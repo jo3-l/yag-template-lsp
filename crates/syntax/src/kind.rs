@@ -27,6 +27,11 @@ pub enum SyntaxKind {
     /// The assignment operator: `=`.
     Eq,
 
+    /// A variable: `$x`.
+    Var,
+    /// An identifier.
+    Ident,
+
     /// The `if` keyword.
     If,
     /// The `end` keyword.
@@ -44,12 +49,10 @@ pub enum SyntaxKind {
     IfClause,
     /// An expression used as an action, e.g., `{{fn 1 2 3}}`.
     ExprAction,
-    /// An identifier.
-    Ident,
     /// A function call: `f x y z ...`.
     FuncCall,
-    /// A variable: `$x`.
-    Var,
+    /// A variable reference: `$x`.
+    VarRef,
     /// A variable declaration: `$x := y`.
     VarDecl,
     /// A variable assignment: `$x = y`.
@@ -80,17 +83,9 @@ impl SyntaxKind {
         })
     }
 
-    pub fn is_left_delim(self) -> bool {
-        matches!(self, SyntaxKind::LeftDelim | SyntaxKind::TrimmedLeftDelim)
-    }
-
-    pub fn is_right_delim(self) -> bool {
-        matches!(self, SyntaxKind::RightDelim | SyntaxKind::TrimmedRightDelim)
-    }
-
     pub fn is_trivia(self) -> bool {
-        // NOTE: there are some productions in the grammar where whitespace is
-        // significant but it is easier to treat these as exceptional cases
+        // NOTE: there are some places in the grammar where whitespace is
+        // significant, but it is easier to treat these as exceptional cases
         // rather than the norm
         matches!(self, SyntaxKind::Comment | SyntaxKind::Whitespace)
     }
@@ -109,6 +104,8 @@ impl SyntaxKind {
             Whitespace => "whitespace",
             ColonEq => "`:=`",
             Eq => "`=`",
+            Ident => "identifier",
+            Var => "variable",
             If => "`if`",
             End => "`end`",
             Root => "root",
@@ -117,11 +114,10 @@ impl SyntaxKind {
             IfConditional => "if conditional",
             IfClause => "if clause",
             ExprAction => "action",
-            Ident => "identifier",
             FuncCall => "function call",
             Bool => "boolean literal",
             Int => "integer literal",
-            Var => "variable",
+            VarRef => "variable reference",
             VarAssign => "variable assignment",
             VarDecl => "variable declaration",
 

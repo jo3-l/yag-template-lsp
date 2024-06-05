@@ -36,7 +36,7 @@ pub(crate) fn var(p: &mut Parser, atomic: bool) {
     let m = p.marker();
     p.assert(SyntaxKind::Var);
     if atomic {
-        return p.abandon(m);
+        return p.wrap(m, SyntaxKind::VarRef);
     }
 
     match p.cur() {
