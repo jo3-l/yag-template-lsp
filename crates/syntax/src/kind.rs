@@ -36,28 +36,28 @@ pub enum SyntaxKind {
     Root,
     /// A list of actions and text, possibly interspersed.
     ActionList,
-    /// A boolean literal.
-    Bool,
-    /// The `{{end}}` clause completing a conditional or loop compound action.
-    EndClause,
-    /// An expression used as an action, e.g., `{{fn 1 2 3}}`.
-    ExprAction,
-    /// A function call: `f x y z ...`.
-    FuncCall,
     /// An identifier.
     Ident,
     /// An if-else compound action: `{{if x}} y {{else}} z {{end}}`
     IfConditional,
+    /// The `{{end}}` clause completing a conditional or loop compound action.
+    EndClause,
     /// The `{{if x}}` clause within an if-else compound action.
     IfClause,
-    /// An integer literal.
-    Int,
+    /// An expression used as an action, e.g., `{{fn 1 2 3}}`.
+    ExprAction,
+    /// A function call: `f x y z ...`.
+    FuncCall,
     /// A variable: `$x`.
     Var,
     /// A variable declaration: `$x := y`.
     VarDecl,
     /// A variable assignment: `$x = y`.
     VarAssign,
+    /// A boolean literal.
+    Bool,
+    /// An integer literal.
+    Int,
 
     #[doc(hidden)]
     __LAST,
@@ -104,14 +104,14 @@ impl SyntaxKind {
             If => "`if`",
             End => "`end`",
             Root => "root",
-            ActionList => "block",
-            Bool => "boolean literal",
-            EndClause => "end clause",
-            ExprAction => "action",
-            FuncCall => "function call",
+            ActionList => "action list",
             Ident => "identifier",
+            EndClause => "end clause",
             IfConditional => "if conditional",
             IfClause => "if clause",
+            ExprAction => "action",
+            FuncCall => "function call",
+            Bool => "boolean literal",
             Int => "integer literal",
             Var => "variable",
             VarAssign => "variable assignment",
