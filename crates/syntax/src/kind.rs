@@ -36,6 +36,8 @@ pub enum SyntaxKind {
     Root,
     /// A list of actions and text, possibly interspersed.
     ActionList,
+    /// A boolean literal.
+    Bool,
     /// The `{{end}}` clause completing a conditional or loop compound action.
     EndClause,
     /// An expression used as an action, e.g., `{{fn 1 2 3}}`.
@@ -67,11 +69,13 @@ impl SyntaxKind {
         unsafe { std::mem::transmute::<u16, SyntaxKind>(kind) }
     }
 
-    pub fn try_from_keyword(keyword: &str) -> Option<SyntaxKind> {
+    pub fn try_from_ident(ident: &str) -> Option<SyntaxKind> {
         use SyntaxKind::*;
-        Some(match keyword {
+        Some(match ident {
             "if" => If,
             "end" => End,
+
+            "true" | "false" => Bool,
             _ => return None,
         })
     }
@@ -101,6 +105,7 @@ impl SyntaxKind {
             End => "`end`",
             Root => "root",
             ActionList => "block",
+            Bool => "boolean literal",
             EndClause => "end clause",
             ExprAction => "action",
             FuncCall => "function call",

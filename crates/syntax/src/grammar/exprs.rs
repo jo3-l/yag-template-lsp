@@ -1,13 +1,13 @@
 use crate::grammar::token_sets::{LEFT_DELIMS, RIGHT_DELIMS};
 use crate::kind::SyntaxKind;
 use crate::parser::Parser;
-use crate::token_set;
 use crate::token_set::TokenSet;
 
 pub(crate) fn expr(p: &mut Parser, atomic: bool) {
     match p.cur() {
         SyntaxKind::Ident => func_call(p, atomic),
         SyntaxKind::Int => p.eat(),
+        SyntaxKind::Bool => p.eat(),
         SyntaxKind::Var => var(p, atomic),
         _ => p.error_with_recover("expected expression", LEFT_DELIMS),
     }

@@ -168,7 +168,7 @@ impl Lexer<'_> {
     fn ident(&mut self, start: usize) -> SyntaxKind {
         self.s.eat_while(char::is_alphanumeric);
         let ident = self.s.from(start);
-        SyntaxKind::try_from_keyword(ident).unwrap_or(SyntaxKind::Ident)
+        SyntaxKind::try_from_ident(ident).unwrap_or(SyntaxKind::Ident)
     }
 
     fn var(&mut self) -> SyntaxKind {
