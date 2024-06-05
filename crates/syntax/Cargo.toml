@@ -1,0 +1,8 @@
+[package]
+name = "syntax"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+unscanny = "0.1"
+rowan = "0.15.15"
