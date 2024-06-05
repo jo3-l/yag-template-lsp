@@ -44,6 +44,6 @@ fn demo_parse() {
     print(0, node.into());
     println!("errors");
     for err in parsed.errors {
-        println!("{}: {}", err.span, err.message);
+        println!("{:?}: {}", err.range, err.message);
     }
 }

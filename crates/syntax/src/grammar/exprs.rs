@@ -23,7 +23,7 @@ pub(crate) fn func_call(p: &mut Parser, atomic: bool) {
             if !p.had_leading_whitespace() {
                 p.error(
                     "expected whitespace before function call argument",
-                    p.cur_span(),
+                    p.cur_range(),
                 );
             }
             expr(p, true);

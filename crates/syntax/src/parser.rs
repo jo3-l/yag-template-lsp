@@ -1,9 +1,8 @@
-use rowan::{GreenNode, GreenNodeBuilder};
+use rowan::{GreenNode, GreenNodeBuilder, TextRange, TextSize};
 
 use crate::error::SyntaxError;
 use crate::kind::SyntaxKind;
 use crate::lexer::Lexer;
-use crate::span::Span;
 use crate::token_set::TokenSet;
 
 #[derive(Debug)]
@@ -17,7 +16,7 @@ pub(crate) struct Parser<'s> {
     events: Vec<Event<'s>>,
     lexer: Lexer<'s>,
     errors: Vec<SyntaxError>,
-    cur_start: usize,
+    cur_start: TextSize,
     cur: SyntaxKind,
     had_leading_whitespace: bool,
 }
@@ -30,7 +29,7 @@ impl<'s> Parser<'s> {
             events: Vec::new(),
             lexer,
             errors: Vec::new(),
-            cur_start: 0,
+            cur_start: TextSize::new(0),
             cur: current,
             had_leading_whitespace: false,
         }
@@ -116,20 +115,20 @@ impl<'s> Parser<'s> {
         }
     }
 
-    pub(crate) fn cur_start(&self) -> usize {
+    pub(crate) fn cur_start(&self) -> TextSize {
         self.cur_start
     }
 
-    pub(crate) fn cur_end(&self) -> usize {
+    pub(crate) fn cur_end(&self) -> TextSize {
         self.lexer.cursor()
     }
 
-    pub(crate) fn cur_span(&self) -> Span {
-        Span::new(self.cur_start, self.cur_end())
+    pub(crate) fn cur_range(&self) -> TextRange {
+        TextRange::new(self.cur_start(), self.cur_end())
     }
 
     pub(crate) fn cur_text(&self) -> &'s str {
-        &self.lexer.input()[self.cur_start..self.cur_end()]
+        &self.lexer.input()[self.cur_range()]
     }
 
     /// Is the current token preceded by whitespace?
@@ -196,13 +195,13 @@ impl Parser<'_> {
 
     /// Create an error node and consume the next token.
     pub(crate) fn error_and_eat(&mut self, message: impl Into<String>) {
-        self.error(message, self.cur_span());
+        self.error(message, self.cur_range());
         self.eat();
     }
 
     pub(crate) fn error_with_recover(&mut self, message: impl Into<String>, recoverable: TokenSet) {
         if self.at(recoverable) {
-            self.error(message, Span::empty(self.cur_start));
+            self.error(message, TextRange::empty(self.cur_start));
         } else {
             self.error_and_eat(message);
         }
@@ -210,8 +209,8 @@ impl Parser<'_> {
 
     /// Emit a syntax error at the given span without touching the current token
     /// or the parse tree.
-    pub(crate) fn error(&mut self, message: impl Into<String>, span: Span) {
-        self.errors.push(SyntaxError::new(message, span));
+    pub(crate) fn error(&mut self, message: impl Into<String>, range: TextRange) {
+        self.errors.push(SyntaxError::new(message, range));
     }
 }
 

@@ -1,8 +1,8 @@
+use rowan::{TextRange, TextSize};
 use unscanny::Scanner;
 
 use crate::error::SyntaxError;
 use crate::kind::SyntaxKind;
-use crate::span::Span;
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 enum LexMode {
@@ -41,8 +41,8 @@ impl<'s> Lexer<'s> {
         self.s.done()
     }
 
-    pub fn cursor(&self) -> usize {
-        self.s.cursor()
+    pub fn cursor(&self) -> TextSize {
+        TextSize::new(self.s.cursor() as u32)
     }
 
     pub fn checkpoint(&self) -> Checkpoint {
@@ -68,13 +68,13 @@ impl<'s> Lexer<'s> {
 }
 
 impl Lexer<'_> {
-    fn error(&mut self, message: impl Into<String>, span: Span) {
-        self.errors.push(SyntaxError::new(message, span));
+    fn error(&mut self, message: impl Into<String>, range: TextRange) {
+        self.errors.push(SyntaxError::new(message, range));
     }
 
-    fn error_at_offset(&mut self, message: impl Into<String>, offset: usize) {
+    fn error_at_offset(&mut self, message: impl Into<String>, offset: TextSize) {
         self.errors
-            .push(SyntaxError::new(message, Span::empty(offset)));
+            .push(SyntaxError::new(message, TextRange::empty(offset)));
     }
 }
 
@@ -104,7 +104,7 @@ impl Lexer<'_> {
     }
 
     fn action(&mut self) -> SyntaxKind {
-        let start = self.s.cursor();
+        let start = self.cursor();
         let Some(c) = self.s.eat() else {
             return SyntaxKind::Eof;
         };
@@ -130,17 +130,17 @@ impl Lexer<'_> {
             _ => {
                 self.error(
                     format!("unexpected character {c:?} in action"),
-                    Span::new(start, self.s.cursor()),
+                    TextRange::new(start, self.cursor()),
                 );
                 SyntaxKind::Error
             }
         }
     }
 
-    fn comment(&mut self, start: usize) -> SyntaxKind {
+    fn comment(&mut self, start: TextSize) -> SyntaxKind {
         self.s.eat_until("*/");
         if !self.s.eat_if("*/") {
-            self.error("unclosed comment", Span::new(start, self.s.cursor()));
+            self.error("unclosed comment", TextRange::new(start, self.cursor()));
         }
         SyntaxKind::Comment
     }
@@ -165,9 +165,9 @@ impl Lexer<'_> {
         SyntaxKind::Int
     }
 
-    fn ident(&mut self, start: usize) -> SyntaxKind {
+    fn ident(&mut self, start: TextSize) -> SyntaxKind {
         self.s.eat_while(char::is_alphanumeric);
-        let ident = self.s.from(start);
+        let ident = self.s.from(start.into());
         SyntaxKind::try_from_ident(ident).unwrap_or(SyntaxKind::Ident)
     }
 

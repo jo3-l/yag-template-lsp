@@ -80,6 +80,14 @@ impl SyntaxKind {
         })
     }
 
+    pub fn is_left_delim(self) -> bool {
+        matches!(self, SyntaxKind::LeftDelim | SyntaxKind::TrimmedLeftDelim)
+    }
+
+    pub fn is_right_delim(self) -> bool {
+        matches!(self, SyntaxKind::RightDelim | SyntaxKind::TrimmedRightDelim)
+    }
+
     pub fn is_trivia(self) -> bool {
         // NOTE: there are some productions in the grammar where whitespace is
         // significant but it is easier to treat these as exceptional cases

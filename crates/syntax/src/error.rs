@@ -1,18 +1,18 @@
 use std::fmt;
 
-use crate::span::Span;
+use rowan::TextRange;
 
 #[derive(Debug, Clone)]
 pub struct SyntaxError {
     pub message: String,
-    pub span: Span,
+    pub range: TextRange,
 }
 
 impl SyntaxError {
-    pub fn new(message: impl Into<String>, span: Span) -> SyntaxError {
+    pub fn new(message: impl Into<String>, range: TextRange) -> SyntaxError {
         SyntaxError {
             message: message.into(),
-            span,
+            range,
         }
     }
 }
