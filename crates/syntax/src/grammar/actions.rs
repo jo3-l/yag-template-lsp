@@ -11,7 +11,6 @@ pub(crate) fn action_list(p: &mut Parser) {
 
     let m = p.marker();
     while !p.done() && !p.at2(LEFT_DELIMS, TERMINATORS) {
-        dbg!("test");
         text_or_action(p);
     }
     p.wrap(m, SyntaxKind::ActionList);
