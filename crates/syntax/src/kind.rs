@@ -36,16 +36,16 @@ pub enum SyntaxKind {
     Root,
     /// A list of actions and text, possibly interspersed.
     ActionList,
-    /// An identifier.
-    Ident,
-    /// An if-else compound action: `{{if x}} y {{else}} z {{end}}`
-    IfConditional,
     /// The `{{end}}` clause completing a conditional or loop compound action.
     EndClause,
+    /// An if-else compound action: `{{if x}} y {{else}} z {{end}}`
+    IfConditional,
     /// The `{{if x}}` clause within an if-else compound action.
     IfClause,
     /// An expression used as an action, e.g., `{{fn 1 2 3}}`.
     ExprAction,
+    /// An identifier.
+    Ident,
     /// A function call: `f x y z ...`.
     FuncCall,
     /// A variable: `$x`.
@@ -113,11 +113,11 @@ impl SyntaxKind {
             End => "`end`",
             Root => "root",
             ActionList => "action list",
-            Ident => "identifier",
             EndClause => "end clause",
             IfConditional => "if conditional",
             IfClause => "if clause",
             ExprAction => "action",
+            Ident => "identifier",
             FuncCall => "function call",
             Bool => "boolean literal",
             Int => "integer literal",
