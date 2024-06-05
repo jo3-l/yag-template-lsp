@@ -1,3 +1,4 @@
+use std::fmt;
 use std::ops::Range;
 
 #[derive(Debug, Clone, Copy)]
@@ -39,5 +40,11 @@ impl From<Range<usize>> for Span {
             start: r.start,
             end: r.end,
         }
+    }
+}
+
+impl fmt::Display for Span {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}..{}", self.start, self.end)
     }
 }
