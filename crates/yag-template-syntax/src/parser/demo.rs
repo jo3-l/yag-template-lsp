@@ -1,3 +1,4 @@
+#![allow(unused, unused_imports)]
 use crate::parser::parse;
 use crate::{NodeOrToken, SyntaxElement, SyntaxNode};
 
