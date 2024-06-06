@@ -1,9 +1,15 @@
 use crate::grammar::token_sets::{LEFT_DELIMS, RIGHT_DELIMS};
-use crate::parser::Parser;
+use crate::parser::{Checkpoint, Parser};
 use crate::token_set::{token_set, TokenSet};
 use crate::SyntaxKind;
 
 pub(crate) fn expr(p: &mut Parser, atomic: bool) {
+    let mut recoverable = LEFT_DELIMS.union(RIGHT_DELIMS);
+    if !atomic {
+        recoverable = recoverable.add(SyntaxKind::Pipe);
+    }
+
+    let c = p.checkpoint();
     match p.cur() {
         SyntaxKind::Ident => func_call(p, atomic),
         SyntaxKind::Int => p.eat(),
@@ -12,17 +18,44 @@ pub(crate) fn expr(p: &mut Parser, atomic: bool) {
 
         // try to recover from missing variable name in declaration/assignment: `{{ := 5}}`
         SyntaxKind::Eq | SyntaxKind::ColonEq if !atomic => var(p, false),
-        _ => p.error_with_recover("expected expression", LEFT_DELIMS),
+        _ => p.error_with_recover("expected expression", recoverable),
+    }
+    if !atomic && p.at(SyntaxKind::Pipe) {
+        pipeline(p, c);
     }
 }
 
+pub(crate) fn pipeline(p: &mut Parser, c: Checkpoint) {
+    while p.at(SyntaxKind::Pipe) {
+        pipeline_stage(p);
+    }
+    p.wrap(c, SyntaxKind::Pipeline);
+}
+
+pub(crate) fn pipeline_stage(p: &mut Parser) {
+    let pipeline_stage = p.start(SyntaxKind::PipelineStage);
+    p.expect(SyntaxKind::Pipe);
+    if p.at(SyntaxKind::Ident) {
+        func_call(p, false);
+    } else {
+        p.error_with_recover(
+            "expected function call after pipe",
+            LEFT_DELIMS.union(RIGHT_DELIMS),
+        );
+    }
+    pipeline_stage.complete(p);
+}
+
 pub(crate) fn func_call(p: &mut Parser, atomic: bool) {
-    const FUNC_CALL_TERMINATORS: TokenSet = LEFT_DELIMS.union(RIGHT_DELIMS).add(SyntaxKind::Eof);
+    const EXPR_TERMINATORS: TokenSet = LEFT_DELIMS
+        .union(RIGHT_DELIMS)
+        .add(SyntaxKind::Pipe)
+        .add(SyntaxKind::Eof);
 
     let func_call = p.start(SyntaxKind::FuncCall);
-    p.assert(SyntaxKind::Ident);
+    p.expect(SyntaxKind::Ident);
     if !atomic {
-        while !p.at(FUNC_CALL_TERMINATORS) {
+        while !p.at(EXPR_TERMINATORS) {
             if !p.preceded_by_whitespace() {
                 p.error(
                     "expected whitespace before function call argument",

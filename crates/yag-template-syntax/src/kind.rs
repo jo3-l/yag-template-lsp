@@ -26,6 +26,8 @@ pub enum SyntaxKind {
     ColonEq,
     /// The assignment operator: `=`.
     Eq,
+    /// The pipe operator: `|`.
+    Pipe,
 
     /// A variable: `$x`.
     Var,
@@ -57,6 +59,14 @@ pub enum SyntaxKind {
     ExprAction,
     /// A function call: `f x y z ...`.
     FuncCall,
+    /// A pipeline: `{{x | f y z | g a b c}}`.
+    Pipeline,
+    /// A single stage in a pipeline, comprising the pipe symbol and the
+    /// function call.
+    ///
+    /// For instance, in the previous snippet `{{x | f y z | g a b c}}`, there
+    /// are two stages, `| f y z` and `| g a b c`.
+    PipelineStage,
     /// A variable reference: `$x`.
     VarRef,
     /// A variable declaration: `$x := y`.
@@ -111,6 +121,7 @@ impl SyntaxKind {
             Whitespace => "whitespace",
             ColonEq => "`:=`",
             Eq => "`=`",
+            Pipe => "`|`",
             Ident => "identifier",
             Var => "variable",
             If => "`if`",
@@ -125,6 +136,8 @@ impl SyntaxKind {
             ElseClause => "else clause",
             ExprAction => "action",
             FuncCall => "function call",
+            Pipeline => "pipeline",
+            PipelineStage => "pipeline stage",
             Bool => "boolean literal",
             Int => "integer literal",
             VarRef => "variable reference",

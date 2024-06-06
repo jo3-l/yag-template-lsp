@@ -1,5 +1,6 @@
 use drop_bomb::DropBomb;
-use rowan::{Checkpoint, GreenNode, GreenNodeBuilder};
+pub(crate) use rowan::Checkpoint;
+use rowan::{GreenNode, GreenNodeBuilder};
 
 use crate::error::SyntaxError;
 use crate::lexer::Lexer;
@@ -128,11 +129,6 @@ impl<'s> Parser<'s> {
             self.eat();
         }
         at
-    }
-
-    pub(crate) fn assert(&mut self, pat: impl TokenPattern) {
-        assert!(pat.matches(self.cur));
-        self.eat();
     }
 
     /// Add the current token to the parse tree, then call [Parser::skip] to

@@ -156,6 +156,7 @@ impl_delimiter_accessors!(ExprAction);
 #[derive(Debug, Clone, Hash)]
 pub enum Expr {
     FuncCall(FuncCall),
+    Pipeline(Pipeline),
     VarRef(VarRef),
     VarDecl(VarDecl),
     VarAssign(VarAssign),
@@ -167,6 +168,7 @@ impl AstNode for Expr {
     fn cast(node: SyntaxNode) -> Option<Self> {
         match node.kind() {
             SyntaxKind::FuncCall => FuncCall::cast(node).map(Self::FuncCall),
+            SyntaxKind::Pipeline => Pipeline::cast(node).map(Self::Pipeline),
             SyntaxKind::VarRef => VarRef::cast(node).map(Self::VarRef),
             SyntaxKind::VarDecl => VarDecl::cast(node).map(Self::VarDecl),
             SyntaxKind::VarAssign => VarAssign::cast(node).map(Self::VarAssign),
@@ -179,6 +181,7 @@ impl AstNode for Expr {
     fn syntax(&self) -> &SyntaxNode {
         match self {
             Expr::FuncCall(v) => v.syntax(),
+            Expr::Pipeline(v) => v.syntax(),
             Expr::VarRef(v) => v.syntax(),
             Expr::VarDecl(v) => v.syntax(),
             Expr::VarAssign(v) => v.syntax(),
@@ -203,12 +206,36 @@ define_node! {
 }
 
 impl FuncCall {
-    pub fn fn_ident(&self) -> Option<Ident> {
+    pub fn func_name(&self) -> Option<Ident> {
         cast_first_child(self.syntax())
     }
 
     pub fn call_args(&self) -> AstChildren<Expr> {
         cast_children(self.syntax())
+    }
+}
+
+define_node! {
+    Pipeline(SyntaxKind::Pipeline)
+}
+
+impl Pipeline {
+    pub fn init_expr(&self) -> Option<Expr> {
+        cast_first_child(self.syntax())
+    }
+
+    pub fn stages(&self) -> AstChildren<PipelineStage> {
+        cast_children(self.syntax())
+    }
+}
+
+define_node! {
+    PipelineStage(SyntaxKind::PipelineStage)
+}
+
+impl PipelineStage {
+    pub fn func_call(&self) -> Option<FuncCall> {
+        cast_first_child(self.syntax())
     }
 }
 
