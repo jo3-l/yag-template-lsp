@@ -28,8 +28,9 @@ impl TokenSet {
     }
 }
 
-#[macro_export]
 macro_rules! token_set {
     ($($t:ident),*) => { TokenSet::EMPTY$(.add(crate::SyntaxKind::$t))* };
     ($($t:ident),* ,) => { token_set!($($t),*) };
 }
+
+pub(crate) use token_set;

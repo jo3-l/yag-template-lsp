@@ -2,8 +2,8 @@ use super::token_sets::RIGHT_DELIMS;
 use crate::grammar::exprs::expr;
 use crate::grammar::token_sets::LEFT_DELIMS;
 use crate::parser::Parser;
-use crate::token_set::TokenSet;
-use crate::{token_set, SyntaxKind};
+use crate::token_set::{token_set, TokenSet};
+use crate::SyntaxKind;
 
 pub(crate) fn action_list(p: &mut Parser) {
     const TERMINATORS: TokenSet = token_set! { Else, End };
