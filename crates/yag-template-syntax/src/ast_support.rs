@@ -1,4 +1,3 @@
-use crate::kind::SyntaxKind;
 use crate::{AstChildren, AstNode, SyntaxNode};
 
 pub(crate) fn cast_first_child<N: AstNode>(parent: &SyntaxNode) -> Option<N> {
@@ -14,10 +13,10 @@ macro_rules! define_node {
         #[derive(Debug, Clone, Eq, PartialEq, Hash)]
         #[repr(transparent)]
         $(#[$attr])*
-        pub struct $name(SyntaxNode);
+        pub struct $name(crate::SyntaxNode);
 
-        impl AstNode for $name {
-            fn cast(node: SyntaxNode) -> Option<Self> {
+        impl crate::AstNode for $name {
+            fn cast(node: crate::SyntaxNode) -> Option<Self> {
                 if matches!(node.kind(), $pat) {
                     Some(Self(node))
                 } else {
@@ -25,7 +24,7 @@ macro_rules! define_node {
                 }
             }
 
-            fn syntax(&self) -> &SyntaxNode {
+            fn syntax(&self) -> &crate::SyntaxNode {
                 &self.0
             }
         }

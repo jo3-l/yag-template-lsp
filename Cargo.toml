@@ -1,2 +1,2 @@
 [workspace]
-members = ["crates/syntax"]
+members = ["crates/yag-template-lsp", "crates/yag-template-syntax"]

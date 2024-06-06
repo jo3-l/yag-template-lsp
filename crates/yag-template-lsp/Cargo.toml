@@ -1,0 +1,9 @@
+[package]
+name = "yag-template-lsp"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+tokio = { version = "1.17.0", features = ["full"] }
+tower-lsp = "0.20.0"
+yag-template-syntax = { path = "../yag-template-syntax" }

@@ -10,6 +10,7 @@ mod token_set;
 use std::marker::PhantomData;
 
 use rowan::SyntaxNodeChildren;
+pub use rowan::{SyntaxText, TextRange, TextSize};
 
 use crate::kind::SyntaxKind;
 

@@ -1,11 +1,12 @@
-use rowan::{GreenNode, GreenNodeBuilder, TextRange, TextSize};
+use rowan::{GreenNode, GreenNodeBuilder};
 
 use crate::error::SyntaxError;
 use crate::kind::SyntaxKind;
 use crate::lexer::Lexer;
 use crate::token_set::TokenSet;
+use crate::{TextRange, TextSize};
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Parse {
     pub root: GreenNode,
     pub errors: Vec<SyntaxError>,

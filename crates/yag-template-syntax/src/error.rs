@@ -1,6 +1,6 @@
 use std::fmt;
 
-use rowan::TextRange;
+use crate::TextRange;
 
 #[derive(Debug, Clone)]
 pub struct SyntaxError {

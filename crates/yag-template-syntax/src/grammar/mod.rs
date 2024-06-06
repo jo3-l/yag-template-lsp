@@ -5,7 +5,8 @@ mod token_sets;
 use actions::text_or_action;
 
 use crate::kind::SyntaxKind;
-use crate::parser::{Parse, Parser};
+pub use crate::parser::Parse;
+use crate::parser::Parser;
 use crate::{NodeOrToken, SyntaxElement, SyntaxNode};
 
 pub fn parse(input: &str) -> Parse {

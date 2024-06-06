@@ -1,8 +1,8 @@
-use rowan::{TextRange, TextSize};
 use unscanny::Scanner;
 
 use crate::error::SyntaxError;
 use crate::kind::SyntaxKind;
+use crate::{TextRange, TextSize};
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 enum LexMode {
