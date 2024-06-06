@@ -16,7 +16,7 @@ use crate::{SyntaxKind, TextRange, TextSize};
 pub fn parse(input: &str) -> Parse {
     let mut p = Parser::new(input);
     let root = p.start(SyntaxKind::Root);
-    while !p.done() {
+    while !p.at_eof() {
         text_or_action(&mut p);
     }
     root.complete(&mut p);
@@ -99,7 +99,7 @@ impl Parser<'_> {
 // Accessing and consuming tokens. In general, all methods ignore trivia but not
 // whitespace (which can be significant) unless stated otherwise.
 impl<'s> Parser<'s> {
-    pub(crate) fn done(&self) -> bool {
+    pub(crate) fn at_eof(&self) -> bool {
         self.cur == SyntaxKind::Eof
     }
 
@@ -161,10 +161,12 @@ impl<'s> Parser<'s> {
         at
     }
 
-    /// Add the current token to the parse tree, then advance to the next
-    /// non-trivia token.
+    /// Add the current token to the parse tree if not at EOF, then advance to
+    /// the next non-trivia token.
     pub(crate) fn eat(&mut self) {
-        self.eat_one();
+        if !self.at_eof() {
+            self.eat_cur();
+        }
         self.eat_trivia();
     }
 
@@ -180,30 +182,31 @@ impl<'s> Parser<'s> {
 
     fn eat_trivia(&mut self) {
         while self.at(TRIVIA) {
-            self.eat_one();
+            self.eat_cur();
         }
     }
 
-    fn eat_one(&mut self) {
-        if self.cur != SyntaxKind::Eof {
-            self.green.token(self.cur.into(), self.cur_text());
-        }
+    fn eat_cur(&mut self) {
+        self.green.token(self.cur.into(), self.cur_text());
         self.cur_start = self.lexer.cursor();
         self.cur = self.lexer.next();
+        if let Some(err) = self.lexer.take_error() {
+            self.errors.push(err);
+        }
     }
 }
 
 // Error reporting and recovery.
 impl Parser<'_> {
     /// Eat the current token if it matches `kind`, otherwise produce an error
-    /// and continue via [Parser::error_recover]. The boolean result indicates whether
-    /// the token matched.
+    /// and continue via [Parser::err_recover]. The boolean result indicates
+    /// whether the token matched.
     pub(crate) fn expect_recover(&mut self, kind: SyntaxKind, recover: TokenSet) -> bool {
         let at = self.at(kind);
         if at {
             self.eat();
         } else {
-            self.error_recover(format!("expected {}", kind.name()), recover);
+            self.err_recover(format!("expected {}", kind.name()), recover);
         }
         at
     }
@@ -211,13 +214,13 @@ impl Parser<'_> {
     /// Unconditionally eat the current token, producing an error if it does not
     /// match `kind`. For improved error recovery, prefer
     /// [Parser::expect_recover] when possible; see the documentation for
-    /// [Parser::error_recover] for further explanation.
+    /// [Parser::err_recover] for further explanation.
     pub(crate) fn expect(&mut self, kind: SyntaxKind) -> bool {
         let at = self.at(kind);
         if at {
             self.eat();
         } else {
-            self.error_and_eat(format!("expected {}", kind.name()));
+            self.err_and_eat(format!("expected {}", kind.name()));
         }
         at
     }
@@ -236,20 +239,24 @@ impl Parser<'_> {
     /// when the parser encounters the `{{` (where an expression is expected),
     /// an error is produced but the `{{` is not consumed, allowing `{{add 1
     /// 2}}` to be parsed completely.
-    pub(crate) fn error_recover(&mut self, message: impl Into<String>, recovery: TokenSet) {
+    pub(crate) fn err_recover(&mut self, message: impl Into<String>, recovery: TokenSet) {
         if self.at(recovery) {
             self.error(message, TextRange::empty(self.cur_start));
         } else {
-            self.error_and_eat(message);
+            self.err_and_eat(message);
         }
     }
 
     /// Create an error node and consume the current token. When possible,
-    /// prefer to call [Parser::error_recover] so that the impact of the error
+    /// prefer to call [Parser::err_recover] so that the impact of the error
     /// on parsing of subsequent correct input can be minimized.
-    pub(crate) fn error_and_eat(&mut self, message: impl Into<String>) {
+    pub(crate) fn err_and_eat(&mut self, message: impl Into<String>) {
         self.error(message, self.cur_range());
-        self.eat();
+        if !self.at(SyntaxKind::Eof) {
+            let error = self.start(SyntaxKind::Error);
+            self.eat();
+            error.complete(self);
+        }
     }
 
     /// Emit a syntax error at the given span without touching the current token

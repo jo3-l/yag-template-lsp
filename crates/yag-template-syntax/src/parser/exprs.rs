@@ -2,7 +2,7 @@ use crate::parser::token_set::{TokenSet, ACTION_DELIMS, LEFT_DELIMS, RIGHT_DELIM
 use crate::parser::{Checkpoint, Parser};
 use crate::SyntaxKind;
 
-pub(crate) fn expr(p: &mut Parser) {
+pub(crate) fn expr(p: &mut Parser, context: &str) {
     const EXPR_RECOVERY_SET: TokenSet = ACTION_DELIMS.add(SyntaxKind::RightParen);
 
     let saw_dot = p.at(SyntaxKind::Dot);
@@ -15,10 +15,8 @@ pub(crate) fn expr(p: &mut Parser) {
         SyntaxKind::Var => {
             var(p);
         }
-        _ => {
-            p.error_recover("expected expression", EXPR_RECOVERY_SET);
-            return;
-        }
+        SyntaxKind::InvalidChar => return, // lexer should have already emitted an error
+        _ => return p.err_recover(format!("expected expression {context}"), EXPR_RECOVERY_SET),
     }
 
     // issue error for two dots in a row, eg in `..Field`, since
@@ -52,7 +50,11 @@ pub(crate) fn atom(p: &mut Parser) {
             p.eat();
             p.wrap(c, SyntaxKind::VarAccess);
         }
-        _ => p.error_recover("expected expression", ACTION_DELIMS), // "expected atom" is not great end-user ux, so lie a little
+        SyntaxKind::InvalidChar => return, // lexer should have already emitted an error
+        _ => {
+            // "expected atom" is not great end-user ux, so lie a little
+            return p.err_recover("expected expression", ACTION_DELIMS);
+        }
     }
 
     if saw_dot && p.at(SyntaxKind::Dot) {
@@ -106,7 +108,7 @@ pub(crate) fn pipeline_stage(p: &mut Parser) {
     let pipeline_stage = p.start(SyntaxKind::PipelineStage);
     p.expect(SyntaxKind::Pipe);
     p.eat_whitespace();
-    expr(p);
+    expr(p, "after `|`");
     pipeline_stage.complete(p);
 }
 
@@ -114,7 +116,7 @@ pub(crate) fn parenthesized(p: &mut Parser) {
     let parenthesized = p.start(SyntaxKind::ParenthesizedExpr);
     p.expect(SyntaxKind::LeftParen);
     p.eat_whitespace();
-    expr(p);
+    expr(p, "after `(`");
     p.eat_whitespace();
     p.expect_recover(SyntaxKind::RightParen, LEFT_DELIMS);
     parenthesized.complete(p);
@@ -127,7 +129,7 @@ pub(crate) fn func_call(p: &mut Parser, accept_args: bool) {
     if accept_args {
         while !p.at_ignore_space(CALL_TERMINATORS) {
             if !p.eat_whitespace() {
-                p.error("expected whitespace between arguments", p.cur_range());
+                p.error_here("expected whitespace between arguments");
             }
             atom(p);
         }
@@ -174,14 +176,14 @@ pub(crate) fn var(p: &mut Parser) {
     match p.cur() {
         SyntaxKind::ColonEq => {
             p.eat();
-            expr(p);
+            expr(p, "after `:=`");
             p.wrap(c, SyntaxKind::VarDecl);
         }
         SyntaxKind::Eq => {
             if saw_var && !saw_space_after_var {
                 p.error_here("space required before `=` in assignment")
             }
-            expr(p);
+            expr(p, "after `=`");
         }
         _ => (),
     }

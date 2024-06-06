@@ -13,14 +13,13 @@ enum LexMode {
 pub struct Lexer<'s> {
     s: Scanner<'s>,
     mode: LexMode,
-    errors: Vec<SyntaxError>,
+    error: Option<SyntaxError>,
 }
 
 #[derive(Debug)]
 pub struct Checkpoint {
     cursor: usize,
     mode: LexMode,
-    error_count: usize,
 }
 
 impl<'s> Lexer<'s> {
@@ -28,7 +27,7 @@ impl<'s> Lexer<'s> {
         Lexer {
             s: Scanner::new(input),
             mode: LexMode::Text,
-            errors: Vec::new(),
+            error: None,
         }
     }
 
@@ -48,32 +47,23 @@ impl<'s> Lexer<'s> {
         Checkpoint {
             cursor: self.s.cursor(),
             mode: self.mode,
-            error_count: self.errors.len(),
         }
     }
 
     pub fn restore(&mut self, checkpoint: Checkpoint) {
         self.s.jump(checkpoint.cursor);
         self.mode = checkpoint.mode;
-        self.errors.truncate(checkpoint.error_count);
     }
 
-    pub fn finish(mut self) -> Vec<SyntaxError> {
-        while !self.done() {
-            self.next();
-        }
-        self.errors
+    /// Extract the syntax error associated with the last token, if any.
+    pub fn take_error(&mut self) -> Option<SyntaxError> {
+        self.error.take()
     }
 }
 
 impl Lexer<'_> {
     fn error(&mut self, message: impl Into<String>, range: TextRange) {
-        self.errors.push(SyntaxError::new(message, range));
-    }
-
-    fn error_at_offset(&mut self, message: impl Into<String>, offset: TextSize) {
-        self.errors
-            .push(SyntaxError::new(message, TextRange::empty(offset)));
+        self.error = Some(SyntaxError::new(message, range));
     }
 }
 
@@ -132,10 +122,10 @@ impl Lexer<'_> {
             }
             _ => {
                 self.error(
-                    format!("unexpected character {c:?} in action"),
+                    format!("invalid character {c:?} in action"),
                     TextRange::new(start, self.cursor()),
                 );
-                SyntaxKind::Error
+                SyntaxKind::InvalidChar
             }
         }
     }
