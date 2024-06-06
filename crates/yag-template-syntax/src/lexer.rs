@@ -117,6 +117,7 @@ impl Lexer<'_> {
             '=' => SyntaxKind::Eq,
             ':' if self.s.eat_if('=') => SyntaxKind::ColonEq,
             '|' => SyntaxKind::Pipe,
+            '.' => SyntaxKind::Dot,
             '(' => SyntaxKind::LeftParen,
             ')' => SyntaxKind::RightParen,
             '$' => self.var(),

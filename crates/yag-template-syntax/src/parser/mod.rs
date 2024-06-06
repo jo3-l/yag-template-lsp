@@ -107,6 +107,13 @@ impl<'s> Parser<'s> {
         self.cur
     }
 
+    pub(crate) fn peek(&mut self) -> SyntaxKind {
+        let checkpoint = self.lexer.checkpoint();
+        let token = self.lexer.next();
+        self.lexer.restore(checkpoint);
+        token
+    }
+
     pub(crate) fn peek_non_space(&mut self) -> SyntaxKind {
         let checkpoint = self.lexer.checkpoint();
         loop {
@@ -144,10 +151,6 @@ impl<'s> Parser<'s> {
         } else {
             self.at(pat)
         }
-    }
-
-    pub(crate) fn at2(&mut self, pat0: impl TokenPattern, pat1: impl TokenPattern) -> bool {
-        pat0.matches(self.cur) && pat1.matches(self.peek_non_space())
     }
 
     pub(crate) fn eat_if(&mut self, pat: impl TokenPattern) -> bool {

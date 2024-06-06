@@ -159,6 +159,9 @@ pub enum Expr {
     ExprCall(ExprCall),
     Parenthesized(ParenthesizedExpr),
     Pipeline(Pipeline),
+    ContextAccess(ContextAccess),
+    ContextFieldChain(ContextFieldChain),
+    ExprFieldChain(ExprFieldChain),
     VarAccess(VarAccess),
     VarDecl(VarDecl),
     VarAssign(VarAssign),
@@ -173,6 +176,11 @@ impl AstNode for Expr {
             SyntaxKind::ExprCall => ExprCall::cast(node).map(Self::ExprCall),
             SyntaxKind::ParenthesizedExpr => ParenthesizedExpr::cast(node).map(Self::Parenthesized),
             SyntaxKind::Pipeline => Pipeline::cast(node).map(Self::Pipeline),
+            SyntaxKind::ContextAccess => ContextAccess::cast(node).map(Self::ContextAccess),
+            SyntaxKind::ContextFieldChain => {
+                ContextFieldChain::cast(node).map(Self::ContextFieldChain)
+            }
+            SyntaxKind::ExprFieldChain => ExprFieldChain::cast(node).map(Self::ExprFieldChain),
             SyntaxKind::VarAccess => VarAccess::cast(node).map(Self::VarAccess),
             SyntaxKind::VarDecl => VarDecl::cast(node).map(Self::VarDecl),
             SyntaxKind::VarAssign => VarAssign::cast(node).map(Self::VarAssign),
@@ -188,6 +196,9 @@ impl AstNode for Expr {
             Expr::ExprCall(v) => v.syntax(),
             Expr::Parenthesized(v) => v.syntax(),
             Expr::Pipeline(v) => v.syntax(),
+            Expr::ContextAccess(v) => v.syntax(),
+            Expr::ContextFieldChain(v) => v.syntax(),
+            Expr::ExprFieldChain(v) => v.syntax(),
             Expr::VarAccess(v) => v.syntax(),
             Expr::VarDecl(v) => v.syntax(),
             Expr::VarAssign(v) => v.syntax(),
@@ -266,6 +277,40 @@ define_node! {
 impl PipelineStage {
     pub fn target_expr(&self) -> Option<Expr> {
         cast_first_child(self.syntax())
+    }
+}
+
+define_node! {
+    ContextAccess(SyntaxKind::ContextAccess)
+}
+
+define_node! {
+    Field(SyntaxKind::Field)
+}
+
+impl Field {
+    pub fn ident(&self) -> Option<Field> {
+        cast_first_child(self.syntax())
+    }
+}
+
+define_node! {
+    ContextFieldChain(SyntaxKind::Field)
+}
+
+impl ContextFieldChain {
+    pub fn fields(&self) -> AstChildren<Field> {
+        cast_children(self.syntax())
+    }
+}
+
+define_node! {
+    ExprFieldChain(SyntaxKind::ExprFieldChain)
+}
+
+impl ExprFieldChain {
+    pub fn fields(&self) -> AstChildren<Field> {
+        cast_children(self.syntax())
     }
 }
 

@@ -5,10 +5,12 @@ use crate::SyntaxKind;
 pub(crate) fn expr(p: &mut Parser) {
     const EXPR_RECOVERY_SET: TokenSet = ACTION_DELIMS.add(SyntaxKind::RightParen);
 
+    let saw_dot = p.at(SyntaxKind::Dot);
     let c = p.checkpoint();
     match p.cur() {
         SyntaxKind::LeftParen => parenthesized(p),
         SyntaxKind::Ident => func_call(p, true),
+        SyntaxKind::Dot => context_access_or_field_chain(p),
         SyntaxKind::Int | SyntaxKind::Bool => p.eat(),
         SyntaxKind::Var => {
             var(p);
@@ -19,12 +21,19 @@ pub(crate) fn expr(p: &mut Parser) {
         }
     }
 
-    // TODO: field access
-    maybe_wrap_with_call_args(p, c);
-    maybe_wrap_in_pipeline(p, c);
+    // issue error for two dots in a row, eg in `..Field`, since
+    // maybe_trailing_field_chain will interpret this construct like `(.).Field`
+    // and does not error
+    if saw_dot && p.at(SyntaxKind::Dot) {
+        p.error_here("expected identifier");
+    }
+    maybe_trailing_field_chain(p, c);
+    maybe_trailing_call_args(p, c);
+    maybe_pipeline(p, c);
 }
 
 pub(crate) fn atom(p: &mut Parser) {
+    let saw_dot = p.at(SyntaxKind::Dot);
     let c = p.checkpoint();
     match p.cur() {
         SyntaxKind::LeftParen => parenthesized(p),
@@ -37,6 +46,7 @@ pub(crate) fn atom(p: &mut Parser) {
             //   add(currentHour(2)).
             func_call(p, false);
         }
+        SyntaxKind::Dot => context_access_or_field_chain(p),
         SyntaxKind::Int | SyntaxKind::Bool => p.eat(),
         SyntaxKind::Var => {
             p.eat();
@@ -45,7 +55,21 @@ pub(crate) fn atom(p: &mut Parser) {
         _ => p.error_recover("expected expression", ACTION_DELIMS), // "expected atom" is not great end-user ux, so lie a little
     }
 
-    // TODO: field access
+    if saw_dot && p.at(SyntaxKind::Dot) {
+        p.error_here("expected identifier");
+    }
+    maybe_trailing_field_chain(p, c);
+}
+
+pub(crate) fn maybe_trailing_field_chain(p: &mut Parser, c: Checkpoint) {
+    let mut num_fields = 0;
+    while p.at(SyntaxKind::Dot) {
+        field(p);
+        num_fields += 1;
+    }
+    if num_fields > 0 {
+        p.wrap(c, SyntaxKind::ExprFieldChain);
+    }
 }
 
 const CALL_TERMINATORS: TokenSet = LEFT_DELIMS
@@ -54,15 +78,19 @@ const CALL_TERMINATORS: TokenSet = LEFT_DELIMS
     .add(SyntaxKind::RightParen)
     .add(SyntaxKind::Eof);
 
-pub(crate) fn maybe_wrap_with_call_args(p: &mut Parser, c: Checkpoint) {
+pub(crate) fn maybe_trailing_call_args(p: &mut Parser, c: Checkpoint) {
+    let mut num_args = 0;
     while !p.at_ignore_space(CALL_TERMINATORS) {
         p.eat_whitespace();
         atom(p);
+        num_args += 1;
     }
-    p.wrap(c, SyntaxKind::ExprCall);
+    if num_args > 0 {
+        p.wrap(c, SyntaxKind::ExprCall);
+    }
 }
 
-pub(crate) fn maybe_wrap_in_pipeline(p: &mut Parser, c: Checkpoint) {
+pub(crate) fn maybe_pipeline(p: &mut Parser, c: Checkpoint) {
     if !p.at_ignore_space(SyntaxKind::Pipe) {
         return;
     }
@@ -105,6 +133,29 @@ pub(crate) fn func_call(p: &mut Parser, accept_args: bool) {
         }
     }
     func_call.complete(p);
+}
+
+pub(crate) fn context_access_or_field_chain(p: &mut Parser) {
+    let c = p.checkpoint();
+    p.expect(SyntaxKind::Dot);
+    // are we in a context field chain?
+    if p.eat_if(SyntaxKind::Ident) {
+        p.wrap(c, SyntaxKind::Field); // `.ident` is first field
+        while p.at(SyntaxKind::Dot) {
+            field(p);
+        }
+        p.wrap(c, SyntaxKind::ContextFieldChain);
+    } else {
+        // this is just a lone `.` accessing the context
+        p.wrap(c, SyntaxKind::ContextAccess);
+    }
+}
+
+pub(crate) fn field(p: &mut Parser) {
+    let field = p.start(SyntaxKind::Field);
+    p.expect(SyntaxKind::Dot);
+    p.expect_recover(SyntaxKind::Ident, ACTION_DELIMS);
+    field.complete(p);
 }
 
 pub(crate) fn var(p: &mut Parser) {

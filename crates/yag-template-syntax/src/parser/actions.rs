@@ -1,8 +1,15 @@
 use super::token_set::{LEFT_DELIMS, RIGHT_DELIMS};
+use super::TokenPattern;
 use crate::parser::exprs::expr;
 use crate::parser::token_set::TokenSet;
 use crate::parser::Parser;
 use crate::SyntaxKind;
+
+impl Parser<'_> {
+    pub(crate) fn at_left_delim_and(&mut self, pat: impl TokenPattern) -> bool {
+        self.at(LEFT_DELIMS) && pat.matches(self.peek_non_space())
+    }
+}
 
 pub(crate) fn action_list(p: &mut Parser) {
     const ACTION_LIST_TERMINATORS: TokenSet =
@@ -10,7 +17,7 @@ pub(crate) fn action_list(p: &mut Parser) {
 
     let action_list = p.start(SyntaxKind::ActionList);
     // until EOF, `{{end`, or `{{else`
-    while !p.done() && !p.at2(LEFT_DELIMS, ACTION_LIST_TERMINATORS) {
+    while !p.done() && !p.at_left_delim_and(ACTION_LIST_TERMINATORS) {
         text_or_action(p);
     }
     action_list.complete(p);
@@ -34,7 +41,7 @@ pub(crate) fn if_action(p: &mut Parser) {
     let if_action = p.start(SyntaxKind::IfConditional);
     if_clause(p);
     action_list(p);
-    while p.at2(LEFT_DELIMS, SyntaxKind::Else) {
+    while p.at_left_delim_and(SyntaxKind::Else) {
         else_branch(p);
     }
     end_clause(p, "if action");
@@ -86,7 +93,7 @@ pub(crate) fn else_clause(p: &mut Parser) {
 }
 
 pub(crate) fn end_clause(p: &mut Parser, for_context: &str) {
-    if !p.at2(LEFT_DELIMS, SyntaxKind::End) {
+    if !p.at_left_delim_and(SyntaxKind::End) {
         p.error_recover(format!("missing end clause for {for_context}"), LEFT_DELIMS);
         return;
     }
@@ -106,12 +113,6 @@ pub(crate) fn expr_action(p: &mut Parser) {
     p.eat_whitespace();
     expr(p);
     p.eat_whitespace();
-    while !p.at(RIGHT_DELIMS) && !p.at(LEFT_DELIMS) {
-        p.error_and_eat(format!(
-            "unexpected {} (want right action delimiter)",
-            p.cur().name()
-        ))
-    }
     right_delim(p);
     expr_action.complete(p);
 }

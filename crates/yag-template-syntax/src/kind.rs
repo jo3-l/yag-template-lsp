@@ -28,6 +28,8 @@ pub enum SyntaxKind {
     Eq,
     /// The pipe operator: `|`.
     Pipe,
+    /// The context or field access operator: `.`.
+    Dot,
     /// A left parenthesis: `(`.
     LeftParen,
     /// A right parenthesis: `)`.
@@ -78,6 +80,17 @@ pub enum SyntaxKind {
     /// For instance, in the previous snippet `{{x | f y z | g a b c}}`, there
     /// are two stages, `| f y z` and `| g a b c`.
     PipelineStage,
+    /// A single `.` that evaluates to the context data (not part of a field.)
+    ContextAccess,
+    /// A single field access, part of a context or expression field chain:
+    /// `.Field`.
+    Field,
+    /// A series of field accesses on the context data: `.Field1.Field2.Field3`.
+    /// The parser will produce a ContextFieldChain even in the case where there
+    /// is only one field.
+    ContextFieldChain,
+    /// A series of field accesses on an expression: `(...).Field1.Field2.Field3`.
+    ExprFieldChain,
     /// A variable that is evaluated as an expression (not as part of a
     /// declaration of an assignment): `$x`.
     VarAccess,
@@ -127,6 +140,7 @@ impl SyntaxKind {
             ColonEq => "`:=`",
             Eq => "`=`",
             Pipe => "`|`",
+            Dot => "`.`",
             LeftParen => "`(`",
             RightParen => "`)`",
             Ident => "identifier",
@@ -147,6 +161,10 @@ impl SyntaxKind {
             ParenthesizedExpr => "parenthesized expression",
             Pipeline => "pipeline",
             PipelineStage => "pipeline stage",
+            ContextAccess => "context access",
+            Field => "field",
+            ContextFieldChain => "context field chain",
+            ExprFieldChain => "expression field chain",
             Bool => "boolean literal",
             Int => "integer literal",
             VarAccess => "variable access",
