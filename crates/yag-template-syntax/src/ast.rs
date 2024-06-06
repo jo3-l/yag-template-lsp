@@ -105,6 +105,14 @@ impl IfConditional {
         cast_first_child(self.syntax())
     }
 
+    pub fn action_list(&self) -> Option<ActionList> {
+        cast_first_child(self.syntax())
+    }
+
+    pub fn else_branches(&self) -> AstChildren<ElseBranch> {
+        cast_children(self.syntax())
+    }
+
     pub fn end_clause(&self) -> Option<EndClause> {
         cast_first_child(self.syntax())
     }
@@ -114,6 +122,31 @@ define_node! {
     IfClause(SyntaxKind::IfClause)
 }
 impl_delimiter_accessors!(IfClause);
+
+define_node! {
+    ElseBranch(SyntaxKind::ElseBranch)
+}
+
+impl ElseBranch {
+    pub fn clause(&self) -> Option<ElseClause> {
+        cast_first_child(self.syntax())
+    }
+
+    pub fn action_list(&self) -> Option<ActionList> {
+        cast_first_child(self.syntax())
+    }
+}
+
+define_node! {
+    ElseClause(SyntaxKind::ElseClause)
+}
+impl_delimiter_accessors!(ElseClause);
+
+impl ElseClause {
+    pub fn cond(&self) -> Option<Expr> {
+        cast_first_child(self.syntax())
+    }
+}
 
 define_node! {
     ExprAction(SyntaxKind::ExprAction)

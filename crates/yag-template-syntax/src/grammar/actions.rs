@@ -6,7 +6,7 @@ use crate::token_set::TokenSet;
 use crate::{token_set, SyntaxKind};
 
 pub(crate) fn action_list(p: &mut Parser) {
-    const TERMINATORS: TokenSet = token_set! { End };
+    const TERMINATORS: TokenSet = token_set! { Else, End };
 
     let m = p.marker();
     while !p.done() && !p.at2(LEFT_DELIMS, TERMINATORS) {
@@ -33,6 +33,9 @@ pub(crate) fn if_action(p: &mut Parser) {
     let m = p.marker();
     if_clause(p);
     action_list(p);
+    while p.at2(LEFT_DELIMS, SyntaxKind::Else) {
+        else_branch(p);
+    }
     end_clause(p, "if action");
     p.wrap(m, SyntaxKind::If);
 }
@@ -46,6 +49,32 @@ pub(crate) fn if_clause(p: &mut Parser) {
     p.wrap(m, SyntaxKind::IfClause);
 }
 
+pub(crate) fn else_branch(p: &mut Parser) {
+    let m = p.marker();
+    else_clause(p);
+    action_list(p);
+    p.wrap(m, SyntaxKind::ElseBranch);
+}
+
+pub(crate) fn else_clause(p: &mut Parser) {
+    let m = p.marker();
+    left_delim(p);
+    p.expect(SyntaxKind::Else);
+    match p.cur() {
+        SyntaxKind::RightDelim | SyntaxKind::TrimmedRightDelim => p.eat(),
+        SyntaxKind::If => {
+            p.eat();
+            expr(p, false);
+            right_delim(p);
+        }
+        _ => p.error_with_recover(
+            "expected expression or right action delimiter after `else` keyword",
+            LEFT_DELIMS,
+        ),
+    }
+    p.wrap(m, SyntaxKind::ElseClause);
+}
+
 pub(crate) fn end_clause(p: &mut Parser, context: &str) {
     if !p.at2(LEFT_DELIMS, SyntaxKind::End) {
         p.error_with_recover(format!("missing end clause for {context}"), LEFT_DELIMS);
@@ -54,7 +83,7 @@ pub(crate) fn end_clause(p: &mut Parser, context: &str) {
 
     let m = p.marker();
     left_delim(p);
-    p.expect_with_recover(SyntaxKind::End, LEFT_DELIMS);
+    p.expect(SyntaxKind::End);
     right_delim(p);
     p.wrap(m, SyntaxKind::EndClause);
 }

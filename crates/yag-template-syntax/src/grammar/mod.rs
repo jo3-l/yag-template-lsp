@@ -37,7 +37,13 @@ fn print(indent: usize, element: SyntaxElement) {
 
 #[test]
 fn demo_parse() {
-    let text = r#"{{if true
+    let text = r#"{{if 1}}
+    true
+    {{else if asdfasdf}}
+    bcd
+    {{else}}
+    no
+    {{end}}
     "#;
     let parsed = parse(text);
     let node = SyntaxNode::new_root(parsed.root.clone());

@@ -182,6 +182,16 @@ impl<'s> Parser<'s> {
 
 // Error reporting.
 impl Parser<'_> {
+    pub(crate) fn expect(&mut self, kind: SyntaxKind) -> bool {
+        let at = self.at(kind);
+        if at {
+            self.eat();
+        } else {
+            self.error_and_eat(format!("expected {}", kind.name()));
+        }
+        at
+    }
+
     pub(crate) fn expect_with_recover(&mut self, kind: SyntaxKind, recoverable: TokenSet) -> bool {
         let at = self.at(kind);
         if at {

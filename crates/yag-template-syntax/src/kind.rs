@@ -34,6 +34,8 @@ pub enum SyntaxKind {
 
     /// The `if` keyword.
     If,
+    /// The `else` keyword.
+    Else,
     /// The `end` keyword.
     End,
 
@@ -47,6 +49,10 @@ pub enum SyntaxKind {
     IfConditional,
     /// The `{{if x}}` clause within an if-else compound action.
     IfClause,
+    /// A single `{{else}} actions...` branch of an if-else compound action.
+    ElseBranch,
+    /// The `{{else}}` or `{{else if x}}` clause within an else branch.
+    ElseClause,
     /// An expression used as an action, e.g., `{{fn 1 2 3}}`.
     ExprAction,
     /// A function call: `f x y z ...`.
@@ -76,6 +82,7 @@ impl SyntaxKind {
         use SyntaxKind::*;
         Some(match ident {
             "if" => If,
+            "else" => Else,
             "end" => End,
 
             "true" | "false" => Bool,
@@ -107,12 +114,15 @@ impl SyntaxKind {
             Ident => "identifier",
             Var => "variable",
             If => "`if`",
+            Else => "`else`",
             End => "`end`",
             Root => "root",
             ActionList => "action list",
             EndClause => "end clause",
             IfConditional => "if conditional",
             IfClause => "if clause",
+            ElseBranch => "else branch",
+            ElseClause => "else clause",
             ExprAction => "action",
             FuncCall => "function call",
             Bool => "boolean literal",
