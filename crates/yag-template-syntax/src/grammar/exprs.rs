@@ -20,7 +20,7 @@ pub(crate) fn func_call(p: &mut Parser, atomic: bool) {
     p.assert(SyntaxKind::Ident);
     if !atomic {
         while !p.at(FUNC_CALL_TERMINATOR) {
-            if !p.had_leading_whitespace() {
+            if !p.preceded_by_whitespace() {
                 p.error(
                     "expected whitespace before function call argument",
                     p.cur_range(),
@@ -46,7 +46,7 @@ pub(crate) fn var(p: &mut Parser, atomic: bool) {
             p.wrap(m, SyntaxKind::VarDecl);
         }
         SyntaxKind::Eq => {
-            if p.had_leading_whitespace() {
+            if p.preceded_by_whitespace() {
                 p.eat()
             } else {
                 p.error_and_eat("expected whitespace before equals sign")

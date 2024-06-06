@@ -18,7 +18,7 @@ pub(crate) struct Parser<'s> {
     errors: Vec<SyntaxError>,
     cur_start: TextSize,
     cur: SyntaxKind,
-    had_leading_whitespace: bool,
+    preceded_by_whitespace: bool,
 }
 
 impl<'s> Parser<'s> {
@@ -31,7 +31,7 @@ impl<'s> Parser<'s> {
             errors: Vec::new(),
             cur_start: TextSize::new(0),
             cur: current,
-            had_leading_whitespace: false,
+            preceded_by_whitespace: false,
         }
     }
 
@@ -131,9 +131,8 @@ impl<'s> Parser<'s> {
         &self.lexer.input()[self.cur_range()]
     }
 
-    /// Is the current token preceded by whitespace?
-    pub(crate) fn had_leading_whitespace(&self) -> bool {
-        self.had_leading_whitespace
+    pub(crate) fn preceded_by_whitespace(&self) -> bool {
+        self.preceded_by_whitespace
     }
 
     pub(crate) fn at(&self, pat: impl TokenPattern) -> bool {
@@ -175,7 +174,7 @@ impl<'s> Parser<'s> {
             kind: self.cur,
             text: self.cur_text(),
         });
-        self.had_leading_whitespace = self.cur == SyntaxKind::Whitespace;
+        self.preceded_by_whitespace = self.cur == SyntaxKind::Whitespace;
         self.cur_start = self.lexer.cursor();
         self.cur = self.lexer.next();
     }
