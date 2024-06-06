@@ -1,9 +1,9 @@
-use crate::parser::token_set::{TokenSet, LEFT_DELIMS, RIGHT_DELIMS};
+use crate::parser::token_set::{TokenSet, ACTION_DELIMS, LEFT_DELIMS, RIGHT_DELIMS};
 use crate::parser::{Checkpoint, Parser};
 use crate::SyntaxKind;
 
 pub(crate) fn expr(p: &mut Parser) {
-    const RECOVER: TokenSet = LEFT_DELIMS.union(RIGHT_DELIMS).add(SyntaxKind::RightParen);
+    const EXPR_RECOVERY_SET: TokenSet = ACTION_DELIMS.add(SyntaxKind::RightParen);
 
     let c = p.checkpoint();
     match p.cur() {
@@ -14,7 +14,7 @@ pub(crate) fn expr(p: &mut Parser) {
             var(p);
         }
         _ => {
-            p.error_recover("expected expression", RECOVER);
+            p.error_recover("expected expression", EXPR_RECOVERY_SET);
             return;
         }
     }
@@ -47,8 +47,6 @@ pub(crate) fn pipeline_stage(p: &mut Parser) {
 }
 
 pub(crate) fn atom(p: &mut Parser) {
-    const ALL_DELIMS: TokenSet = LEFT_DELIMS.union(RIGHT_DELIMS);
-
     let c = p.checkpoint();
     match p.cur() {
         SyntaxKind::LeftParen => parenthesized(p),
@@ -66,7 +64,7 @@ pub(crate) fn atom(p: &mut Parser) {
             p.eat();
             p.wrap(c, SyntaxKind::VarAccess);
         }
-        _ => p.error_recover("expected expression", ALL_DELIMS), // "expected atom" is not great end-user ux, so lie a little
+        _ => p.error_recover("expected expression", ACTION_DELIMS), // "expected atom" is not great end-user ux, so lie a little
     }
 
     // field access
