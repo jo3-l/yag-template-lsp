@@ -12,7 +12,7 @@ use std::marker::PhantomData;
 use rowan::SyntaxNodeChildren;
 pub use rowan::{SyntaxText, TextRange, TextSize};
 
-use crate::kind::SyntaxKind;
+pub use crate::kind::SyntaxKind;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum YagTemplateLanguage {}

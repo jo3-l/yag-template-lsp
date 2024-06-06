@@ -1,7 +1,7 @@
 use crate::grammar::token_sets::{LEFT_DELIMS, RIGHT_DELIMS};
-use crate::kind::SyntaxKind;
 use crate::parser::Parser;
 use crate::token_set::TokenSet;
+use crate::SyntaxKind;
 
 pub(crate) fn expr(p: &mut Parser, atomic: bool) {
     match p.cur() {

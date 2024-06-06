@@ -1,6 +1,5 @@
 use crate::ast_support::{cast_children, cast_first_child, define_node};
-use crate::kind::SyntaxKind;
-use crate::{AstChildren, AstNode, SyntaxNode, SyntaxText};
+use crate::{AstChildren, AstNode, SyntaxKind, SyntaxNode, SyntaxText};
 
 define_node! {
     Root(SyntaxKind::Root)

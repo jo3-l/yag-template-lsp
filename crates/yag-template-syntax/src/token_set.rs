@@ -1,7 +1,7 @@
 // Based on rust-analyzer's `TokenSet`.
 // https://github.com/rust-lang/rust-analyzer/blob/master/crates/parser/src/token_set.rs
 
-use crate::kind::SyntaxKind;
+use crate::SyntaxKind;
 
 #[derive(Default, Copy, Clone)]
 pub(crate) struct TokenSet(u64);
@@ -30,6 +30,6 @@ impl TokenSet {
 
 #[macro_export]
 macro_rules! token_set {
-    ($($t:ident),*) => { TokenSet::EMPTY$(.add(crate::kind::SyntaxKind::$t))* };
+    ($($t:ident),*) => { TokenSet::EMPTY$(.add(crate::SyntaxKind::$t))* };
     ($($t:ident),* ,) => { token_set!($($t),*) };
 }

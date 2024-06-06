@@ -1,10 +1,9 @@
 use rowan::{GreenNode, GreenNodeBuilder};
 
 use crate::error::SyntaxError;
-use crate::kind::SyntaxKind;
 use crate::lexer::Lexer;
 use crate::token_set::TokenSet;
-use crate::{TextRange, TextSize};
+use crate::{SyntaxKind, TextRange, TextSize};
 
 #[derive(Debug, Clone)]
 pub struct Parse {
