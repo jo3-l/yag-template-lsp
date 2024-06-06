@@ -77,7 +77,7 @@ impl RightDelim {
     }
 }
 
-macro_rules! impl_delimiter_accessors {
+macro_rules! impl_delim_accessors {
     ($name:ident) => {
         impl $name {
             pub fn left_delim(&self) -> Option<LeftDelim> {
@@ -94,7 +94,7 @@ macro_rules! impl_delimiter_accessors {
 define_node! {
     EndClause(SyntaxKind::EndClause)
 }
-impl_delimiter_accessors!(EndClause);
+impl_delim_accessors!(EndClause);
 
 define_node! {
     IfConditional(SyntaxKind::IfConditional)
@@ -121,7 +121,7 @@ impl IfConditional {
 define_node! {
     IfClause(SyntaxKind::IfClause)
 }
-impl_delimiter_accessors!(IfClause);
+impl_delim_accessors!(IfClause);
 
 define_node! {
     ElseBranch(SyntaxKind::ElseBranch)
@@ -140,7 +140,7 @@ impl ElseBranch {
 define_node! {
     ElseClause(SyntaxKind::ElseClause)
 }
-impl_delimiter_accessors!(ElseClause);
+impl_delim_accessors!(ElseClause);
 
 impl ElseClause {
     pub fn cond(&self) -> Option<Expr> {
@@ -151,7 +151,7 @@ impl ElseClause {
 define_node! {
     ExprAction(SyntaxKind::ExprAction)
 }
-impl_delimiter_accessors!(ExprAction);
+impl_delim_accessors!(ExprAction);
 
 #[derive(Debug, Clone, Hash)]
 pub enum Expr {
