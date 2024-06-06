@@ -156,9 +156,10 @@ impl_delimiter_accessors!(ExprAction);
 #[derive(Debug, Clone, Hash)]
 pub enum Expr {
     FuncCall(FuncCall),
+    ExprCall(ExprCall),
     Parenthesized(ParenthesizedExpr),
     Pipeline(Pipeline),
-    VarRef(VarRef),
+    VarAccess(VarAccess),
     VarDecl(VarDecl),
     VarAssign(VarAssign),
     Bool(Bool),
@@ -169,9 +170,10 @@ impl AstNode for Expr {
     fn cast(node: SyntaxNode) -> Option<Self> {
         match node.kind() {
             SyntaxKind::FuncCall => FuncCall::cast(node).map(Self::FuncCall),
+            SyntaxKind::ExprCall => ExprCall::cast(node).map(Self::ExprCall),
             SyntaxKind::ParenthesizedExpr => ParenthesizedExpr::cast(node).map(Self::Parenthesized),
             SyntaxKind::Pipeline => Pipeline::cast(node).map(Self::Pipeline),
-            SyntaxKind::VarRef => VarRef::cast(node).map(Self::VarRef),
+            SyntaxKind::VarAccess => VarAccess::cast(node).map(Self::VarAccess),
             SyntaxKind::VarDecl => VarDecl::cast(node).map(Self::VarDecl),
             SyntaxKind::VarAssign => VarAssign::cast(node).map(Self::VarAssign),
             SyntaxKind::Bool => Bool::cast(node).map(Self::Bool),
@@ -183,9 +185,10 @@ impl AstNode for Expr {
     fn syntax(&self) -> &SyntaxNode {
         match self {
             Expr::FuncCall(v) => v.syntax(),
+            Expr::ExprCall(v) => v.syntax(),
             Expr::Parenthesized(v) => v.syntax(),
             Expr::Pipeline(v) => v.syntax(),
-            Expr::VarRef(v) => v.syntax(),
+            Expr::VarAccess(v) => v.syntax(),
             Expr::VarDecl(v) => v.syntax(),
             Expr::VarAssign(v) => v.syntax(),
             Expr::Bool(v) => v.syntax(),
@@ -210,6 +213,20 @@ define_node! {
 
 impl FuncCall {
     pub fn func_name(&self) -> Option<Ident> {
+        cast_first_child(self.syntax())
+    }
+
+    pub fn call_args(&self) -> AstChildren<Expr> {
+        cast_children(self.syntax())
+    }
+}
+
+define_node! {
+    ExprCall(SyntaxKind::FuncCall)
+}
+
+impl ExprCall {
+    pub fn callee(&self) -> Option<Expr> {
         cast_first_child(self.syntax())
     }
 
@@ -247,7 +264,7 @@ define_node! {
 }
 
 impl PipelineStage {
-    pub fn func_call(&self) -> Option<FuncCall> {
+    pub fn target_expr(&self) -> Option<Expr> {
         cast_first_child(self.syntax())
     }
 }
@@ -263,10 +280,10 @@ impl Var {
 }
 
 define_node! {
-    VarRef(SyntaxKind::VarRef)
+    VarAccess(SyntaxKind::VarAccess)
 }
 
-impl VarRef {
+impl VarAccess {
     pub fn var(&self) -> Option<Var> {
         cast_first_child(self.syntax())
     }

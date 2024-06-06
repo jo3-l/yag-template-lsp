@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use tower_lsp::lsp_types::Url;
-use yag_template_syntax::grammar::{self, Parse};
+use yag_template_syntax::parser::{self, Parse};
 
 use crate::mapper::Mapper;
 
@@ -21,7 +21,7 @@ impl Workspace {
     }
 
     pub(crate) fn upsert_document(&mut self, uri: &Url, text: &str) {
-        let parse = grammar::parse(text);
+        let parse = parser::parse(text);
         let mapper = Mapper::new_utf16(text);
         self.documents
             .insert(uri.clone(), Document { parse, mapper });

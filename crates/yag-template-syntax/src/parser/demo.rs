@@ -1,22 +1,5 @@
-mod actions;
-mod exprs;
-mod token_sets;
-
-use actions::text_or_action;
-
-pub use crate::parser::Parse;
-use crate::parser::Parser;
-use crate::{NodeOrToken, SyntaxElement, SyntaxKind, SyntaxNode};
-
-pub fn parse(input: &str) -> Parse {
-    let mut p = Parser::new(input);
-    let m = p.checkpoint();
-    while !p.done() {
-        text_or_action(&mut p);
-    }
-    p.wrap(m, SyntaxKind::Root);
-    p.finish()
-}
+use crate::parser::parse;
+use crate::{NodeOrToken, SyntaxElement, SyntaxNode};
 
 fn print(indent: usize, element: SyntaxElement) {
     let kind = element.kind();
@@ -37,7 +20,8 @@ fn print(indent: usize, element: SyntaxElement) {
 
 #[test]
 fn demo_parse() {
-    let text = r#"{{(a) (b)}}
+    let text = r#"{{if $x}}
+    {{else 
     "#;
     let parsed = parse(text);
     let node = SyntaxNode::new_root(parsed.root.clone());

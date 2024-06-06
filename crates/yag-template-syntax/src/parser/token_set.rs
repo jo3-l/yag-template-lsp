@@ -9,10 +9,12 @@ pub(crate) struct TokenSet(u64);
 const _: () = assert!(SyntaxKind::__LAST as u32 <= u64::BITS);
 
 impl TokenSet {
-    pub(crate) const EMPTY: TokenSet = TokenSet(0);
+    pub(crate) const fn new() -> TokenSet {
+        TokenSet(0)
+    }
 
     pub(crate) const fn of(kind: SyntaxKind) -> TokenSet {
-        TokenSet::EMPTY.add(kind)
+        TokenSet::new().add(kind)
     }
 
     pub(crate) const fn add(self, kind: SyntaxKind) -> TokenSet {
@@ -28,9 +30,14 @@ impl TokenSet {
     }
 }
 
-macro_rules! token_set {
-    ($($t:ident),*) => { TokenSet::EMPTY$(.add(crate::SyntaxKind::$t))* };
-    ($($t:ident),* ,) => { token_set!($($t),*) };
-}
+pub(crate) const LEFT_DELIMS: TokenSet = TokenSet::new()
+    .add(SyntaxKind::LeftDelim)
+    .add(SyntaxKind::TrimmedLeftDelim);
 
-pub(crate) use token_set;
+pub(crate) const RIGHT_DELIMS: TokenSet = TokenSet::new()
+    .add(SyntaxKind::RightDelim)
+    .add(SyntaxKind::TrimmedRightDelim);
+
+pub(crate) const TRIVIA: TokenSet = TokenSet::of(SyntaxKind::Comment);
+
+pub(crate) const WHITESPACE_OR_TRIVIA: TokenSet = TRIVIA.add(SyntaxKind::Whitespace);

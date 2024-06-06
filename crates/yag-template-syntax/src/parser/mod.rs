@@ -1,0 +1,281 @@
+mod actions;
+mod demo;
+mod exprs;
+mod token_set;
+
+use actions::text_or_action;
+use drop_bomb::DropBomb;
+pub(crate) use rowan::Checkpoint;
+use rowan::{GreenNode, GreenNodeBuilder};
+
+use crate::error::SyntaxError;
+use crate::lexer::Lexer;
+use crate::parser::token_set::{TokenSet, TRIVIA, WHITESPACE_OR_TRIVIA};
+use crate::{SyntaxKind, TextRange, TextSize};
+
+pub fn parse(input: &str) -> Parse {
+    let mut p = Parser::new(input);
+    let m = p.checkpoint();
+    while !p.done() {
+        text_or_action(&mut p);
+    }
+    p.wrap(m, SyntaxKind::Root);
+    p.finish()
+}
+
+#[derive(Debug, Clone)]
+pub struct Parse {
+    pub root: GreenNode,
+    pub errors: Vec<SyntaxError>,
+}
+
+#[derive(Debug)]
+pub(crate) struct Parser<'s> {
+    green: GreenNodeBuilder<'static>,
+    lexer: Lexer<'s>,
+    errors: Vec<SyntaxError>,
+    cur_start: TextSize,
+    cur: SyntaxKind,
+}
+
+impl<'s> Parser<'s> {
+    pub(crate) fn new(input: &'s str) -> Parser {
+        let mut lexer = Lexer::new(input);
+        let current = lexer.next();
+        Parser {
+            green: GreenNodeBuilder::new(),
+            lexer,
+            errors: Vec::new(),
+            cur_start: TextSize::new(0),
+            cur: current,
+        }
+    }
+
+    pub(crate) fn finish(self) -> Parse {
+        Parse {
+            root: self.green.finish(),
+            errors: self.errors,
+        }
+    }
+}
+
+pub(crate) struct Marker(DropBomb);
+
+impl Marker {
+    /// Mark the subtree starting at the beginning of the marker as complete.
+    pub(crate) fn complete(mut self, p: &mut Parser) {
+        self.0.defuse();
+        p.green.finish_node();
+    }
+}
+
+// Manipulating the parse tree.
+impl Parser<'_> {
+    /// Begin a new subtree of the given kind, containing all subsequent nodes
+    /// until `Marker::complete` is called.
+    #[must_use]
+    pub(crate) fn start(&mut self, kind: SyntaxKind) -> Marker {
+        self.green.start_node(kind.into());
+        Marker(DropBomb::new(
+            "all calls to Parser::start() must have corresponding Parser::complete() call",
+        ))
+    }
+
+    /// Create a checkpoint which can be used (with the aid of [Parser::wrap])
+    /// to retroactively wrap nodes in a subtree. It is useful when the precise
+    /// type of the parent node is not known until further parsing occurs.
+    pub(crate) fn checkpoint(&mut self) -> Checkpoint {
+        self.green.checkpoint()
+    }
+
+    /// Wrap all nodes between the checkpoint and the current position within a
+    /// new parent node of the given kind.
+    pub(crate) fn wrap(&mut self, c: Checkpoint, kind: SyntaxKind) {
+        self.green.start_node_at(c, kind.into());
+        self.green.finish_node();
+    }
+}
+
+// Accessing and consuming tokens. In general, all methods ignore trivia but not
+// whitespace (which can be significant) unless stated otherwise.
+impl<'s> Parser<'s> {
+    pub(crate) fn done(&self) -> bool {
+        self.cur == SyntaxKind::Eof
+    }
+
+    pub(crate) fn cur(&self) -> SyntaxKind {
+        self.cur
+    }
+
+    pub(crate) fn peek_non_space(&mut self) -> SyntaxKind {
+        let checkpoint = self.lexer.checkpoint();
+        loop {
+            let token = self.lexer.next();
+            if !WHITESPACE_OR_TRIVIA.contains(token) {
+                self.lexer.restore(checkpoint);
+                break token;
+            }
+        }
+    }
+
+    pub(crate) fn cur_start(&self) -> TextSize {
+        self.cur_start
+    }
+
+    pub(crate) fn cur_end(&self) -> TextSize {
+        self.lexer.cursor()
+    }
+
+    pub(crate) fn cur_range(&self) -> TextRange {
+        TextRange::new(self.cur_start(), self.cur_end())
+    }
+
+    pub(crate) fn cur_text(&self) -> &'s str {
+        &self.lexer.input()[self.cur_range()]
+    }
+
+    pub(crate) fn at(&self, pat: impl TokenPattern) -> bool {
+        pat.matches(self.cur)
+    }
+
+    pub(crate) fn at_ignore_space(&mut self, pat: impl TokenPattern) -> bool {
+        if self.at(SyntaxKind::Whitespace) {
+            pat.matches(self.peek_non_space())
+        } else {
+            self.at(pat)
+        }
+    }
+
+    pub(crate) fn at2(&mut self, pat0: impl TokenPattern, pat1: impl TokenPattern) -> bool {
+        pat0.matches(self.cur) && pat1.matches(self.peek_non_space())
+    }
+
+    pub(crate) fn eat_if(&mut self, pat: impl TokenPattern) -> bool {
+        let at = self.at(pat);
+        if at {
+            self.eat();
+        }
+        at
+    }
+
+    /// Add the current token to the parse tree, then advance to the next
+    /// non-trivia token.
+    pub(crate) fn eat(&mut self) {
+        self.eat_one();
+        self.eat_trivia();
+    }
+
+    /// Eat leading whitespace and trivia (possibly interspersed), and report
+    /// whether any whitespace was consumed.
+    pub(crate) fn eat_whitespace(&mut self) -> bool {
+        let at_whitespace = self.at(SyntaxKind::Whitespace);
+        while self.at(SyntaxKind::Whitespace) {
+            self.eat();
+        }
+        at_whitespace
+    }
+
+    fn eat_trivia(&mut self) {
+        while self.at(TRIVIA) {
+            self.eat_one();
+        }
+    }
+
+    fn eat_one(&mut self) {
+        if self.cur != SyntaxKind::Eof {
+            self.green.token(self.cur.into(), self.cur_text());
+        }
+        self.cur_start = self.lexer.cursor();
+        self.cur = self.lexer.next();
+    }
+}
+
+// Error reporting and recovery.
+impl Parser<'_> {
+    /// Eat the current token if it matches `kind`, otherwise produce an error
+    /// and continue via [Parser::error_recover]. The boolean result indicates whether
+    /// the token matched.
+    pub(crate) fn expect_recover(&mut self, kind: SyntaxKind, recover: TokenSet) -> bool {
+        let at = self.at(kind);
+        if at {
+            self.eat();
+        } else {
+            self.error_recover(format!("expected {}", kind.name()), recover);
+        }
+        at
+    }
+
+    /// Unconditionally eat the current token, producing an error if it does not
+    /// match `kind`. For improved error recovery, prefer
+    /// [Parser::expect_recover] when possible; see the documentation for
+    /// [Parser::error_recover] for further explanation.
+    pub(crate) fn expect(&mut self, kind: SyntaxKind) -> bool {
+        let at = self.at(kind);
+        if at {
+            self.eat();
+        } else {
+            self.error_and_eat(format!("expected {}", kind.name()));
+        }
+        at
+    }
+
+    /// Produce an error and eat the current token if it is not in the `recover`
+    /// set.
+    ///
+    /// A careful choice of `recover` can minimize the impact of syntax errors
+    /// on the parse tree produced for subsequent, otherwise correct, input. For
+    /// instance, generally one will want to mark both left action delimiters
+    /// (`{{`, `{{- `) as recoverable so they are not consumed upon error. This
+    /// way, given an input such as
+    /// ```text
+    /// {{$x := {{add 1 2}}
+    /// ```
+    /// when the parser encounters the `{{` (where an expression is expected),
+    /// an error is produced but the `{{` is not consumed, allowing `{{add 1 2}}`
+    /// to be parsed completely.
+    pub(crate) fn error_recover(&mut self, message: impl Into<String>, recover: TokenSet) {
+        if self.at(recover) {
+            self.error(message, TextRange::empty(self.cur_start));
+        } else {
+            self.error_and_eat(message);
+        }
+    }
+
+    /// Create an error node and consume the current token. When possible,
+    /// prefer to call [Parser::error_recover] so that the impact of the error
+    /// on parsing of subsequent correct input can be minimized.
+    pub(crate) fn error_and_eat(&mut self, message: impl Into<String>) {
+        self.error(message, self.cur_range());
+        self.eat();
+    }
+
+    /// Emit a syntax error at the given span without touching the current token
+    /// or the parse tree.
+    ///
+    /// Callers should take special care to ensure that the parser does not get
+    /// stuck if this method is called directly.
+    pub(crate) fn error(&mut self, message: impl Into<String>, range: TextRange) {
+        self.errors.push(SyntaxError::new(message, range));
+    }
+
+    /// Call [Parser::error] at the range of the current token.
+    pub(crate) fn error_here(&mut self, message: impl Into<String>) {
+        self.error(message, self.cur_range())
+    }
+}
+
+pub(crate) trait TokenPattern {
+    fn matches(self, kind: SyntaxKind) -> bool;
+}
+
+impl TokenPattern for SyntaxKind {
+    fn matches(self, kind: SyntaxKind) -> bool {
+        self == kind
+    }
+}
+
+impl TokenPattern for TokenSet {
+    fn matches(self, kind: SyntaxKind) -> bool {
+        self.contains(kind)
+    }
+}

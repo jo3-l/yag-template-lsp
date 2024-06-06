@@ -1,17 +1,16 @@
 pub mod ast;
 mod ast_support;
 pub mod error;
-pub mod grammar;
 pub mod kind;
 pub mod lexer;
-mod parser;
-mod token_set;
+pub mod parser;
 
 use std::marker::PhantomData;
 
 use rowan::SyntaxNodeChildren;
 pub use rowan::{SyntaxText, TextRange, TextSize};
 
+pub use crate::error::SyntaxError;
 pub use crate::kind::SyntaxKind;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]

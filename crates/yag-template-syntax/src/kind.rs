@@ -63,6 +63,11 @@ pub enum SyntaxKind {
     ExprAction,
     /// A function call: `f x y z ...`.
     FuncCall,
+    /// An expression called with arguments: `.Foo.Bar x y z ...`. At the time
+    /// of writing, the real template executor written in Go only supports
+    /// calling methods with arguments, but for maximal generality we permit the
+    /// callee to be any expression.
+    ExprCall,
     /// A parenthesized expression: `(...)`.
     ParenthesizedExpr,
     /// A pipeline: `{{x | f y z | g a b c}}`.
@@ -73,8 +78,9 @@ pub enum SyntaxKind {
     /// For instance, in the previous snippet `{{x | f y z | g a b c}}`, there
     /// are two stages, `| f y z` and `| g a b c`.
     PipelineStage,
-    /// A variable reference: `$x`.
-    VarRef,
+    /// A variable that is evaluated as an expression (not as part of a
+    /// declaration of an assignment): `$x`.
+    VarAccess,
     /// A variable declaration: `$x := y`.
     VarDecl,
     /// A variable assignment: `$x = y`.
@@ -104,13 +110,6 @@ impl SyntaxKind {
             "true" | "false" => Bool,
             _ => return None,
         })
-    }
-
-    pub fn is_trivia(self) -> bool {
-        // NOTE: there are some places in the grammar where whitespace is
-        // significant, but it is easier to treat these as exceptional cases
-        // rather than the norm
-        matches!(self, SyntaxKind::Comment | SyntaxKind::Whitespace)
     }
 
     pub fn name(self) -> &'static str {
@@ -144,12 +143,13 @@ impl SyntaxKind {
             ElseClause => "else clause",
             ExprAction => "action",
             FuncCall => "function call",
+            ExprCall => "expression called with arguments",
             ParenthesizedExpr => "parenthesized expression",
             Pipeline => "pipeline",
             PipelineStage => "pipeline stage",
             Bool => "boolean literal",
             Int => "integer literal",
-            VarRef => "variable reference",
+            VarAccess => "variable access",
             VarAssign => "variable assignment",
             VarDecl => "variable declaration",
 

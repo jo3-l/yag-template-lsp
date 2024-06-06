@@ -1,15 +1,16 @@
-use super::token_sets::RIGHT_DELIMS;
-use crate::grammar::exprs::expr;
-use crate::grammar::token_sets::LEFT_DELIMS;
+use super::token_set::{LEFT_DELIMS, RIGHT_DELIMS};
+use crate::parser::exprs::expr;
+use crate::parser::token_set::TokenSet;
 use crate::parser::Parser;
-use crate::token_set::{token_set, TokenSet};
 use crate::SyntaxKind;
 
 pub(crate) fn action_list(p: &mut Parser) {
-    const TERMINATORS: TokenSet = token_set! { Else, End };
+    const ACTION_LIST_TERMINATORS: TokenSet =
+        TokenSet::new().add(SyntaxKind::End).add(SyntaxKind::Else);
 
     let action_list = p.start(SyntaxKind::ActionList);
-    while !p.done() && !p.at2(LEFT_DELIMS, TERMINATORS) {
+    // until EOF, `{{end`, or `{{else`
+    while !p.done() && !p.at2(LEFT_DELIMS, ACTION_LIST_TERMINATORS) {
         text_or_action(p);
     }
     action_list.complete(p);
@@ -23,7 +24,7 @@ pub(crate) fn text_or_action(p: &mut Parser) {
     if !p.at(LEFT_DELIMS) {
         return p.error_and_eat("expected left action delimiter");
     }
-    match p.peek() {
+    match p.peek_non_space() {
         SyntaxKind::If => if_action(p),
         _ => expr_action(p),
     }
@@ -43,8 +44,15 @@ pub(crate) fn if_action(p: &mut Parser) {
 pub(crate) fn if_clause(p: &mut Parser) {
     let if_clause = p.start(SyntaxKind::IfClause);
     left_delim(p);
-    p.expect_with_recover(SyntaxKind::If, LEFT_DELIMS);
-    expr(p, false);
+    p.eat_whitespace();
+
+    let saw_if_kw = p.expect(SyntaxKind::If);
+    if saw_if_kw && !p.eat_whitespace() {
+        p.error_here("expected space between `if` keyword and condition");
+    }
+
+    expr(p);
+    p.eat_whitespace();
     right_delim(p);
     if_clause.complete(p);
 }
@@ -60,30 +68,34 @@ pub(crate) fn else_clause(p: &mut Parser) {
     let else_clause = p.start(SyntaxKind::ElseClause);
     left_delim(p);
     p.expect(SyntaxKind::Else);
+    p.eat_whitespace();
     match p.cur() {
         SyntaxKind::RightDelim | SyntaxKind::TrimmedRightDelim => p.eat(),
         SyntaxKind::If => {
             p.eat();
-            expr(p, false);
+            expr(p);
+            p.eat_whitespace();
             right_delim(p);
         }
-        _ => p.error_with_recover(
-            "expected expression or right action delimiter after `else` keyword",
+        _ => p.error_recover(
+            "expected `if` keyword or right action delimiter after `else` keyword",
             LEFT_DELIMS,
         ),
     }
     else_clause.complete(p);
 }
 
-pub(crate) fn end_clause(p: &mut Parser, context: &str) {
+pub(crate) fn end_clause(p: &mut Parser, for_context: &str) {
     if !p.at2(LEFT_DELIMS, SyntaxKind::End) {
-        p.error_with_recover(format!("missing end clause for {context}"), LEFT_DELIMS);
+        p.error_recover(format!("missing end clause for {for_context}"), LEFT_DELIMS);
         return;
     }
 
     let end_clause = p.start(SyntaxKind::EndClause);
     left_delim(p);
+    p.eat_whitespace();
     p.expect(SyntaxKind::End);
+    p.eat_whitespace();
     right_delim(p);
     end_clause.complete(p);
 }
@@ -91,7 +103,15 @@ pub(crate) fn end_clause(p: &mut Parser, context: &str) {
 pub(crate) fn expr_action(p: &mut Parser) {
     let expr_action = p.start(SyntaxKind::ExprAction);
     left_delim(p);
-    expr(p, false);
+    p.eat_whitespace();
+    expr(p);
+    p.eat_whitespace();
+    while !p.at(RIGHT_DELIMS) && !p.at(LEFT_DELIMS) {
+        p.error_and_eat(format!(
+            "unexpected {} (want right action delimiter)",
+            p.cur().name()
+        ))
+    }
     right_delim(p);
     expr_action.complete(p);
 }
@@ -104,6 +124,6 @@ pub(crate) fn left_delim(p: &mut Parser) {
 
 pub(crate) fn right_delim(p: &mut Parser) {
     if !p.eat_if(RIGHT_DELIMS) {
-        p.error_with_recover("expected right action delimiter", LEFT_DELIMS);
+        p.error_recover("expected right action delimiter", LEFT_DELIMS);
     }
 }
