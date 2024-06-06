@@ -15,11 +15,11 @@ use crate::{SyntaxKind, TextRange, TextSize};
 
 pub fn parse(input: &str) -> Parse {
     let mut p = Parser::new(input);
-    let m = p.checkpoint();
+    let root = p.start(SyntaxKind::Root);
     while !p.done() {
         text_or_action(&mut p);
     }
-    p.wrap(m, SyntaxKind::Root);
+    root.complete(&mut p);
     p.finish()
 }
 
@@ -165,8 +165,8 @@ impl<'s> Parser<'s> {
         self.eat_trivia();
     }
 
-    /// Eat leading whitespace and trivia (possibly interspersed), and report
-    /// whether any whitespace was consumed.
+    /// Eat all leading whitespace and trivia and report whether any whitespace
+    /// was consumed.
     pub(crate) fn eat_whitespace(&mut self) -> bool {
         let at_whitespace = self.at(SyntaxKind::Whitespace);
         while self.at(SyntaxKind::Whitespace) {
@@ -219,10 +219,10 @@ impl Parser<'_> {
         at
     }
 
-    /// Produce an error and eat the current token if it is not in the `recover`
-    /// set.
+    /// Produce an error and eat the current token if it is not in the
+    /// `recovery` set.
     ///
-    /// A careful choice of `recover` can minimize the impact of syntax errors
+    /// A careful choice of `recovery` can minimize the impact of syntax errors
     /// on the parse tree produced for subsequent, otherwise correct, input. For
     /// instance, generally one will want to mark both left action delimiters
     /// (`{{`, `{{- `) as recoverable so they are not consumed upon error. This
@@ -231,10 +231,10 @@ impl Parser<'_> {
     /// {{$x := {{add 1 2}}
     /// ```
     /// when the parser encounters the `{{` (where an expression is expected),
-    /// an error is produced but the `{{` is not consumed, allowing `{{add 1 2}}`
-    /// to be parsed completely.
-    pub(crate) fn error_recover(&mut self, message: impl Into<String>, recover: TokenSet) {
-        if self.at(recover) {
+    /// an error is produced but the `{{` is not consumed, allowing `{{add 1
+    /// 2}}` to be parsed completely.
+    pub(crate) fn error_recover(&mut self, message: impl Into<String>, recovery: TokenSet) {
+        if self.at(recovery) {
             self.error(message, TextRange::empty(self.cur_start));
         } else {
             self.error_and_eat(message);
