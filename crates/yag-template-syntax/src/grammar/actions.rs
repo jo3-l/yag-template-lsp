@@ -33,7 +33,7 @@ pub(crate) fn if_action(p: &mut Parser) {
     let m = p.marker();
     if_clause(p);
     action_list(p);
-    end_clause(p);
+    end_clause(p, "if action");
     p.wrap(m, SyntaxKind::If);
 }
 
@@ -46,7 +46,12 @@ pub(crate) fn if_clause(p: &mut Parser) {
     p.wrap(m, SyntaxKind::IfClause);
 }
 
-pub(crate) fn end_clause(p: &mut Parser) {
+pub(crate) fn end_clause(p: &mut Parser, context: &str) {
+    if !p.at2(LEFT_DELIMS, SyntaxKind::End) {
+        p.error_with_recover(format!("missing end clause for {context}"), LEFT_DELIMS);
+        return;
+    }
+
     let m = p.marker();
     left_delim(p);
     p.expect_with_recover(SyntaxKind::End, LEFT_DELIMS);
