@@ -19,31 +19,9 @@ pub(crate) fn expr(p: &mut Parser) {
         }
     }
 
+    // TODO: field access
+    maybe_wrap_with_call_args(p, c);
     maybe_wrap_in_pipeline(p, c);
-
-    // field access
-    // call args
-    // pipeline
-}
-
-pub(crate) fn maybe_wrap_in_pipeline(p: &mut Parser, c: Checkpoint) {
-    if !p.at_ignore_space(SyntaxKind::Pipe) {
-        return;
-    }
-
-    while p.at_ignore_space(SyntaxKind::Pipe) {
-        p.eat_whitespace();
-        pipeline_stage(p);
-    }
-    p.wrap(c, SyntaxKind::Pipeline);
-}
-
-pub(crate) fn pipeline_stage(p: &mut Parser) {
-    let pipeline_stage = p.start(SyntaxKind::PipelineStage);
-    p.expect(SyntaxKind::Pipe);
-    p.eat_whitespace();
-    expr(p);
-    pipeline_stage.complete(p);
 }
 
 pub(crate) fn atom(p: &mut Parser) {
@@ -67,7 +45,41 @@ pub(crate) fn atom(p: &mut Parser) {
         _ => p.error_recover("expected expression", ACTION_DELIMS), // "expected atom" is not great end-user ux, so lie a little
     }
 
-    // field access
+    // TODO: field access
+}
+
+const CALL_TERMINATORS: TokenSet = LEFT_DELIMS
+    .union(RIGHT_DELIMS)
+    .add(SyntaxKind::Pipe)
+    .add(SyntaxKind::RightParen)
+    .add(SyntaxKind::Eof);
+
+pub(crate) fn maybe_wrap_with_call_args(p: &mut Parser, c: Checkpoint) {
+    while !p.at_ignore_space(CALL_TERMINATORS) {
+        p.eat_whitespace();
+        atom(p);
+    }
+    p.wrap(c, SyntaxKind::ExprCall);
+}
+
+pub(crate) fn maybe_wrap_in_pipeline(p: &mut Parser, c: Checkpoint) {
+    if !p.at_ignore_space(SyntaxKind::Pipe) {
+        return;
+    }
+
+    while p.at_ignore_space(SyntaxKind::Pipe) {
+        p.eat_whitespace();
+        pipeline_stage(p);
+    }
+    p.wrap(c, SyntaxKind::Pipeline);
+}
+
+pub(crate) fn pipeline_stage(p: &mut Parser) {
+    let pipeline_stage = p.start(SyntaxKind::PipelineStage);
+    p.expect(SyntaxKind::Pipe);
+    p.eat_whitespace();
+    expr(p);
+    pipeline_stage.complete(p);
 }
 
 pub(crate) fn parenthesized(p: &mut Parser) {
@@ -81,12 +93,6 @@ pub(crate) fn parenthesized(p: &mut Parser) {
 }
 
 pub(crate) fn func_call(p: &mut Parser, accept_args: bool) {
-    const CALL_TERMINATORS: TokenSet = LEFT_DELIMS
-        .union(RIGHT_DELIMS)
-        .add(SyntaxKind::Pipe)
-        .add(SyntaxKind::RightParen)
-        .add(SyntaxKind::Eof);
-
     let func_call = p.start(SyntaxKind::FuncCall);
     p.expect(SyntaxKind::Ident);
 
