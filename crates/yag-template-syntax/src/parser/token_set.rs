@@ -14,11 +14,11 @@ impl TokenSet {
     }
 
     pub(crate) const fn of(kind: SyntaxKind) -> TokenSet {
-        TokenSet::new().add(kind)
+        TokenSet(mask(kind))
     }
 
     pub(crate) const fn add(self, kind: SyntaxKind) -> TokenSet {
-        TokenSet(self.0 | (1 << (kind as u64)))
+        TokenSet(self.0 | mask(kind))
     }
 
     pub(crate) const fn union(&self, other: TokenSet) -> TokenSet {
@@ -26,8 +26,12 @@ impl TokenSet {
     }
 
     pub(crate) const fn contains(&self, kind: SyntaxKind) -> bool {
-        (self.0 >> (kind as u64) & 1) != 0
+        (self.0 & mask(kind)) != 0
     }
+}
+
+const fn mask(kind: SyntaxKind) -> u64 {
+    1 << (kind as u64)
 }
 
 pub(crate) const LEFT_DELIMS: TokenSet = TokenSet::new()
@@ -37,6 +41,8 @@ pub(crate) const LEFT_DELIMS: TokenSet = TokenSet::new()
 pub(crate) const RIGHT_DELIMS: TokenSet = TokenSet::new()
     .add(SyntaxKind::RightDelim)
     .add(SyntaxKind::TrimmedRightDelim);
+
+pub(crate) const ACTION_DELIMS: TokenSet = LEFT_DELIMS.union(RIGHT_DELIMS);
 
 pub(crate) const TRIVIA: TokenSet = TokenSet::of(SyntaxKind::Comment);
 
