@@ -8,11 +8,11 @@ use crate::{token_set, SyntaxKind};
 pub(crate) fn action_list(p: &mut Parser) {
     const TERMINATORS: TokenSet = token_set! { Else, End };
 
-    let m = p.marker();
+    let action_list = p.start(SyntaxKind::ActionList);
     while !p.done() && !p.at2(LEFT_DELIMS, TERMINATORS) {
         text_or_action(p);
     }
-    p.wrap(m, SyntaxKind::ActionList);
+    action_list.complete(p);
 }
 
 pub(crate) fn text_or_action(p: &mut Parser) {
@@ -30,34 +30,34 @@ pub(crate) fn text_or_action(p: &mut Parser) {
 }
 
 pub(crate) fn if_action(p: &mut Parser) {
-    let m = p.marker();
+    let if_action = p.start(SyntaxKind::IfConditional);
     if_clause(p);
     action_list(p);
     while p.at2(LEFT_DELIMS, SyntaxKind::Else) {
         else_branch(p);
     }
     end_clause(p, "if action");
-    p.wrap(m, SyntaxKind::If);
+    if_action.complete(p);
 }
 
 pub(crate) fn if_clause(p: &mut Parser) {
-    let m = p.marker();
+    let if_clause = p.start(SyntaxKind::IfClause);
     left_delim(p);
     p.expect_with_recover(SyntaxKind::If, LEFT_DELIMS);
     expr(p, false);
     right_delim(p);
-    p.wrap(m, SyntaxKind::IfClause);
+    if_clause.complete(p);
 }
 
 pub(crate) fn else_branch(p: &mut Parser) {
-    let m = p.marker();
+    let else_branch = p.start(SyntaxKind::ElseBranch);
     else_clause(p);
     action_list(p);
-    p.wrap(m, SyntaxKind::ElseBranch);
+    else_branch.complete(p);
 }
 
 pub(crate) fn else_clause(p: &mut Parser) {
-    let m = p.marker();
+    let else_clause = p.start(SyntaxKind::ElseClause);
     left_delim(p);
     p.expect(SyntaxKind::Else);
     match p.cur() {
@@ -72,7 +72,7 @@ pub(crate) fn else_clause(p: &mut Parser) {
             LEFT_DELIMS,
         ),
     }
-    p.wrap(m, SyntaxKind::ElseClause);
+    else_clause.complete(p);
 }
 
 pub(crate) fn end_clause(p: &mut Parser, context: &str) {
@@ -81,19 +81,19 @@ pub(crate) fn end_clause(p: &mut Parser, context: &str) {
         return;
     }
 
-    let m = p.marker();
+    let end_clause = p.start(SyntaxKind::EndClause);
     left_delim(p);
     p.expect(SyntaxKind::End);
     right_delim(p);
-    p.wrap(m, SyntaxKind::EndClause);
+    end_clause.complete(p);
 }
 
 pub(crate) fn expr_action(p: &mut Parser) {
-    let m = p.marker();
+    let expr_action = p.start(SyntaxKind::ExprAction);
     left_delim(p);
     expr(p, false);
     right_delim(p);
-    p.wrap(m, SyntaxKind::ExprAction);
+    expr_action.complete(p);
 }
 
 pub(crate) fn left_delim(p: &mut Parser) {

@@ -14,12 +14,12 @@ pub(crate) fn expr(p: &mut Parser, atomic: bool) {
 }
 
 pub(crate) fn func_call(p: &mut Parser, atomic: bool) {
-    const FUNC_CALL_TERMINATOR: TokenSet = LEFT_DELIMS.union(RIGHT_DELIMS).add(SyntaxKind::Eof);
+    const FUNC_CALL_TERMINATORS: TokenSet = LEFT_DELIMS.union(RIGHT_DELIMS).add(SyntaxKind::Eof);
 
-    let m = p.marker();
+    let func_call = p.start(SyntaxKind::FuncCall);
     p.assert(SyntaxKind::Ident);
     if !atomic {
-        while !p.at(FUNC_CALL_TERMINATOR) {
+        while !p.at(FUNC_CALL_TERMINATORS) {
             if !p.preceded_by_whitespace() {
                 p.error(
                     "expected whitespace before function call argument",
@@ -29,21 +29,21 @@ pub(crate) fn func_call(p: &mut Parser, atomic: bool) {
             expr(p, true);
         }
     }
-    p.wrap(m, SyntaxKind::FuncCall);
+    func_call.complete(p);
 }
 
 pub(crate) fn var(p: &mut Parser, atomic: bool) {
-    let m = p.marker();
+    let c = p.checkpoint();
     p.assert(SyntaxKind::Var);
     if atomic {
-        return p.wrap(m, SyntaxKind::VarRef);
+        return p.wrap(c, SyntaxKind::VarRef);
     }
 
     match p.cur() {
         SyntaxKind::ColonEq => {
             p.eat();
             expr(p, false);
-            p.wrap(m, SyntaxKind::VarDecl);
+            p.wrap(c, SyntaxKind::VarDecl);
         }
         SyntaxKind::Eq => {
             if p.preceded_by_whitespace() {
@@ -52,8 +52,8 @@ pub(crate) fn var(p: &mut Parser, atomic: bool) {
                 p.error_and_eat("expected whitespace before equals sign")
             }
             expr(p, false);
-            p.wrap(m, SyntaxKind::VarAssign);
+            p.wrap(c, SyntaxKind::VarAssign);
         }
-        _ => p.abandon(m),
+        _ => (),
     }
 }

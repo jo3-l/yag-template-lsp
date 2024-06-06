@@ -1,4 +1,5 @@
-use rowan::{GreenNode, GreenNodeBuilder};
+use drop_bomb::DropBomb;
+use rowan::{Checkpoint, GreenNode, GreenNodeBuilder};
 
 use crate::error::SyntaxError;
 use crate::lexer::Lexer;
@@ -13,7 +14,7 @@ pub struct Parse {
 
 #[derive(Debug)]
 pub(crate) struct Parser<'s> {
-    events: Vec<Event<'s>>,
+    green: GreenNodeBuilder<'static>,
     lexer: Lexer<'s>,
     errors: Vec<SyntaxError>,
     cur_start: TextSize,
@@ -26,7 +27,7 @@ impl<'s> Parser<'s> {
         let mut lexer = Lexer::new(input);
         let current = lexer.next();
         Parser {
-            events: Vec::new(),
+            green: GreenNodeBuilder::new(),
             lexer,
             errors: Vec::new(),
             cur_start: TextSize::new(0),
@@ -37,60 +38,38 @@ impl<'s> Parser<'s> {
 
     pub(crate) fn finish(self) -> Parse {
         Parse {
-            root: process(self.events),
+            root: self.green.finish(),
             errors: self.errors,
         }
     }
 }
 
-#[derive(Debug)]
-enum Event<'s> {
-    Abandoned,
-    Start(Option<SyntaxKind>),
-    Finish,
-    Leaf { kind: SyntaxKind, text: &'s str },
-}
+pub(crate) struct Marker(DropBomb);
 
-fn process(events: Vec<Event>) -> GreenNode {
-    let mut builder = GreenNodeBuilder::new();
-    for event in events {
-        match event {
-            Event::Abandoned => (),
-            Event::Start(None) => {
-                panic!("unexpected pending start event (must be completed or abandoned)")
-            }
-            Event::Start(Some(kind)) => builder.start_node(kind.into()),
-            Event::Finish => builder.finish_node(),
-            Event::Leaf { kind, text } => builder.token(kind.into(), text),
-        }
+impl Marker {
+    pub(crate) fn complete(mut self, p: &mut Parser) {
+        self.0.defuse();
+        p.green.finish_node();
     }
-    builder.finish()
 }
-
-#[derive(Debug)]
-pub(crate) struct Marker(usize);
 
 // Manipulating the parse tree.
 impl Parser<'_> {
     #[must_use]
-    pub(crate) fn marker(&mut self) -> Marker {
-        let idx = self.events.len();
-        self.events.push(Event::Start(None));
-        Marker(idx)
+    pub(crate) fn start(&mut self, kind: SyntaxKind) -> Marker {
+        self.green.start_node(kind.into());
+        Marker(DropBomb::new(
+            "all calls to Parser::start() must have corresponding Parser::complete()",
+        ))
     }
 
-    pub(crate) fn abandon(&mut self, marker: Marker) {
-        self.events[marker.0] = Event::Abandoned;
+    pub(crate) fn checkpoint(&mut self) -> Checkpoint {
+        self.green.checkpoint()
     }
 
-    pub(crate) fn wrap(&mut self, from: Marker, kind: SyntaxKind) {
-        self.events[from.0] = Event::Start(Some(kind));
-        self.events.push(Event::Finish);
-    }
-
-    pub(crate) fn wrap_within(&mut self, from: Marker, to: Marker, kind: SyntaxKind) {
-        self.events[from.0] = Event::Start(Some(kind));
-        self.events[to.0] = Event::Finish;
+    pub(crate) fn wrap(&mut self, c: Checkpoint, kind: SyntaxKind) {
+        self.green.start_node_at(c, kind.into());
+        self.green.finish_node();
     }
 }
 
@@ -170,10 +149,7 @@ impl<'s> Parser<'s> {
     }
 
     fn eat_one(&mut self) {
-        self.events.push(Event::Leaf {
-            kind: self.cur,
-            text: self.cur_text(),
-        });
+        self.green.token(self.cur.into(), self.cur_text());
         self.preceded_by_whitespace = self.cur == SyntaxKind::Whitespace;
         self.cur_start = self.lexer.cursor();
         self.cur = self.lexer.next();

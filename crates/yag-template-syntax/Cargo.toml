@@ -4,5 +4,6 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
+drop_bomb = "0.1.5"
 unscanny = "0.1"
 rowan = "0.15.15"

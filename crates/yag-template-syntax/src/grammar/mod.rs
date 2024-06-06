@@ -10,7 +10,7 @@ use crate::{NodeOrToken, SyntaxElement, SyntaxKind, SyntaxNode};
 
 pub fn parse(input: &str) -> Parse {
     let mut p = Parser::new(input);
-    let m = p.marker();
+    let m = p.checkpoint();
     while !p.done() {
         text_or_action(&mut p);
     }
