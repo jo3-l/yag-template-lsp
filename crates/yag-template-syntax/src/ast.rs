@@ -156,6 +156,7 @@ impl_delimiter_accessors!(ExprAction);
 #[derive(Debug, Clone, Hash)]
 pub enum Expr {
     FuncCall(FuncCall),
+    Parenthesized(ParenthesizedExpr),
     Pipeline(Pipeline),
     VarRef(VarRef),
     VarDecl(VarDecl),
@@ -168,6 +169,7 @@ impl AstNode for Expr {
     fn cast(node: SyntaxNode) -> Option<Self> {
         match node.kind() {
             SyntaxKind::FuncCall => FuncCall::cast(node).map(Self::FuncCall),
+            SyntaxKind::ParenthesizedExpr => ParenthesizedExpr::cast(node).map(Self::Parenthesized),
             SyntaxKind::Pipeline => Pipeline::cast(node).map(Self::Pipeline),
             SyntaxKind::VarRef => VarRef::cast(node).map(Self::VarRef),
             SyntaxKind::VarDecl => VarDecl::cast(node).map(Self::VarDecl),
@@ -181,6 +183,7 @@ impl AstNode for Expr {
     fn syntax(&self) -> &SyntaxNode {
         match self {
             Expr::FuncCall(v) => v.syntax(),
+            Expr::Parenthesized(v) => v.syntax(),
             Expr::Pipeline(v) => v.syntax(),
             Expr::VarRef(v) => v.syntax(),
             Expr::VarDecl(v) => v.syntax(),
@@ -212,6 +215,16 @@ impl FuncCall {
 
     pub fn call_args(&self) -> AstChildren<Expr> {
         cast_children(self.syntax())
+    }
+}
+
+define_node! {
+    ParenthesizedExpr(SyntaxKind::ParenthesizedExpr)
+}
+
+impl ParenthesizedExpr {
+    pub fn inner_expr(&self) -> Option<Expr> {
+        cast_first_child(self.syntax())
     }
 }
 

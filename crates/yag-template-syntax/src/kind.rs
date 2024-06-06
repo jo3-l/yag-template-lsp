@@ -28,6 +28,10 @@ pub enum SyntaxKind {
     Eq,
     /// The pipe operator: `|`.
     Pipe,
+    /// A left parenthesis: `(`.
+    LeftParen,
+    /// A right parenthesis: `)`.
+    RightParen,
 
     /// A variable: `$x`.
     Var,
@@ -59,6 +63,8 @@ pub enum SyntaxKind {
     ExprAction,
     /// A function call: `f x y z ...`.
     FuncCall,
+    /// A parenthesized expression: `(...)`.
+    ParenthesizedExpr,
     /// A pipeline: `{{x | f y z | g a b c}}`.
     Pipeline,
     /// A single stage in a pipeline, comprising the pipe symbol and the
@@ -122,6 +128,8 @@ impl SyntaxKind {
             ColonEq => "`:=`",
             Eq => "`=`",
             Pipe => "`|`",
+            LeftParen => "`(`",
+            RightParen => "`)`",
             Ident => "identifier",
             Var => "variable",
             If => "`if`",
@@ -136,6 +144,7 @@ impl SyntaxKind {
             ElseClause => "else clause",
             ExprAction => "action",
             FuncCall => "function call",
+            ParenthesizedExpr => "parenthesized expression",
             Pipeline => "pipeline",
             PipelineStage => "pipeline stage",
             Bool => "boolean literal",

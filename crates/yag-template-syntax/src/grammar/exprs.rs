@@ -11,6 +11,7 @@ pub(crate) fn expr(p: &mut Parser, atomic: bool) {
 
     let c = p.checkpoint();
     match p.cur() {
+        SyntaxKind::LeftParen => parenthesized(p),
         SyntaxKind::Ident => func_call(p, atomic),
         SyntaxKind::Int => p.eat(),
         SyntaxKind::Bool => p.eat(),
@@ -40,16 +41,25 @@ pub(crate) fn pipeline_stage(p: &mut Parser) {
     } else {
         p.error_with_recover(
             "expected function call after pipe",
-            LEFT_DELIMS.union(RIGHT_DELIMS),
+            LEFT_DELIMS.union(RIGHT_DELIMS).add(SyntaxKind::RightParen),
         );
     }
     pipeline_stage.complete(p);
+}
+
+pub(crate) fn parenthesized(p: &mut Parser) {
+    let parenthesized = p.start(SyntaxKind::ParenthesizedExpr);
+    p.expect(SyntaxKind::LeftParen);
+    expr(p, false);
+    p.expect_with_recover(SyntaxKind::RightParen, LEFT_DELIMS);
+    parenthesized.complete(p);
 }
 
 pub(crate) fn func_call(p: &mut Parser, atomic: bool) {
     const EXPR_TERMINATORS: TokenSet = LEFT_DELIMS
         .union(RIGHT_DELIMS)
         .add(SyntaxKind::Pipe)
+        .add(SyntaxKind::RightParen)
         .add(SyntaxKind::Eof);
 
     let func_call = p.start(SyntaxKind::FuncCall);

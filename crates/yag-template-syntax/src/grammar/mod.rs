@@ -37,7 +37,7 @@ fn print(indent: usize, element: SyntaxElement) {
 
 #[test]
 fn demo_parse() {
-    let text = r#"{{a | f g h i}}
+    let text = r#"{{(a) (b)}}
     "#;
     let parsed = parse(text);
     let node = SyntaxNode::new_root(parsed.root.clone());
