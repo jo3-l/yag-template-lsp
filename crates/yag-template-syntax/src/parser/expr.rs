@@ -24,11 +24,9 @@ pub(crate) fn expr(p: &mut Parser, context: &str) {
         }
     }
 
-    // issue error for two dots in a row, eg in `..Field`, since
-    // maybe_trailing_field_chain will interpret this construct as `(.).Field`
-    // and does not error
-    if saw_dot && p.at(SyntaxKind::Field) {
-        p.error_here("expected identifier after `.`");
+    // issue error for two dots in a row: `..Field`
+    if saw_dot && (p.at(SyntaxKind::Field) || p.at(SyntaxKind::Dot)) {
+        p.error_here("expected field name after `.`");
     }
     maybe_wrap_trailing_field_chain(p, c);
     maybe_wrap_trailing_call_args(p, c);
@@ -59,7 +57,7 @@ pub(crate) fn atom(p: &mut Parser) {
 
         SyntaxKind::InvalidChar => p.eat(), // lexer should have already emitted an error; don't duplicate
         _ => {
-            // "expected atom" is not great end-user ux, so lie a little
+            // "expected atom" is not great end-user UX, so lie a little
             return p.err_recover(
                 format!("expected expression; found {}", p.cur_name()),
                 ATOM_RECOVERY_SET,

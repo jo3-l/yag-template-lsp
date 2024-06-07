@@ -38,8 +38,22 @@ pub(crate) fn text_or_action(p: &mut Parser) {
         SyntaxKind::Range => range_loop(p),
         SyntaxKind::While => while_loop(p),
         SyntaxKind::Try => try_catch_action(p),
+        SyntaxKind::Else => wrap_err(else_clause, p, "unexpected {{else}}"),
+        SyntaxKind::Catch => wrap_err(catch_clause, p, "unexpected {{catch}} outside of try-catch action"),
+        SyntaxKind::End => wrap_err(end_clause, p, "unexpected {{end}}"),
         _ => expr_action(p),
     }
+}
+
+pub(crate) fn wrap_err<F, R>(f: F, p: &mut Parser, err_msg: impl Into<String>)
+where
+    F: FnOnce(&mut Parser) -> R,
+{
+    let error = p.start(SyntaxKind::Error);
+    let start = p.cur_start();
+    f(p);
+    error.complete(p);
+    p.error(err_msg, TextRange::new(start, p.cur_start()));
 }
 
 pub(crate) fn if_conditional(p: &mut Parser) {
@@ -47,7 +61,7 @@ pub(crate) fn if_conditional(p: &mut Parser) {
     if_clause(p);
     action_list(p);
     else_branches(p, "if action", true);
-    end_clause(p, "if action");
+    end_clause_or_recover(p, "if action");
     if_conditional.complete(p);
 }
 
@@ -143,12 +157,16 @@ pub(crate) fn else_clause(p: &mut Parser) -> (ElseBranchType, TextRange) {
     (branch_type, TextRange::new(start, p.cur_start()))
 }
 
-pub(crate) fn end_clause(p: &mut Parser, parent_context: &str) {
+pub(crate) fn end_clause_or_recover(p: &mut Parser, parent_context: &str) {
     if !p.at_left_delim_and(SyntaxKind::End) {
         p.err_recover(format!("missing end clause for {parent_context}"), LEFT_DELIMS);
         return;
     }
 
+    end_clause(p);
+}
+
+pub(crate) fn end_clause(p: &mut Parser) {
     let end_clause = p.start(SyntaxKind::EndClause);
     left_delim(p);
     p.eat_whitespace();
@@ -163,7 +181,7 @@ pub(crate) fn range_loop(p: &mut Parser) {
     range_clause(p);
     action_list(p);
     else_branches(p, "range loop", false);
-    end_clause(p, "range loop");
+    end_clause_or_recover(p, "range loop");
     range_loop.complete(p);
 }
 
@@ -261,7 +279,7 @@ pub(crate) fn while_loop(p: &mut Parser) {
     while_clause(p);
     action_list(p);
     else_branches(p, "while loop", false);
-    end_clause(p, "while loop");
+    end_clause_or_recover(p, "while loop");
     while_loop.complete(p);
 }
 
@@ -289,7 +307,7 @@ pub(crate) fn try_catch_action(p: &mut Parser) {
     } else {
         p.err_recover("missing {{catch}} for try-catch action", LEFT_DELIMS);
     }
-    end_clause(p, "try-catch action");
+    end_clause_or_recover(p, "try-catch action");
     try_catch_action.complete(p);
 }
 
