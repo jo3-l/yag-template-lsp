@@ -1,13 +1,9 @@
-use std::io::{self, Write};
-
-use rowan::TextRange;
-
 use super::token_set::{ACTION_DELIMS, LEFT_DELIMS, RIGHT_DELIMS};
 use super::TokenPattern;
-use crate::parser::exprs::expr;
+use crate::parser::expr::expr;
 use crate::parser::token_set::TokenSet;
 use crate::parser::Parser;
-use crate::SyntaxKind;
+use crate::{SyntaxKind, TextRange};
 
 impl Parser<'_> {
     pub(crate) fn at_left_delim_and(&mut self, pat: impl TokenPattern) -> bool {
@@ -186,16 +182,17 @@ pub(crate) fn range_clause(p: &mut Parser) {
     let mut saw_decl_or_assign_op = false;
     'parse_iter_vars: while p.at(SyntaxKind::Var) {
         match p.peek_non_space() {
+            // {{range $x}}: $x is the expression to be iterated over,
+            // so exit the loop and let expr() take care of it.
             SyntaxKind::RightDelim | SyntaxKind::TrimmedRightDelim => {
-                // {{range $x}}: $x is the expression to be iterated over,
-                // so exit the loop and let expr() take care of it.
                 break 'parse_iter_vars;
             }
+
+            // {{range $x := expr}}: $x is the last iteration variable, so
+            // eat `$x` and `:=` then exit the loop.
             SyntaxKind::ColonEq => {
                 saw_decl_or_assign_op = true;
 
-                // {{range $x := expr}}: $x is the last iteration variable, so
-                // eat `$x` and `:=` then exit the loop.
                 p.assert(SyntaxKind::Var);
                 num_vars += 1;
                 p.eat_whitespace();
@@ -203,10 +200,11 @@ pub(crate) fn range_clause(p: &mut Parser) {
                 p.eat_whitespace();
                 break 'parse_iter_vars;
             }
+
+            // {{range $x = expr}}: similar to above.
             SyntaxKind::Eq => {
                 saw_decl_or_assign_op = false;
 
-                // {{range $x = expr}}: similar to above.
                 p.assert(SyntaxKind::Var);
                 num_vars += 1;
                 if !p.eat_whitespace() {
@@ -216,9 +214,10 @@ pub(crate) fn range_clause(p: &mut Parser) {
                 p.eat_whitespace();
                 break 'parse_iter_vars;
             }
+
+            // {{range $x, $y := expr}}: we are at `$x,` and still have more
+            // iteration variables to parse.
             SyntaxKind::Comma => {
-                // {{range $x, $y := expr}}: we are at `$x,` and still have more
-                // iteration variables to parse.
                 p.assert(SyntaxKind::Var);
                 num_vars += 1;
                 p.eat_whitespace();
@@ -226,9 +225,10 @@ pub(crate) fn range_clause(p: &mut Parser) {
                 p.eat_whitespace();
                 continue 'parse_iter_vars;
             }
+
+            // {{range $x $y := expr}}: we are at `$x`; this construct is
+            // syntactically invalid but try to continue.
             SyntaxKind::Var => {
-                // {{range $x $y := expr}}: we are at `$x`; this construct is
-                // syntactically invalid but try to continue.
                 p.assert(SyntaxKind::Var);
                 num_vars += 1;
                 p.eat_whitespace();
@@ -236,8 +236,9 @@ pub(crate) fn range_clause(p: &mut Parser) {
                 // don't eat the second variable; that's for the next iteration
                 continue 'parse_iter_vars;
             }
+
+            // Something unexpected; just let expr() take care of it.
             _ => {
-                // Something unexpected; just let expr() take care of it.
                 break 'parse_iter_vars;
             }
         }

@@ -1,5 +1,33 @@
-use crate::ast_support::{cast_children, cast_first_child, define_node};
-use crate::{AstChildren, AstNode, SyntaxKind, SyntaxNode, SyntaxText};
+pub use rowan::SyntaxText;
+
+use crate::kind::SyntaxKind;
+use crate::rowan_interface::{cast_children, cast_first_child};
+pub use crate::rowan_interface::{AstChildren, AstNode, NodeOrToken, SyntaxElement, SyntaxNode, SyntaxToken};
+
+macro_rules! define_node {
+    ($(#[$attr:meta])* $name:ident($pat:pat)) => {
+        #[derive(Debug, Clone, Eq, PartialEq, Hash)]
+        #[repr(transparent)]
+        $(#[$attr])*
+        pub struct $name(SyntaxNode);
+
+        impl AstNode for $name {
+            fn cast(node: SyntaxNode) -> Option<Self> {
+                if matches!(node.kind(), $pat) {
+                    Some(Self(node))
+                } else {
+                    None
+                }
+            }
+
+            fn syntax(&self) -> &SyntaxNode {
+                &self.0
+            }
+        }
+    };
+}
+
+pub(crate) use define_node;
 
 define_node! {
     Root(SyntaxKind::Root)
@@ -7,7 +35,7 @@ define_node! {
 
 impl Root {
     pub fn actions(&self) -> AstChildren<Action> {
-        cast_children(self.syntax())
+        cast_children(self)
     }
 }
 
@@ -62,7 +90,7 @@ define_node! {
 
 impl ActionList {
     pub fn actions(&self) -> AstChildren<Action> {
-        cast_children(self.syntax())
+        cast_children(self)
     }
 }
 
@@ -90,11 +118,11 @@ macro_rules! impl_delim_accessors {
     ($name:ident) => {
         impl $name {
             pub fn left_delim(&self) -> Option<LeftDelim> {
-                cast_first_child(self.syntax())
+                cast_first_child(self)
             }
 
             pub fn right_delim(&self) -> Option<RightDelim> {
-                cast_first_child(self.syntax())
+                cast_first_child(self)
             }
         }
     };
@@ -111,19 +139,19 @@ define_node! {
 
 impl IfConditional {
     pub fn if_clause(&self) -> Option<IfClause> {
-        cast_first_child(self.syntax())
+        cast_first_child(self)
     }
 
     pub fn action_list(&self) -> Option<ActionList> {
-        cast_first_child(self.syntax())
+        cast_first_child(self)
     }
 
     pub fn else_branches(&self) -> AstChildren<ElseBranch> {
-        cast_children(self.syntax())
+        cast_children(self)
     }
 
     pub fn end_clause(&self) -> Option<EndClause> {
-        cast_first_child(self.syntax())
+        cast_first_child(self)
     }
 }
 
@@ -134,7 +162,7 @@ impl_delim_accessors!(IfClause);
 
 impl IfClause {
     pub fn if_expr(&self) -> Option<Expr> {
-        cast_first_child(self.syntax())
+        cast_first_child(self)
     }
 }
 
@@ -144,11 +172,11 @@ define_node! {
 
 impl ElseBranch {
     pub fn else_clause(&self) -> Option<ElseClause> {
-        cast_first_child(self.syntax())
+        cast_first_child(self)
     }
 
     pub fn action_list(&self) -> Option<ActionList> {
-        cast_first_child(self.syntax())
+        cast_first_child(self)
     }
 }
 
@@ -159,7 +187,7 @@ impl_delim_accessors!(ElseClause);
 
 impl ElseClause {
     pub fn cond_expr(&self) -> Option<Expr> {
-        cast_first_child(self.syntax())
+        cast_first_child(self)
     }
 }
 
@@ -169,19 +197,19 @@ define_node! {
 
 impl RangeLoop {
     pub fn range_clause(&self) -> Option<RangeClause> {
-        cast_first_child(self.syntax())
+        cast_first_child(self)
     }
 
     pub fn action_list(&self) -> Option<ActionList> {
-        cast_first_child(self.syntax())
+        cast_first_child(self)
     }
 
     pub fn else_branch(&self) -> Option<ElseBranch> {
-        cast_first_child(self.syntax())
+        cast_first_child(self)
     }
 
     pub fn end_clause(&self) -> Option<EndClause> {
-        cast_first_child(self.syntax())
+        cast_first_child(self)
     }
 }
 
@@ -192,19 +220,19 @@ impl_delim_accessors!(RangeClause);
 
 impl RangeClause {
     pub fn iteration_vars(&self) -> AstChildren<Var> {
-        cast_children(self.syntax())
+        cast_children(self)
     }
 
     pub fn range_expr(&self) -> Option<Expr> {
-        cast_first_child(self.syntax())
+        cast_first_child(self)
     }
 
     pub fn eq_token(&self) -> Option<EqToken> {
-        cast_first_child(self.syntax())
+        cast_first_child(self)
     }
 
     pub fn colon_eq_token(&self) -> Option<ColonEqToken> {
-        cast_first_child(self.syntax())
+        cast_first_child(self)
     }
 }
 
@@ -222,19 +250,19 @@ define_node! {
 
 impl WhileLoop {
     pub fn while_clause(&self) -> Option<WhileClause> {
-        cast_first_child(self.syntax())
+        cast_first_child(self)
     }
 
     pub fn action_list(&self) -> Option<ActionList> {
-        cast_first_child(self.syntax())
+        cast_first_child(self)
     }
 
     pub fn else_branch(&self) -> Option<ElseBranch> {
-        cast_first_child(self.syntax())
+        cast_first_child(self)
     }
 
     pub fn end_clause(&self) -> Option<EndClause> {
-        cast_first_child(self.syntax())
+        cast_first_child(self)
     }
 }
 
@@ -245,7 +273,7 @@ impl_delim_accessors!(WhileClause);
 
 impl WhileClause {
     pub fn loop_condition_expr(&self) -> Option<Expr> {
-        cast_first_child(self.syntax())
+        cast_first_child(self)
     }
 }
 
@@ -255,19 +283,19 @@ define_node! {
 
 impl TryCatchAction {
     pub fn try_clause(&self) -> Option<TryClause> {
-        cast_first_child(self.syntax())
+        cast_first_child(self)
     }
 
     pub fn try_action_list(&self) -> Option<ActionList> {
-        cast_first_child(self.syntax())
+        cast_first_child(self)
     }
 
     pub fn catch_clause(&self) -> Option<CatchClause> {
-        cast_first_child(self.syntax())
+        cast_first_child(self)
     }
 
     pub fn catch_action_list(&self) -> Option<ActionList> {
-        cast_children(self.syntax()).nth(1)
+        cast_children(self).nth(1)
     }
 }
 
@@ -355,11 +383,11 @@ define_node! {
 
 impl FuncCall {
     pub fn func_name(&self) -> Option<Ident> {
-        cast_first_child(self.syntax())
+        cast_first_child(self)
     }
 
     pub fn call_args(&self) -> AstChildren<Expr> {
-        cast_children(self.syntax())
+        cast_children(self)
     }
 }
 
@@ -369,11 +397,11 @@ define_node! {
 
 impl ExprCall {
     pub fn callee(&self) -> Option<Expr> {
-        cast_first_child(self.syntax())
+        cast_first_child(self)
     }
 
     pub fn call_args(&self) -> AstChildren<Expr> {
-        cast_children(self.syntax())
+        cast_children(self)
     }
 }
 
@@ -383,7 +411,7 @@ define_node! {
 
 impl ParenthesizedExpr {
     pub fn inner_expr(&self) -> Option<Expr> {
-        cast_first_child(self.syntax())
+        cast_first_child(self)
     }
 }
 
@@ -393,11 +421,11 @@ define_node! {
 
 impl Pipeline {
     pub fn init_expr(&self) -> Option<Expr> {
-        cast_first_child(self.syntax())
+        cast_first_child(self)
     }
 
     pub fn stages(&self) -> AstChildren<PipelineStage> {
-        cast_children(self.syntax())
+        cast_children(self)
     }
 }
 
@@ -407,7 +435,7 @@ define_node! {
 
 impl PipelineStage {
     pub fn target_expr(&self) -> Option<Expr> {
-        cast_first_child(self.syntax())
+        cast_first_child(self)
     }
 }
 
@@ -436,7 +464,7 @@ define_node! {
 
 impl ContextFieldChain {
     pub fn fields(&self) -> AstChildren<Field> {
-        cast_children(self.syntax())
+        cast_children(self)
     }
 }
 
@@ -446,7 +474,7 @@ define_node! {
 
 impl ExprFieldChain {
     pub fn fields(&self) -> AstChildren<Field> {
-        cast_children(self.syntax())
+        cast_children(self)
     }
 }
 
@@ -466,7 +494,7 @@ define_node! {
 
 impl VarAccess {
     pub fn var(&self) -> Option<Var> {
-        cast_first_child(self.syntax())
+        cast_first_child(self)
     }
 }
 
@@ -476,11 +504,11 @@ define_node! {
 
 impl VarDecl {
     pub fn var(&self) -> Option<Var> {
-        cast_first_child(self.syntax())
+        cast_first_child(self)
     }
 
     pub fn initializer(&self) -> Option<Expr> {
-        cast_first_child(self.syntax())
+        cast_first_child(self)
     }
 }
 
@@ -490,11 +518,11 @@ define_node! {
 
 impl VarAssign {
     pub fn var(&self) -> Option<Var> {
-        cast_first_child(self.syntax())
+        cast_first_child(self)
     }
 
     pub fn new_val(&self) -> Option<Expr> {
-        cast_first_child(self.syntax())
+        cast_first_child(self)
     }
 }
 

@@ -1,6 +1,6 @@
 #![allow(unused, unused_imports)]
+use crate::ast::{AstNode, NodeOrToken, SyntaxElement, SyntaxNode};
 use crate::parser::parse;
-use crate::{ast, AstNode, NodeOrToken, SyntaxElement, SyntaxNode};
 
 fn print(indent: usize, element: SyntaxElement) {
     let kind = element.kind();
