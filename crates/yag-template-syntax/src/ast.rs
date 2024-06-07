@@ -27,6 +27,7 @@ pub enum Action {
     IfConditional(IfConditional),
     RangeLoop(RangeLoop),
     WhileLoop(WhileLoop),
+    TryCatch(TryCatchAction),
     ExprAction(ExprAction),
 }
 
@@ -37,6 +38,7 @@ impl AstNode for Action {
             SyntaxKind::IfConditional => IfConditional::cast(node).map(Self::IfConditional),
             SyntaxKind::RangeLoop => RangeLoop::cast(node).map(Self::RangeLoop),
             SyntaxKind::WhileLoop => WhileLoop::cast(node).map(Self::WhileLoop),
+            SyntaxKind::TryCatchAction => TryCatchAction::cast(node).map(Self::TryCatch),
             SyntaxKind::ExprAction => ExprAction::cast(node).map(Self::ExprAction),
             _ => None,
         }
@@ -48,6 +50,7 @@ impl AstNode for Action {
             Self::IfConditional(v) => v.syntax(),
             Self::RangeLoop(v) => v.syntax(),
             Self::WhileLoop(v) => v.syntax(),
+            Self::TryCatch(v) => v.syntax(),
             Self::ExprAction(v) => v.syntax(),
         }
     }
@@ -245,6 +248,38 @@ impl WhileClause {
         cast_first_child(self.syntax())
     }
 }
+
+define_node! {
+    TryCatchAction(SyntaxKind::TryCatchAction)
+}
+
+impl TryCatchAction {
+    pub fn try_clause(&self) -> Option<TryClause> {
+        cast_first_child(self.syntax())
+    }
+
+    pub fn try_action_list(&self) -> Option<ActionList> {
+        cast_first_child(self.syntax())
+    }
+
+    pub fn catch_clause(&self) -> Option<CatchClause> {
+        cast_first_child(self.syntax())
+    }
+
+    pub fn catch_action_list(&self) -> Option<ActionList> {
+        cast_children(self.syntax()).nth(1)
+    }
+}
+
+define_node! {
+    TryClause(SyntaxKind::TryClause)
+}
+impl_delim_accessors!(TryClause);
+
+define_node! {
+    CatchClause(SyntaxKind::CatchClause)
+}
+impl_delim_accessors!(CatchClause);
 
 define_node! {
     ExprAction(SyntaxKind::ExprAction)

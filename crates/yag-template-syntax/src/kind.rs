@@ -57,6 +57,10 @@ pub enum SyntaxKind {
     Range,
     /// The `while` keyword.
     While,
+    /// The `try` keyword.
+    Try,
+    /// The `catch` keyword.
+    Catch,
 
     /// The top-level node.
     Root,
@@ -80,6 +84,12 @@ pub enum SyntaxKind {
     WhileLoop,
     /// The `{{while ...}}` clause within a while loop compound action.
     WhileClause,
+    /// A try-catch compound action: `{{try}} ... {{catch}} ... {{end}}`.
+    TryCatchAction,
+    /// The `{{try}}` clause within a try-catch compound action.
+    TryClause,
+    /// The `{{catch}}` clause within a try-catch compound action.
+    CatchClause,
     /// An expression used as an action, e.g., `{{fn 1 2 3}}`.
     ExprAction,
     /// A function call: `f x y z ...`.
@@ -137,6 +147,8 @@ impl SyntaxKind {
             "end" => End,
             "range" => Range,
             "while" => While,
+            "try" => Try,
+            "catch" => Catch,
 
             "true" | "false" => Bool,
             _ => return None,
@@ -171,6 +183,8 @@ impl SyntaxKind {
             End => "`end`",
             Range => "`range`",
             While => "`while`",
+            Try => "`try`",
+            Catch => "`catch`",
             Root => "root",
             ActionList => "action list",
             EndClause => "end clause",
@@ -182,6 +196,9 @@ impl SyntaxKind {
             RangeClause => "range clause",
             WhileLoop => "while loop",
             WhileClause => "while clause",
+            TryCatchAction => "try-catch action",
+            TryClause => "try clause",
+            CatchClause => "catch clause",
             ExprAction => "action",
             FuncCall => "function call",
             ExprCall => "expression called with arguments",

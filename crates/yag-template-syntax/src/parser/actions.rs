@@ -16,7 +16,10 @@ impl Parser<'_> {
 }
 
 pub(crate) fn action_list(p: &mut Parser) {
-    const ACTION_LIST_TERMINATORS: TokenSet = TokenSet::new().add(SyntaxKind::End).add(SyntaxKind::Else);
+    const ACTION_LIST_TERMINATORS: TokenSet = TokenSet::new()
+        .add(SyntaxKind::Else)
+        .add(SyntaxKind::Catch)
+        .add(SyntaxKind::End);
 
     let action_list = p.start(SyntaxKind::ActionList);
     // until EOF, `{{end`, or `{{else`
@@ -38,6 +41,7 @@ pub(crate) fn text_or_action(p: &mut Parser) {
         SyntaxKind::If => if_conditional(p),
         SyntaxKind::Range => range_loop(p),
         SyntaxKind::While => while_loop(p),
+        SyntaxKind::Try => try_catch_action(p),
         _ => expr_action(p),
     }
 }
@@ -61,7 +65,7 @@ pub(crate) fn if_clause(p: &mut Parser) {
     }
     expr(p, "after `if` keyword");
     p.eat_whitespace();
-    right_delim(p);
+    right_delim(p, "in if action");
     if_clause.complete(p);
 }
 
@@ -125,7 +129,7 @@ pub(crate) fn else_clause(p: &mut Parser) -> (ElseBranchType, TextRange) {
             p.eat();
             expr(p, "after `else if`");
             p.eat_whitespace();
-            right_delim(p);
+            right_delim(p, "in else-if clause");
             ElseBranchType::ElseIf
         }
         _ => {
@@ -154,7 +158,7 @@ pub(crate) fn end_clause(p: &mut Parser, parent_context: &str) {
     p.eat_whitespace();
     p.expect(SyntaxKind::End);
     p.eat_whitespace();
-    right_delim(p);
+    right_delim(p, "after `end` keyword");
     end_clause.complete(p);
 }
 
@@ -168,7 +172,6 @@ pub(crate) fn range_loop(p: &mut Parser) {
 }
 
 pub(crate) fn range_clause(p: &mut Parser) {
-    eprintln!("here");
     let range_clause = p.start(SyntaxKind::RangeClause);
     left_delim(p);
     p.eat_whitespace();
@@ -248,8 +251,7 @@ pub(crate) fn range_clause(p: &mut Parser) {
     }
 
     expr(p, "in range action");
-    eprintln!("expr returned");
-    right_delim(p);
+    right_delim(p, "in range action");
     range_clause.complete(p);
 }
 
@@ -272,8 +274,42 @@ pub(crate) fn while_clause(p: &mut Parser) {
     }
     expr(p, "after `while` keyword");
     p.eat_whitespace();
-    right_delim(p);
+    right_delim(p, "in `while` clause");
     while_clause.complete(p);
+}
+
+pub(crate) fn try_catch_action(p: &mut Parser) {
+    let try_catch_action = p.start(SyntaxKind::TryCatchAction);
+    try_clause(p);
+    action_list(p);
+    if p.at_left_delim_and(SyntaxKind::Catch) {
+        catch_clause(p);
+        action_list(p);
+    } else {
+        p.err_recover("missing {{catch}} for try-catch action", LEFT_DELIMS);
+    }
+    end_clause(p, "try-catch action");
+    try_catch_action.complete(p);
+}
+
+pub(crate) fn try_clause(p: &mut Parser) {
+    let try_clause = p.start(SyntaxKind::TryClause);
+    left_delim(p);
+    p.eat_whitespace();
+    p.expect(SyntaxKind::Try);
+    p.eat_whitespace();
+    right_delim(p, "after `try` keyword");
+    try_clause.complete(p);
+}
+
+pub(crate) fn catch_clause(p: &mut Parser) {
+    let catch_clause = p.start(SyntaxKind::CatchClause);
+    left_delim(p);
+    p.eat_whitespace();
+    p.expect(SyntaxKind::Catch);
+    p.eat_whitespace();
+    right_delim(p, "after `catch` clause");
+    catch_clause.complete(p);
 }
 
 pub(crate) fn expr_action(p: &mut Parser) {
@@ -282,7 +318,7 @@ pub(crate) fn expr_action(p: &mut Parser) {
     p.eat_whitespace();
     expr(p, "after `{{`");
     p.eat_whitespace();
-    right_delim(p);
+    right_delim(p, "in action");
     expr_action.complete(p);
 }
 
@@ -292,12 +328,12 @@ pub(crate) fn left_delim(p: &mut Parser) {
     }
 }
 
-pub(crate) fn right_delim(p: &mut Parser) {
+pub(crate) fn right_delim(p: &mut Parser, context: &str) {
     while !p.at_eof() && !p.at(ACTION_DELIMS) {
         if p.eat_if(SyntaxKind::InvalidChar) {
             // lexer should already have emitted an error
         } else {
-            p.err_and_eat(format!("unexpected {} in action", p.cur_name()))
+            p.err_and_eat(format!("unexpected {} {context}", p.cur_name()))
         }
     }
 

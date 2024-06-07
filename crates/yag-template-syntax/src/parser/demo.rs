@@ -21,8 +21,7 @@ fn print(indent: usize, element: SyntaxElement) {
 
 #[test]
 fn demo_parse() {
-    let text = r#"{{while $x}}
-    {{else}}
+    let text = r#"{{try $x}}
     {{end}}
     "#;
     let parsed = parse(text);
