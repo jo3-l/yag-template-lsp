@@ -17,7 +17,7 @@ define_node! {
 
 impl Text {
     pub fn get(&self) -> SyntaxText {
-        self.0.text()
+        self.syntax().text()
     }
 }
 
@@ -25,6 +25,7 @@ impl Text {
 pub enum Action {
     Text(Text),
     IfConditional(IfConditional),
+    RangeLoop(RangeLoop),
     ExprAction(ExprAction),
 }
 
@@ -33,6 +34,7 @@ impl AstNode for Action {
         match node.kind() {
             SyntaxKind::Text => Text::cast(node).map(Self::Text),
             SyntaxKind::IfConditional => IfConditional::cast(node).map(Self::IfConditional),
+            SyntaxKind::RangeLoop => RangeLoop::cast(node).map(Self::RangeLoop),
             SyntaxKind::ExprAction => ExprAction::cast(node).map(Self::ExprAction),
             _ => None,
         }
@@ -42,6 +44,7 @@ impl AstNode for Action {
         match self {
             Self::Text(v) => v.syntax(),
             Self::IfConditional(v) => v.syntax(),
+            Self::RangeLoop(v) => v.syntax(),
             Self::ExprAction(v) => v.syntax(),
         }
     }
@@ -63,7 +66,7 @@ define_node! {
 
 impl LeftDelim {
     pub fn has_trim_marker(&self) -> bool {
-        self.0.kind() == SyntaxKind::TrimmedLeftDelim
+        self.syntax().kind() == SyntaxKind::TrimmedLeftDelim
     }
 }
 
@@ -73,7 +76,7 @@ define_node! {
 
 impl RightDelim {
     pub fn has_trim_marker(&self) -> bool {
-        self.0.kind() == SyntaxKind::TrimmedRightDelim
+        self.syntax().kind() == SyntaxKind::TrimmedRightDelim
     }
 }
 
@@ -123,12 +126,18 @@ define_node! {
 }
 impl_delim_accessors!(IfClause);
 
+impl IfClause {
+    pub fn if_expr(&self) -> Option<Expr> {
+        cast_first_child(self.syntax())
+    }
+}
+
 define_node! {
     ElseBranch(SyntaxKind::ElseBranch)
 }
 
 impl ElseBranch {
-    pub fn clause(&self) -> Option<ElseClause> {
+    pub fn else_clause(&self) -> Option<ElseClause> {
         cast_first_child(self.syntax())
     }
 
@@ -143,9 +152,62 @@ define_node! {
 impl_delim_accessors!(ElseClause);
 
 impl ElseClause {
-    pub fn cond(&self) -> Option<Expr> {
+    pub fn cond_expr(&self) -> Option<Expr> {
         cast_first_child(self.syntax())
     }
+}
+
+define_node! {
+    RangeLoop(SyntaxKind::RangeLoop)
+}
+
+impl RangeLoop {
+    pub fn range_clause(&self) -> Option<RangeClause> {
+        cast_first_child(self.syntax())
+    }
+
+    pub fn action_list(&self) -> Option<ActionList> {
+        cast_first_child(self.syntax())
+    }
+
+    pub fn else_branch(&self) -> Option<ElseBranch> {
+        cast_first_child(self.syntax())
+    }
+
+    pub fn end_clause(&self) -> Option<EndClause> {
+        cast_first_child(self.syntax())
+    }
+}
+
+define_node! {
+    RangeClause(SyntaxKind::RangeClause)
+}
+impl_delim_accessors!(RangeClause);
+
+impl RangeClause {
+    pub fn iteration_vars(&self) -> AstChildren<Var> {
+        cast_children(self.syntax())
+    }
+
+    pub fn range_expr(&self) -> Option<Expr> {
+        cast_first_child(self.syntax())
+    }
+
+    pub fn eq_token(&self) -> Option<EqToken> {
+        cast_first_child(self.syntax())
+    }
+
+    pub fn colon_eq_token(&self) -> Option<ColonEqToken> {
+        cast_first_child(self.syntax())
+    }
+}
+
+define_node! {
+    EqToken(SyntaxKind::Eq)
+}
+
+define_node! {
+    ColonEqToken(SyntaxKind::Eq)
 }
 
 define_node! {
@@ -177,9 +239,7 @@ impl AstNode for Expr {
             SyntaxKind::ParenthesizedExpr => ParenthesizedExpr::cast(node).map(Self::Parenthesized),
             SyntaxKind::Pipeline => Pipeline::cast(node).map(Self::Pipeline),
             SyntaxKind::ContextAccess => ContextAccess::cast(node).map(Self::ContextAccess),
-            SyntaxKind::ContextFieldChain => {
-                ContextFieldChain::cast(node).map(Self::ContextFieldChain)
-            }
+            SyntaxKind::ContextFieldChain => ContextFieldChain::cast(node).map(Self::ContextFieldChain),
             SyntaxKind::ExprFieldChain => ExprFieldChain::cast(node).map(Self::ExprFieldChain),
             SyntaxKind::VarAccess => VarAccess::cast(node).map(Self::VarAccess),
             SyntaxKind::VarDecl => VarDecl::cast(node).map(Self::VarDecl),
@@ -214,7 +274,7 @@ define_node! {
 
 impl Ident {
     pub fn get(&self) -> SyntaxText {
-        self.0.text()
+        self.syntax().text()
     }
 }
 
@@ -289,8 +349,13 @@ define_node! {
 }
 
 impl Field {
-    pub fn ident(&self) -> Option<Field> {
-        cast_first_child(self.syntax())
+    pub fn name(&self) -> Option<SyntaxText> {
+        let text = self.syntax().text();
+        if text.char_at(0.into()) == Some('.') {
+            Some(text.slice(1.into()..))
+        } else {
+            None
+        }
     }
 }
 
@@ -368,7 +433,7 @@ define_node! {
 
 impl Bool {
     pub fn get(&self) -> bool {
-        self.0.text() == "true"
+        self.syntax().text() == "true"
     }
 }
 

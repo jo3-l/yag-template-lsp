@@ -104,10 +104,18 @@ impl Lexer<'_> {
                 SyntaxKind::TrimmedRightDelim
             }
             _ if c.is_whitespace() => self.whitespace(),
+            ',' => SyntaxKind::Comma,
             '=' => SyntaxKind::Eq,
             ':' if self.s.eat_if('=') => SyntaxKind::ColonEq,
             '|' => SyntaxKind::Pipe,
-            '.' => SyntaxKind::Dot,
+            '.' => {
+                if self.s.at(char::is_alphanumeric) {
+                    self.s.eat_while(char::is_alphanumeric);
+                    SyntaxKind::Field
+                } else {
+                    SyntaxKind::Dot
+                }
+            }
             '(' => SyntaxKind::LeftParen,
             ')' => SyntaxKind::RightParen,
             '$' => self.var(),

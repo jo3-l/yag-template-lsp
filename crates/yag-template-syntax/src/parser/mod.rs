@@ -107,6 +107,10 @@ impl<'s> Parser<'s> {
         self.cur
     }
 
+    pub(crate) fn cur_name(&self) -> &str {
+        self.cur.name()
+    }
+
     pub(crate) fn peek(&mut self) -> SyntaxKind {
         let checkpoint = self.lexer.checkpoint();
         let token = self.lexer.next();
@@ -225,6 +229,11 @@ impl Parser<'_> {
         at
     }
 
+    pub(crate) fn assert(&mut self, kind: SyntaxKind) {
+        assert_eq!(self.cur, kind);
+        self.eat();
+    }
+
     /// Produce an error and eat the current token if it is not in the
     /// `recovery` set.
     ///
@@ -247,9 +256,9 @@ impl Parser<'_> {
         }
     }
 
-    /// Create an error node and consume the current token. When possible,
-    /// prefer to call [Parser::err_recover] so that the impact of the error
-    /// on parsing of subsequent correct input can be minimized.
+    /// Create an error node and consume the current token if not at EOF. When
+    /// possible, prefer to call [Parser::err_recover] so that the impact of the
+    /// error on parsing of subsequent correct input can be minimized.
     pub(crate) fn err_and_eat(&mut self, message: impl Into<String>) {
         self.error(message, self.cur_range());
         if !self.at(SyntaxKind::Eof) {

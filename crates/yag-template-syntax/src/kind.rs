@@ -1,10 +1,12 @@
 #[derive(PartialEq, Eq, PartialOrd, Ord, Debug, Clone, Copy, Hash)]
 #[repr(u16)]
 pub enum SyntaxKind {
-    /// A syntax error.
-    Error,
     /// The end of the file.
     Eof,
+    /// A syntax error.
+    Error,
+    /// An invalid character in an action.
+    InvalidChar,
 
     /// Literal text outside of an action.
     Text,
@@ -22,6 +24,8 @@ pub enum SyntaxKind {
     /// Whitespace.
     Whitespace,
 
+    /// The comma separating iteration variables in range clauses: `,`.
+    Comma,
     /// The declaration operator: `:=`.
     ColonEq,
     /// The assignment operator: `=`.
@@ -39,6 +43,9 @@ pub enum SyntaxKind {
     Var,
     /// An identifier.
     Ident,
+    /// A single field access, part of a context or expression field chain:
+    /// `.Field`.
+    Field,
 
     /// The `if` keyword.
     If,
@@ -46,6 +53,8 @@ pub enum SyntaxKind {
     Else,
     /// The `end` keyword.
     End,
+    /// The `range` keyword.
+    Range,
 
     /// The top-level node.
     Root,
@@ -53,7 +62,7 @@ pub enum SyntaxKind {
     ActionList,
     /// The `{{end}}` clause completing a conditional or loop compound action.
     EndClause,
-    /// An if-else compound action: `{{if x}} y {{else}} z {{end}}`
+    /// An if-else compound action: `{{if x}} ... {{else if y}} ... {{else}} ... {{end}}`
     IfConditional,
     /// The `{{if x}}` clause within an if-else compound action.
     IfClause,
@@ -61,6 +70,10 @@ pub enum SyntaxKind {
     ElseBranch,
     /// The `{{else}}` or `{{else if x}}` clause within an else branch.
     ElseClause,
+    /// A range loop compound action: `{{range x}} ... {{else}} ... {{end}}`.
+    RangeLoop,
+    /// The `{{range ...}}` clause within a range loop compound action.
+    RangeClause,
     /// An expression used as an action, e.g., `{{fn 1 2 3}}`.
     ExprAction,
     /// A function call: `f x y z ...`.
@@ -82,9 +95,6 @@ pub enum SyntaxKind {
     PipelineStage,
     /// A single `.` that evaluates to the context data (not part of a field.)
     ContextAccess,
-    /// A single field access, part of a context or expression field chain:
-    /// `.Field`.
-    Field,
     /// A series of field accesses on the context data: `.Field1.Field2.Field3`.
     /// The parser will produce a ContextFieldChain even in the case where there
     /// is only one field.
@@ -119,6 +129,7 @@ impl SyntaxKind {
             "if" => If,
             "else" => Else,
             "end" => End,
+            "range" => Range,
 
             "true" | "false" => Bool,
             _ => return None,
@@ -128,8 +139,9 @@ impl SyntaxKind {
     pub fn name(self) -> &'static str {
         use SyntaxKind::*;
         match self {
-            Error => "syntax error",
             Eof => "end of file",
+            Error => "syntax error",
+            InvalidChar => "invalid character in action",
             Text => "text",
             LeftDelim => "`{{`",
             TrimmedLeftDelim => "`{{- `",
@@ -137,6 +149,7 @@ impl SyntaxKind {
             TrimmedRightDelim => "` -}}`",
             Comment => "comment",
             Whitespace => "whitespace",
+            Comma => "comma",
             ColonEq => "`:=`",
             Eq => "`=`",
             Pipe => "`|`",
@@ -145,9 +158,11 @@ impl SyntaxKind {
             RightParen => "`)`",
             Ident => "identifier",
             Var => "variable",
+            Field => "field",
             If => "`if`",
             Else => "`else`",
             End => "`end`",
+            Range => "`range`",
             Root => "root",
             ActionList => "action list",
             EndClause => "end clause",
@@ -155,6 +170,8 @@ impl SyntaxKind {
             IfClause => "if clause",
             ElseBranch => "else branch",
             ElseClause => "else clause",
+            RangeLoop => "range loop",
+            RangeClause => "range clause",
             ExprAction => "action",
             FuncCall => "function call",
             ExprCall => "expression called with arguments",
@@ -162,7 +179,6 @@ impl SyntaxKind {
             Pipeline => "pipeline",
             PipelineStage => "pipeline stage",
             ContextAccess => "context access",
-            Field => "field",
             ContextFieldChain => "context field chain",
             ExprFieldChain => "expression field chain",
             Bool => "boolean literal",

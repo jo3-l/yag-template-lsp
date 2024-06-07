@@ -1,6 +1,6 @@
 #![allow(unused, unused_imports)]
 use crate::parser::parse;
-use crate::{NodeOrToken, SyntaxElement, SyntaxNode};
+use crate::{ast, AstNode, NodeOrToken, SyntaxElement, SyntaxNode};
 
 fn print(indent: usize, element: SyntaxElement) {
     let kind = element.kind();
@@ -21,7 +21,7 @@ fn print(indent: usize, element: SyntaxElement) {
 
 #[test]
 fn demo_parse() {
-    let text = r#"{{if }}
+    let text = r#"{{range $x, $y, $z := $d}}
     "#;
     let parsed = parse(text);
     let node = SyntaxNode::new_root(parsed.root.clone());
