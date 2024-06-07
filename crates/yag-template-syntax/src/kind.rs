@@ -55,6 +55,8 @@ pub enum SyntaxKind {
     End,
     /// The `range` keyword.
     Range,
+    /// The `while` keyword.
+    While,
 
     /// The top-level node.
     Root,
@@ -74,6 +76,10 @@ pub enum SyntaxKind {
     RangeLoop,
     /// The `{{range ...}}` clause within a range loop compound action.
     RangeClause,
+    /// A while loop compound action: `{{while x}} ... {{else}} ... {{end}}`.
+    WhileLoop,
+    /// The `{{while ...}}` clause within a while loop compound action.
+    WhileClause,
     /// An expression used as an action, e.g., `{{fn 1 2 3}}`.
     ExprAction,
     /// A function call: `f x y z ...`.
@@ -130,6 +136,7 @@ impl SyntaxKind {
             "else" => Else,
             "end" => End,
             "range" => Range,
+            "while" => While,
 
             "true" | "false" => Bool,
             _ => return None,
@@ -163,6 +170,7 @@ impl SyntaxKind {
             Else => "`else`",
             End => "`end`",
             Range => "`range`",
+            While => "`while`",
             Root => "root",
             ActionList => "action list",
             EndClause => "end clause",
@@ -172,6 +180,8 @@ impl SyntaxKind {
             ElseClause => "else clause",
             RangeLoop => "range loop",
             RangeClause => "range clause",
+            WhileLoop => "while loop",
+            WhileClause => "while clause",
             ExprAction => "action",
             FuncCall => "function call",
             ExprCall => "expression called with arguments",

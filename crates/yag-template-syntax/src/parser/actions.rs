@@ -37,6 +37,7 @@ pub(crate) fn text_or_action(p: &mut Parser) {
     match p.peek_non_space() {
         SyntaxKind::If => if_conditional(p),
         SyntaxKind::Range => range_loop(p),
+        SyntaxKind::While => while_loop(p),
         _ => expr_action(p),
     }
 }
@@ -161,7 +162,7 @@ pub(crate) fn range_loop(p: &mut Parser) {
     let range_loop = p.start(SyntaxKind::RangeLoop);
     range_clause(p);
     action_list(p);
-    else_branches(p, "range action", false);
+    else_branches(p, "range loop", false);
     end_clause(p, "range loop");
     range_loop.complete(p);
 }
@@ -250,6 +251,29 @@ pub(crate) fn range_clause(p: &mut Parser) {
     eprintln!("expr returned");
     right_delim(p);
     range_clause.complete(p);
+}
+
+pub(crate) fn while_loop(p: &mut Parser) {
+    let while_loop = p.start(SyntaxKind::WhileLoop);
+    while_clause(p);
+    action_list(p);
+    else_branches(p, "while loop", false);
+    end_clause(p, "while loop");
+    while_loop.complete(p);
+}
+
+pub(crate) fn while_clause(p: &mut Parser) {
+    let while_clause = p.start(SyntaxKind::WhileClause);
+    left_delim(p);
+    p.eat_whitespace();
+    p.expect(SyntaxKind::While);
+    if !p.eat_whitespace() {
+        p.error_here(format!("expected space after `while` keyword; found {}", p.cur_name()))
+    }
+    expr(p, "after `while` keyword");
+    p.eat_whitespace();
+    right_delim(p);
+    while_clause.complete(p);
 }
 
 pub(crate) fn expr_action(p: &mut Parser) {

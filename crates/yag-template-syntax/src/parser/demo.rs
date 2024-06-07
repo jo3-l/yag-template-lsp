@@ -21,7 +21,9 @@ fn print(indent: usize, element: SyntaxElement) {
 
 #[test]
 fn demo_parse() {
-    let text = r#"{{range $x, $y, $z := $d}}
+    let text = r#"{{while $x}}
+    {{else}}
+    {{end}}
     "#;
     let parsed = parse(text);
     let node = SyntaxNode::new_root(parsed.root.clone());

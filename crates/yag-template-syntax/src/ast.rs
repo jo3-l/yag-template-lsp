@@ -26,6 +26,7 @@ pub enum Action {
     Text(Text),
     IfConditional(IfConditional),
     RangeLoop(RangeLoop),
+    WhileLoop(WhileLoop),
     ExprAction(ExprAction),
 }
 
@@ -35,6 +36,7 @@ impl AstNode for Action {
             SyntaxKind::Text => Text::cast(node).map(Self::Text),
             SyntaxKind::IfConditional => IfConditional::cast(node).map(Self::IfConditional),
             SyntaxKind::RangeLoop => RangeLoop::cast(node).map(Self::RangeLoop),
+            SyntaxKind::WhileLoop => WhileLoop::cast(node).map(Self::WhileLoop),
             SyntaxKind::ExprAction => ExprAction::cast(node).map(Self::ExprAction),
             _ => None,
         }
@@ -45,6 +47,7 @@ impl AstNode for Action {
             Self::Text(v) => v.syntax(),
             Self::IfConditional(v) => v.syntax(),
             Self::RangeLoop(v) => v.syntax(),
+            Self::WhileLoop(v) => v.syntax(),
             Self::ExprAction(v) => v.syntax(),
         }
     }
@@ -208,6 +211,39 @@ define_node! {
 
 define_node! {
     ColonEqToken(SyntaxKind::Eq)
+}
+
+define_node! {
+    WhileLoop(SyntaxKind::WhileLoop)
+}
+
+impl WhileLoop {
+    pub fn while_clause(&self) -> Option<WhileClause> {
+        cast_first_child(self.syntax())
+    }
+
+    pub fn action_list(&self) -> Option<ActionList> {
+        cast_first_child(self.syntax())
+    }
+
+    pub fn else_branch(&self) -> Option<ElseBranch> {
+        cast_first_child(self.syntax())
+    }
+
+    pub fn end_clause(&self) -> Option<EndClause> {
+        cast_first_child(self.syntax())
+    }
+}
+
+define_node! {
+    WhileClause(SyntaxKind::WhileClause)
+}
+impl_delim_accessors!(WhileClause);
+
+impl WhileClause {
+    pub fn loop_condition_expr(&self) -> Option<Expr> {
+        cast_first_child(self.syntax())
+    }
 }
 
 define_node! {
