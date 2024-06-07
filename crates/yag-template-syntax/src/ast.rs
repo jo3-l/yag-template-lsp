@@ -27,8 +27,6 @@ macro_rules! define_node {
     };
 }
 
-pub(crate) use define_node;
-
 define_node! {
     Root(SyntaxKind::Root)
 }
@@ -484,7 +482,7 @@ define_node! {
 
 impl Var {
     pub fn name(&self) -> SyntaxText {
-        self.0.text()
+        self.syntax().text()
     }
 }
 
