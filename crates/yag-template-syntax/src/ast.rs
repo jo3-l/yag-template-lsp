@@ -448,7 +448,7 @@ define_node! {
 impl Field {
     pub fn name(&self) -> Option<SyntaxText> {
         let text = self.syntax().text();
-        if text.char_at(0.into()) == Some('.') {
+        if text.len() > 1.into() && text.char_at(0.into()) == Some('.') {
             Some(text.slice(1.into()..))
         } else {
             None
