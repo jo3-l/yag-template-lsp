@@ -16,7 +16,7 @@ fn action_list(p: &mut Parser) {
         .add(SyntaxKind::End);
 
     let action_list = p.start(SyntaxKind::ActionList);
-    // until EOF, `{{end`, or `{{else`
+    // until EOF, `{{else`, `{{catch`, or `{{end`
     while !p.at_eof() && !p.at_left_delim_and(ACTION_LIST_TERMINATORS) {
         text_or_action(p);
     }
