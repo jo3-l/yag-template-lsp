@@ -88,7 +88,7 @@ impl ActionList {
     }
 }
 
-macro_rules! impl_delim_accessors {
+macro_rules! delim_accessors {
     ($name:ident) => {
         impl $name {
             pub fn left_delim(&self) -> Option<LeftDelim> {
@@ -105,7 +105,7 @@ macro_rules! impl_delim_accessors {
 define_node! {
     EndClause(SyntaxKind::EndClause)
 }
-impl_delim_accessors!(EndClause);
+delim_accessors!(EndClause);
 
 define_node! {
     IfConditional(SyntaxKind::IfConditional)
@@ -132,7 +132,7 @@ impl IfConditional {
 define_node! {
     IfClause(SyntaxKind::IfClause)
 }
-impl_delim_accessors!(IfClause);
+delim_accessors!(IfClause);
 
 impl IfClause {
     pub fn if_expr(&self) -> Option<Expr> {
@@ -157,7 +157,7 @@ impl ElseBranch {
 define_node! {
     ElseClause(SyntaxKind::ElseClause)
 }
-impl_delim_accessors!(ElseClause);
+delim_accessors!(ElseClause);
 
 impl ElseClause {
     pub fn cond_expr(&self) -> Option<Expr> {
@@ -190,7 +190,7 @@ impl RangeLoop {
 define_node! {
     RangeClause(SyntaxKind::RangeClause)
 }
-impl_delim_accessors!(RangeClause);
+delim_accessors!(RangeClause);
 
 impl RangeClause {
     pub fn iteration_vars(&self) -> AstElementChildren<Var> {
@@ -239,7 +239,7 @@ impl WhileLoop {
 define_node! {
     WhileClause(SyntaxKind::WhileClause)
 }
-impl_delim_accessors!(WhileClause);
+delim_accessors!(WhileClause);
 
 impl WhileClause {
     pub fn loop_condition_expr(&self) -> Option<Expr> {
@@ -272,17 +272,17 @@ impl TryCatchAction {
 define_node! {
     TryClause(SyntaxKind::TryClause)
 }
-impl_delim_accessors!(TryClause);
+delim_accessors!(TryClause);
 
 define_node! {
     CatchClause(SyntaxKind::CatchClause)
 }
-impl_delim_accessors!(CatchClause);
+delim_accessors!(CatchClause);
 
 define_node! {
     ExprAction(SyntaxKind::ExprAction)
 }
-impl_delim_accessors!(ExprAction);
+delim_accessors!(ExprAction);
 
 #[derive(Debug, Clone, Hash)]
 pub enum Expr {

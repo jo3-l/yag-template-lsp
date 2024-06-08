@@ -13,10 +13,6 @@ impl TokenSet {
         TokenSet(0)
     }
 
-    pub(crate) const fn of(kind: SyntaxKind) -> TokenSet {
-        TokenSet(mask(kind))
-    }
-
     pub(crate) const fn add(self, kind: SyntaxKind) -> TokenSet {
         TokenSet(self.0 | mask(kind))
     }
