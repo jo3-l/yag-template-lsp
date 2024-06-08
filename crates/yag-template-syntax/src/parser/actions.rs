@@ -1,4 +1,4 @@
-use crate::parser::expr::{atom, expr};
+use crate::parser::expr::{atom, expr_pipeline};
 use crate::parser::token_set::{TokenSet, ACTION_DELIMS, LEFT_DELIMS, RIGHT_DELIMS, STRING_LITERALS};
 use crate::parser::{Parser, TokenPattern};
 use crate::{SyntaxKind, TextRange};
@@ -9,7 +9,7 @@ impl Parser<'_> {
     }
 }
 
-pub(crate) fn action_list(p: &mut Parser) {
+fn action_list(p: &mut Parser) {
     const ACTION_LIST_TERMINATORS: TokenSet = TokenSet::new()
         .add(SyntaxKind::Else)
         .add(SyntaxKind::Catch)
@@ -54,7 +54,7 @@ pub(crate) fn text_or_action(p: &mut Parser) {
     }
 }
 
-pub(crate) fn wrap_err<F, R>(f: F, p: &mut Parser, err_msg: impl Into<String>)
+fn wrap_err<F, R>(f: F, p: &mut Parser, err_msg: impl Into<String>)
 where
     F: FnOnce(&mut Parser) -> R,
 {
@@ -65,7 +65,7 @@ where
     p.error(err_msg, TextRange::new(start, p.cur_start()));
 }
 
-pub(crate) fn if_conditional(p: &mut Parser) {
+fn if_conditional(p: &mut Parser) {
     let if_conditional = p.start(SyntaxKind::IfConditional);
     if_clause(p);
     action_list(p);
@@ -74,7 +74,7 @@ pub(crate) fn if_conditional(p: &mut Parser) {
     if_conditional.complete(p);
 }
 
-pub(crate) fn if_clause(p: &mut Parser) {
+fn if_clause(p: &mut Parser) {
     let if_clause = p.start(SyntaxKind::IfClause);
     left_delim(p);
     p.eat_whitespace();
@@ -82,13 +82,13 @@ pub(crate) fn if_clause(p: &mut Parser) {
     if !p.eat_whitespace() {
         p.error_here(format!("expected space after `if` keyword; found {}", p.cur()));
     }
-    expr(p, "after `if` keyword");
+    expr_pipeline(p, "after `if` keyword");
     p.eat_whitespace();
     right_delim_or_recover(p, "in if action");
     if_clause.complete(p);
 }
 
-pub(crate) fn else_branches(p: &mut Parser, parent_context: &str, permit_else_if: bool) {
+fn else_branches(p: &mut Parser, parent_context: &str, permit_else_if: bool) {
     // Make sure we issue an error if any additional {{else if}} or {{else}}
     // branches appear after the first unconditional {{else}} branch.
     //
@@ -118,13 +118,13 @@ pub(crate) fn else_branches(p: &mut Parser, parent_context: &str, permit_else_if
 }
 
 #[derive(Debug, PartialEq, Eq)]
-pub(crate) enum ElseBranchType {
+enum ElseBranchType {
     ElseIf,
     Else,
 }
 
 /// Return the type (`else if` or `else`) and text range of the else clause.
-pub(crate) fn else_branch(p: &mut Parser) -> (ElseBranchType, TextRange) {
+fn else_branch(p: &mut Parser) -> (ElseBranchType, TextRange) {
     let else_branch = p.start(SyntaxKind::ElseBranch);
     let (branch_type, range) = else_clause(p);
     action_list(p);
@@ -132,7 +132,7 @@ pub(crate) fn else_branch(p: &mut Parser) -> (ElseBranchType, TextRange) {
     (branch_type, range)
 }
 
-pub(crate) fn else_clause(p: &mut Parser) -> (ElseBranchType, TextRange) {
+fn else_clause(p: &mut Parser) -> (ElseBranchType, TextRange) {
     let start = p.cur_start();
 
     let else_clause = p.start(SyntaxKind::ElseClause);
@@ -146,7 +146,7 @@ pub(crate) fn else_clause(p: &mut Parser) -> (ElseBranchType, TextRange) {
         }
         SyntaxKind::If => {
             p.eat();
-            expr(p, "after `else if`");
+            expr_pipeline(p, "after `else if`");
             p.eat_whitespace();
             right_delim_or_recover(p, "in else-if clause");
             ElseBranchType::ElseIf
@@ -166,7 +166,7 @@ pub(crate) fn else_clause(p: &mut Parser) -> (ElseBranchType, TextRange) {
     (branch_type, TextRange::new(start, p.cur_start()))
 }
 
-pub(crate) fn end_clause_or_recover(p: &mut Parser, parent_context: &str) {
+fn end_clause_or_recover(p: &mut Parser, parent_context: &str) {
     if !p.at_left_delim_and(SyntaxKind::End) {
         p.err_recover(format!("missing end clause for {parent_context}"), LEFT_DELIMS);
         return;
@@ -175,7 +175,7 @@ pub(crate) fn end_clause_or_recover(p: &mut Parser, parent_context: &str) {
     end_clause(p);
 }
 
-pub(crate) fn end_clause(p: &mut Parser) {
+fn end_clause(p: &mut Parser) {
     let end_clause = p.start(SyntaxKind::EndClause);
     left_delim(p);
     p.eat_whitespace();
@@ -185,7 +185,7 @@ pub(crate) fn end_clause(p: &mut Parser) {
     end_clause.complete(p);
 }
 
-pub(crate) fn range_loop(p: &mut Parser) {
+fn range_loop(p: &mut Parser) {
     let range_loop = p.start(SyntaxKind::RangeLoop);
     range_clause(p);
     action_list(p);
@@ -194,7 +194,7 @@ pub(crate) fn range_loop(p: &mut Parser) {
     range_loop.complete(p);
 }
 
-pub(crate) fn range_clause(p: &mut Parser) {
+fn range_clause(p: &mut Parser) {
     let range_clause = p.start(SyntaxKind::RangeClause);
     left_delim(p);
     p.eat_whitespace();
@@ -278,12 +278,12 @@ pub(crate) fn range_clause(p: &mut Parser) {
         p.error_here("expected `:=` or `=` between iteration variables and range expression");
     }
 
-    expr(p, "in range action");
+    expr_pipeline(p, "in range action");
     right_delim_or_recover(p, "in range action");
     range_clause.complete(p);
 }
 
-pub(crate) fn while_loop(p: &mut Parser) {
+fn while_loop(p: &mut Parser) {
     let while_loop = p.start(SyntaxKind::WhileLoop);
     while_clause(p);
     action_list(p);
@@ -292,7 +292,7 @@ pub(crate) fn while_loop(p: &mut Parser) {
     while_loop.complete(p);
 }
 
-pub(crate) fn while_clause(p: &mut Parser) {
+fn while_clause(p: &mut Parser) {
     let while_clause = p.start(SyntaxKind::WhileClause);
     left_delim(p);
     p.eat_whitespace();
@@ -300,13 +300,13 @@ pub(crate) fn while_clause(p: &mut Parser) {
     if !p.eat_whitespace() {
         p.error_here(format!("expected space after `while` keyword; found {}", p.cur()))
     }
-    expr(p, "after `while` keyword");
+    expr_pipeline(p, "after `while` keyword");
     p.eat_whitespace();
     right_delim_or_recover(p, "in `while` clause");
     while_clause.complete(p);
 }
 
-pub(crate) fn try_catch_action(p: &mut Parser) {
+fn try_catch_action(p: &mut Parser) {
     let try_catch_action = p.start(SyntaxKind::TryCatchAction);
     try_clause(p);
     action_list(p);
@@ -320,7 +320,7 @@ pub(crate) fn try_catch_action(p: &mut Parser) {
     try_catch_action.complete(p);
 }
 
-pub(crate) fn try_clause(p: &mut Parser) {
+fn try_clause(p: &mut Parser) {
     let try_clause = p.start(SyntaxKind::TryClause);
     left_delim(p);
     p.eat_whitespace();
@@ -330,7 +330,7 @@ pub(crate) fn try_clause(p: &mut Parser) {
     try_clause.complete(p);
 }
 
-pub(crate) fn catch_clause(p: &mut Parser) {
+fn catch_clause(p: &mut Parser) {
     let catch_clause = p.start(SyntaxKind::CatchClause);
     left_delim(p);
     p.eat_whitespace();
@@ -341,7 +341,7 @@ pub(crate) fn catch_clause(p: &mut Parser) {
 }
 
 // FIXME: Need to reject template definitions not at top level:
-pub(crate) fn template_definition(p: &mut Parser) {
+fn template_definition(p: &mut Parser) {
     let template_definition = p.start(SyntaxKind::TemplateDefinition);
     define_clause(p);
     action_list(p);
@@ -349,7 +349,7 @@ pub(crate) fn template_definition(p: &mut Parser) {
     template_definition.complete(p);
 }
 
-pub(crate) fn define_clause(p: &mut Parser) {
+fn define_clause(p: &mut Parser) {
     let define_clause = p.start(SyntaxKind::DefineClause);
     left_delim(p);
     p.eat_whitespace();
@@ -369,7 +369,7 @@ pub(crate) fn define_clause(p: &mut Parser) {
     define_clause.complete(p);
 }
 
-pub(crate) fn template_block(p: &mut Parser) {
+fn template_block(p: &mut Parser) {
     let template_block = p.start(SyntaxKind::TemplateBlock);
     block_clause(p);
     action_list(p);
@@ -377,7 +377,7 @@ pub(crate) fn template_block(p: &mut Parser) {
     template_block.complete(p);
 }
 
-pub(crate) fn block_clause(p: &mut Parser) {
+fn block_clause(p: &mut Parser) {
     let block_clause = p.start(SyntaxKind::BlockClause);
     left_delim(p);
     p.expect(SyntaxKind::Template);
@@ -400,7 +400,7 @@ pub(crate) fn block_clause(p: &mut Parser) {
                 p.cur()
             ));
         }
-        expr(p, "for template block");
+        expr_pipeline(p, "for template block");
     }
 
     p.eat_whitespace();
@@ -408,7 +408,7 @@ pub(crate) fn block_clause(p: &mut Parser) {
     block_clause.complete(p);
 }
 
-pub(crate) fn template_invocation(p: &mut Parser) {
+fn template_invocation(p: &mut Parser) {
     let template_invocation = p.start(SyntaxKind::TemplateInvocation);
     left_delim(p);
     p.expect(SyntaxKind::Template);
@@ -440,7 +440,7 @@ pub(crate) fn template_invocation(p: &mut Parser) {
                 p.cur()
             ));
         }
-        expr(p, "for template invocation");
+        expr_pipeline(p, "for template invocation");
     }
     p.eat_whitespace();
     right_delim_or_recover(p, "in `template` invocation");
@@ -452,7 +452,7 @@ pub(crate) fn template_invocation(p: &mut Parser) {
 // the only valid location for a comment is when it appears exactly
 // like {{/* comment */}}. (Currently we accept comments nearly everywhere as a
 // consequence of implicitly skipping trivia.)
-pub(crate) fn empty_or_comment_action(p: &mut Parser) {
+fn empty_or_comment_action(p: &mut Parser) {
     // NOTE: The implementation is complicated by the fact that most Parser
     // methods implicitly skip comments (trivia), but since we actually care
     // about comments we must restrict ourselves to using
@@ -481,23 +481,23 @@ pub(crate) fn empty_or_comment_action(p: &mut Parser) {
     }
 }
 
-pub(crate) fn expr_action(p: &mut Parser) {
+fn expr_action(p: &mut Parser) {
     let expr_action = p.start(SyntaxKind::ExprAction);
     left_delim(p);
     p.eat_whitespace();
-    expr(p, "after `{{`");
+    expr_pipeline(p, "after `{{`");
     p.eat_whitespace();
     right_delim_or_recover(p, "in action");
     expr_action.complete(p);
 }
 
-pub(crate) fn left_delim(p: &mut Parser) {
+fn left_delim(p: &mut Parser) {
     if !p.eat_if(LEFT_DELIMS) {
         p.err_and_eat(format!("expected left action delimiter; found {}", p.cur()));
     }
 }
 
-pub(crate) fn right_delim_or_recover(p: &mut Parser, context: &str) {
+fn right_delim_or_recover(p: &mut Parser, context: &str) {
     while !p.at_eof() && !p.at(ACTION_DELIMS) {
         if p.eat_if(SyntaxKind::InvalidCharInAction) {
             // lexer should already have emitted an error; no need for another
@@ -509,7 +509,7 @@ pub(crate) fn right_delim_or_recover(p: &mut Parser, context: &str) {
     right_delim(p);
 }
 
-pub(crate) fn right_delim(p: &mut Parser) {
+fn right_delim(p: &mut Parser) {
     if !p.eat_if(RIGHT_DELIMS) {
         p.err_recover("expected right action delimiter", LEFT_DELIMS);
     }

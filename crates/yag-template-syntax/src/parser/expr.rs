@@ -2,6 +2,28 @@ use crate::parser::token_set::{TokenSet, ACTION_DELIMS, LEFT_DELIMS, RIGHT_DELIM
 use crate::parser::{Checkpoint, Parser};
 use crate::SyntaxKind;
 
+pub(crate) fn expr_pipeline(p: &mut Parser, context: &str) {
+    let c = p.checkpoint();
+    expr(p, context);
+    if !p.at_ignore_space(SyntaxKind::Pipe) {
+        return;
+    }
+
+    while p.at_ignore_space(SyntaxKind::Pipe) {
+        p.eat_whitespace();
+        pipeline_stage(p);
+    }
+    p.wrap(c, SyntaxKind::Pipeline);
+}
+
+fn pipeline_stage(p: &mut Parser) {
+    let pipeline_stage = p.start(SyntaxKind::PipelineStage);
+    p.expect(SyntaxKind::Pipe);
+    p.eat_whitespace();
+    expr(p, "after `|`");
+    pipeline_stage.complete(p);
+}
+
 pub(crate) fn expr(p: &mut Parser, context: &str) {
     const EXPR_RECOVERY_SET: TokenSet = ACTION_DELIMS.add(SyntaxKind::RightParen);
 
@@ -28,7 +50,6 @@ pub(crate) fn expr(p: &mut Parser, context: &str) {
     }
     maybe_wrap_trailing_field_chain(p, c);
     maybe_wrap_trailing_call_args(p, c);
-    maybe_wrap_pipeline(p, c);
 }
 
 pub(crate) fn atom(p: &mut Parser) {
@@ -66,14 +87,14 @@ pub(crate) fn atom(p: &mut Parser) {
     maybe_wrap_trailing_field_chain(p, c);
 }
 
-pub(crate) fn maybe_wrap_trailing_field_chain(p: &mut Parser, c: Checkpoint) {
+fn maybe_wrap_trailing_field_chain(p: &mut Parser, c: Checkpoint) {
     let num_fields = eat_fields(p);
     if num_fields > 0 {
         p.wrap(c, SyntaxKind::ExprFieldChain);
     }
 }
 
-pub(crate) fn eat_fields(p: &mut Parser) -> usize {
+fn eat_fields(p: &mut Parser) -> usize {
     let mut num_fields = 0;
     loop {
         match p.cur() {
@@ -96,7 +117,7 @@ const CALL_TERMINATORS: TokenSet = LEFT_DELIMS
     .add(SyntaxKind::RightParen)
     .add(SyntaxKind::Eof);
 
-pub(crate) fn maybe_wrap_trailing_call_args(p: &mut Parser, c: Checkpoint) {
+fn maybe_wrap_trailing_call_args(p: &mut Parser, c: Checkpoint) {
     let mut num_args = 0;
     while !p.at_ignore_space(CALL_TERMINATORS) {
         p.eat_whitespace();
@@ -108,27 +129,7 @@ pub(crate) fn maybe_wrap_trailing_call_args(p: &mut Parser, c: Checkpoint) {
     }
 }
 
-pub(crate) fn maybe_wrap_pipeline(p: &mut Parser, c: Checkpoint) {
-    if !p.at_ignore_space(SyntaxKind::Pipe) {
-        return;
-    }
-
-    while p.at_ignore_space(SyntaxKind::Pipe) {
-        p.eat_whitespace();
-        pipeline_stage(p);
-    }
-    p.wrap(c, SyntaxKind::Pipeline);
-}
-
-pub(crate) fn pipeline_stage(p: &mut Parser) {
-    let pipeline_stage = p.start(SyntaxKind::PipelineStage);
-    p.expect(SyntaxKind::Pipe);
-    p.eat_whitespace();
-    expr(p, "after `|`");
-    pipeline_stage.complete(p);
-}
-
-pub(crate) fn parenthesized(p: &mut Parser) {
+fn parenthesized(p: &mut Parser) {
     let parenthesized = p.start(SyntaxKind::ParenthesizedExpr);
     p.expect(SyntaxKind::LeftParen);
     p.eat_whitespace();
@@ -138,7 +139,7 @@ pub(crate) fn parenthesized(p: &mut Parser) {
     parenthesized.complete(p);
 }
 
-pub(crate) fn func_call(p: &mut Parser, accept_args: bool) {
+fn func_call(p: &mut Parser, accept_args: bool) {
     let func_call = p.start(SyntaxKind::FuncCall);
     p.expect(SyntaxKind::Ident);
 
@@ -159,19 +160,19 @@ pub(crate) fn func_call(p: &mut Parser, accept_args: bool) {
     func_call.complete(p);
 }
 
-pub(crate) fn context_access(p: &mut Parser) {
+fn context_access(p: &mut Parser) {
     let context_access = p.start(SyntaxKind::ContextAccess);
     p.expect(SyntaxKind::Dot);
     context_access.complete(p);
 }
 
-pub(crate) fn context_field_chain(p: &mut Parser) {
+fn context_field_chain(p: &mut Parser) {
     let context_field_chain = p.start(SyntaxKind::ContextFieldChain);
     eat_fields(p);
     context_field_chain.complete(p);
 }
 
-pub(crate) fn var(p: &mut Parser) {
+fn var(p: &mut Parser) {
     const DECLARE_ASSIGN_OPS: TokenSet = TokenSet::new().add(SyntaxKind::ColonEq).add(SyntaxKind::Eq);
 
     let c = p.checkpoint();
