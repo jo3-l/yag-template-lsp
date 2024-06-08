@@ -144,6 +144,10 @@ impl Char {
     }
 }
 
+define_token! {
+    Nil(SyntaxKind::Nil)
+}
+
 #[derive(Debug, Clone, Hash)]
 pub enum StringLiteral {
     Interpreted(InterpretedString),

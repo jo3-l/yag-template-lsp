@@ -60,6 +60,8 @@ pub enum SyntaxKind {
     RawString,
     /// A character literal: `'c'`.
     Char,
+    /// An untyped nil constant: `nil`.
+    Nil,
 
     /// The `if` keyword.
     If,
@@ -188,6 +190,7 @@ impl SyntaxKind {
             "template" => Template,
             "block" => Block,
 
+            "nil" => Nil,
             "true" | "false" => Bool,
             _ => return None,
         })
@@ -195,7 +198,7 @@ impl SyntaxKind {
 
     pub fn is_literal(self) -> bool {
         use SyntaxKind::*;
-        matches!(self, Bool | Int | Float | InterpretedString | RawString | Char)
+        matches!(self, Bool | Int | Float | InterpretedString | RawString | Char | Nil)
     }
 }
 
@@ -232,6 +235,7 @@ impl fmt::Display for SyntaxKind {
             InterpretedString => "double-quoted string",
             RawString => "raw string",
             Char => "character literal",
+            Nil => "nil constant",
 
             If => "`if`",
             Else => "`else`",

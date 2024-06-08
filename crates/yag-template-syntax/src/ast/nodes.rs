@@ -387,6 +387,7 @@ pub enum Expr {
     Float(Float),
     Char(Char),
     StringLiteral(StringLiteral),
+    Nil(Nil),
 }
 
 impl AstElement for Expr {
@@ -409,6 +410,7 @@ impl AstElement for Expr {
             SyntaxKind::InterpretedString | SyntaxKind::RawString => {
                 StringLiteral::cast(element).map(Self::StringLiteral)
             }
+            SyntaxKind::Nil => Nil::cast(element).map(Self::Nil),
             _ => None,
         }
     }
@@ -432,6 +434,7 @@ impl Expr {
             Self::Float(v) => v.syntax().clone().into(),
             Self::Char(v) => v.syntax().clone().into(),
             Self::StringLiteral(v) => v.syntax().clone().into(),
+            Self::Nil(v) => v.syntax().clone().into(),
         }
     }
 }
