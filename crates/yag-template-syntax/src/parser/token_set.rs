@@ -43,7 +43,3 @@ pub(crate) const RIGHT_DELIMS: TokenSet = TokenSet::new()
     .add(SyntaxKind::TrimmedRightDelim);
 
 pub(crate) const ACTION_DELIMS: TokenSet = LEFT_DELIMS.union(RIGHT_DELIMS);
-
-pub(crate) const TRIVIA: TokenSet = TokenSet::of(SyntaxKind::Comment);
-
-pub(crate) const WHITESPACE_OR_TRIVIA: TokenSet = TRIVIA.add(SyntaxKind::Whitespace);

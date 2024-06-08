@@ -12,16 +12,14 @@ pub(crate) fn expr(p: &mut Parser, context: &str) {
         SyntaxKind::Ident => func_call(p, true),
         SyntaxKind::Field => context_field_chain(p),
         SyntaxKind::Dot => context_access(p),
-        SyntaxKind::Int | SyntaxKind::Bool => p.eat(),
         SyntaxKind::Var => var(p),
+        token if token.is_literal() => p.eat(),
 
-        SyntaxKind::InvalidChar => p.eat(), // lexer should have already emitted an error; don't duplicate
-        _ => {
-            return p.err_recover(
-                format!("expected expression {context}; found {}", p.cur_name()),
-                EXPR_RECOVERY_SET,
-            )
-        }
+        SyntaxKind::InvalidCharInAction => p.eat(), // lexer should have already emitted an error; don't duplicate
+        token => p.err_recover(
+            format!("expected expression {context}; found {}", token),
+            EXPR_RECOVERY_SET,
+        ),
     }
 
     // issue error for two dots in a row: `..Field`
@@ -49,19 +47,16 @@ pub(crate) fn atom(p: &mut Parser) {
         SyntaxKind::Ident => func_call(p, false),
         SyntaxKind::Field => context_field_chain(p),
         SyntaxKind::Dot => context_access(p),
-        SyntaxKind::Int | SyntaxKind::Bool => p.eat(),
         SyntaxKind::Var => {
             p.eat();
             p.wrap(c, SyntaxKind::VarAccess);
         }
+        token if token.is_literal() => p.eat(),
 
-        SyntaxKind::InvalidChar => p.eat(), // lexer should have already emitted an error; don't duplicate
-        _ => {
-            // "expected atom" is not great end-user UX, so lie a little
-            return p.err_recover(
-                format!("expected expression; found {}", p.cur_name()),
-                ATOM_RECOVERY_SET,
-            );
+        SyntaxKind::InvalidCharInAction => p.eat(), // lexer should have already emitted an error; don't duplicate
+        token => {
+            // "expected atom" is not great UX, so lie a little
+            return p.err_recover(format!("expected expression; found {}", token), ATOM_RECOVERY_SET);
         }
     }
 
@@ -183,7 +178,7 @@ pub(crate) fn var(p: &mut Parser) {
 
     // gracefully handle declarations and assignments with missing variable names
     let saw_var = p.expect_recover(SyntaxKind::Var, DECLARE_ASSIGN_OPS);
-    if saw_var && !DECLARE_ASSIGN_OPS.contains(p.peek_non_space()) {
+    if saw_var && !DECLARE_ASSIGN_OPS.contains(p.peek_ignore_space()) {
         p.wrap(c, SyntaxKind::VarAccess);
     }
 

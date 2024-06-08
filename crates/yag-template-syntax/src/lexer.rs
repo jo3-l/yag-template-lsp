@@ -1,7 +1,8 @@
 use unscanny::Scanner;
 
 use crate::error::SyntaxError;
-use crate::{SyntaxKind, TextRange, TextSize};
+use crate::go_lit_syntax::EscapeContext;
+use crate::{go_lit_syntax, SyntaxKind, TextRange, TextSize};
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 enum LexMode {
@@ -65,6 +66,14 @@ impl Lexer<'_> {
     fn error(&mut self, message: impl Into<String>, range: TextRange) {
         self.error = Some(SyntaxError::new(message, range));
     }
+
+    fn error_at(&mut self, pos: TextSize, message: impl Into<String>) {
+        self.error(message, TextRange::empty(pos))
+    }
+
+    fn error_from(&mut self, pos: TextSize, message: impl Into<String>) {
+        self.error(message, TextRange::new(pos, self.cursor()));
+    }
 }
 
 impl Lexer<'_> {
@@ -103,37 +112,38 @@ impl Lexer<'_> {
                 self.mode = LexMode::Text;
                 SyntaxKind::TrimmedRightDelim
             }
-            _ if c.is_whitespace() => self.whitespace(),
+            c if upstream_compat::is_space(c) => self.whitespace(),
             ',' => SyntaxKind::Comma,
             '=' => SyntaxKind::Eq,
             ':' if self.s.eat_if('=') => SyntaxKind::ColonEq,
             '|' => SyntaxKind::Pipe,
-            '.' => {
-                if self.s.at(char::is_alphanumeric) {
-                    self.s.eat_while(char::is_alphanumeric);
-                    SyntaxKind::Field
-                } else {
-                    SyntaxKind::Dot
-                }
+            '.' if self.s.at(char::is_ascii_digit) => {
+                self.s.uneat();
+                self.number()
             }
+            '.' if self.s.eat_if(char::is_alphanumeric) => {
+                self.s.eat_while(char::is_alphanumeric);
+                SyntaxKind::Field
+            }
+            '.' => SyntaxKind::Dot,
             '(' => SyntaxKind::LeftParen,
             ')' => SyntaxKind::RightParen,
             '$' => self.var(),
+            '"' => self.interpreted_string(start),
+            '`' => self.raw_string(start),
+            '\'' => self.char_literal(start),
             '+' | '-' | '0'..='9' => {
                 self.s.uneat();
                 self.number()
             }
-            _ if c.is_alphanumeric() => self.ident(start),
             '}' if self.s.eat_if('}') => {
                 self.mode = LexMode::Text;
                 SyntaxKind::RightDelim
             }
+            c if c.is_alphanumeric() => self.ident(start),
             _ => {
-                self.error(
-                    format!("invalid character {c:?} in action"),
-                    TextRange::new(start, self.cursor()),
-                );
-                SyntaxKind::InvalidChar
+                self.error_from(start, format!("invalid character {c:?} in action"));
+                SyntaxKind::InvalidCharInAction
             }
         }
     }
@@ -141,7 +151,7 @@ impl Lexer<'_> {
     fn comment(&mut self, start: TextSize) -> SyntaxKind {
         self.s.eat_until("*/");
         if !self.s.eat_if("*/") {
-            self.error("unclosed comment", TextRange::new(start, self.cursor()));
+            self.error_from(start, "unclosed comment");
         }
         SyntaxKind::Comment
     }
@@ -151,29 +161,157 @@ impl Lexer<'_> {
         SyntaxKind::Whitespace
     }
 
-    fn number(&mut self) -> SyntaxKind {
-        self.s.eat_if(['+', '-']);
-        let radix = if self.s.eat_if("0x") || self.s.eat_if("0X") {
-            16
-        } else if self.s.eat_if("0o") || self.s.eat_if("0O") {
-            8
-        } else if self.s.eat_if("0b") || self.s.eat_if("0B") {
-            2
-        } else {
-            10
-        };
-        self.s.eat_while(|c: &char| c.to_digit(radix).is_some());
-        SyntaxKind::Int
-    }
-
     fn ident(&mut self, start: TextSize) -> SyntaxKind {
-        self.s.eat_while(char::is_alphanumeric);
+        self.s.eat_while(upstream_compat::is_alphanumeric);
         let ident = self.s.from(start.into());
-        SyntaxKind::try_from_ident(ident).unwrap_or(SyntaxKind::Ident)
+        SyntaxKind::from_ident(ident).unwrap_or(SyntaxKind::Ident)
     }
 
     fn var(&mut self) -> SyntaxKind {
-        self.s.eat_while(char::is_alphanumeric);
+        self.s.eat_while(upstream_compat::is_alphanumeric);
         SyntaxKind::Var
+    }
+
+    fn interpreted_string(&mut self, start: TextSize) -> SyntaxKind {
+        while !self.done() && !self.s.at(['"', '\n']) {
+            let in_escape = self.s.eat() == Some('\\');
+            if in_escape {
+                self.s.eat();
+            }
+        }
+
+        if self.done() {
+            self.error_from(start, "unclosed string");
+        } else if self.s.at('\n') {
+            self.error_at(self.cursor(), "unexpected newline in string")
+        } else if self.s.eat_if('"') {
+            // validate escape sequences
+            let mut errors =
+                go_lit_syntax::iter_escape_sequences(self.s.from(start.into()), EscapeContext::StringLiteral)
+                    .filter_map(|(range, result)| match result {
+                        Ok(_) => None,
+                        Err(err) => Some(SyntaxError::new(err.to_string(), range)),
+                    });
+            // NOTE: lexer only supports one error per token at the moment
+            if let Some(err) = errors.next() {
+                self.error(err.message, err.range);
+            }
+        }
+
+        SyntaxKind::InterpretedString
+    }
+
+    fn raw_string(&mut self, start: TextSize) -> SyntaxKind {
+        self.s.eat_until('`');
+        if !self.s.eat_if('`') {
+            self.error_from(start, "unclosed raw string");
+        }
+        SyntaxKind::RawString
+    }
+
+    fn char_literal(&mut self, start: TextSize) -> SyntaxKind {
+        let Some(c) = self.s.eat() else {
+            self.error_at(self.cursor(), "expected character after `'`");
+            return SyntaxKind::Char;
+        };
+
+        if c == '\\' {
+            match self.s.eat() {
+                Some(c) => {
+                    let result = go_lit_syntax::scan_escape_sequence(&mut self.s, c, EscapeContext::CharacterLiteral);
+                    if let Err(err) = result {
+                        self.error_from(start, err.to_string());
+                    }
+                }
+                None => self.error_at(self.cursor(), "expected character after `\\`"),
+            }
+        }
+
+        if !self.s.eat_if('\'') {
+            self.error_at(self.cursor(), "expected `'` closing character literal");
+        }
+        SyntaxKind::Char
+    }
+
+    fn number(&mut self) -> SyntaxKind {
+        let start = self.cursor();
+        self.s.eat_if(['+', '-']);
+
+        // scan prefix
+        let base = go_lit_syntax::scan_numeric_base_prefix(&mut self.s).unwrap_or(10);
+
+        // scan integer part
+        self.scan_digits(if base == 16 {
+            char::is_ascii_alphanumeric
+        } else {
+            char::is_ascii_digit
+        });
+
+        let interpret_as_float = if base == 10 {
+            // scan decimal part
+            let has_decimal = self.s.eat_if('.');
+            if has_decimal {
+                self.scan_digits(char::is_ascii_digit);
+            }
+
+            // scan exponent
+            let has_exp = self.s.eat_if(['e', 'E']);
+            if has_exp {
+                self.s.eat_if(['+', '-']);
+                self.scan_digits(char::is_ascii_digit);
+            }
+
+            has_decimal || has_exp
+        } else {
+            false
+        };
+
+        if interpret_as_float {
+            if go_lit_syntax::parse_float(self.s.from(start.into())).is_err() {
+                self.error_from(start, "invalid number syntax");
+            }
+            SyntaxKind::Float
+        } else {
+            if go_lit_syntax::parse_int(self.s.from(start.into())).is_err() {
+                self.error_from(start, "invalid number syntax");
+            }
+            SyntaxKind::Int
+        }
+    }
+
+    fn scan_digits<F>(&mut self, allow: F)
+    where
+        F: Fn(&char) -> bool,
+    {
+        self.s.eat_while(|c| c == '_' || allow(&c));
+    }
+}
+
+mod upstream_compat {
+    use unic_ucd_category::GeneralCategory;
+
+    /// Whether c is a space character, according to the original text/template
+    /// parser in Go.
+    ///
+    /// Refer to the `isSpace` function below:
+    /// https://github.com/golang/go/blob/master/src/text/template/parse/lex.go#L671
+    pub(super) fn is_space(c: char) -> bool {
+        matches!(c, ' ' | '\t' | '\r' | '\n')
+    }
+
+    /// Whether c is alphanumeric according to the original text/template parser
+    /// in Go.
+    ///
+    /// Refer to the `isAlphaNumeric` function below:
+    /// https://github.com/golang/go/blob/master/src/text/template/parse/lex.go#L676
+    pub(super) fn is_alphanumeric(c: char) -> bool {
+        match c {
+            '_' | 'a'..='z' | 'A'..='Z' => true,
+            c if c > '\x7f' => {
+                let category = GeneralCategory::of(c);
+                category.is_letter() || category == GeneralCategory::DecimalNumber
+            }
+            _ => false,
+        }
     }
 }

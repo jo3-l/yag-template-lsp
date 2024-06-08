@@ -1,3 +1,5 @@
+use std::fmt;
+
 #[derive(PartialEq, Eq, PartialOrd, Ord, Debug, Clone, Copy, Hash)]
 #[repr(u16)]
 pub enum SyntaxKind {
@@ -6,7 +8,7 @@ pub enum SyntaxKind {
     /// A syntax error.
     Error,
     /// An invalid character in an action.
-    InvalidChar,
+    InvalidCharInAction,
 
     /// Literal text outside of an action.
     Text,
@@ -21,7 +23,7 @@ pub enum SyntaxKind {
     TrimmedRightDelim,
     /// A comment: `/* ... */`
     Comment,
-    /// Whitespace.
+    /// Whitespace in an action.
     Whitespace,
 
     /// The comma separating iteration variables in range clauses: `,`.
@@ -47,6 +49,19 @@ pub enum SyntaxKind {
     /// `.Field`.
     Field,
 
+    /// A boolean literal.
+    Bool,
+    /// An integer literal.
+    Int,
+    /// A floating-point literal.
+    Float,
+    /// An interpreted (i.e., double-quoted) string literal: `"..."`.
+    InterpretedString,
+    /// A raw string literal: `` `...` ``.
+    RawString,
+    /// A character literal: `'c'`.
+    Char,
+
     /// The `if` keyword.
     If,
     /// The `else` keyword.
@@ -66,6 +81,8 @@ pub enum SyntaxKind {
     Root,
     /// A list of actions and text, possibly interspersed.
     ActionList,
+    /// An action that only contains a comment: `{{/* comment */}}`.
+    CommentAction,
     /// The `{{end}}` clause completing a conditional or loop compound action.
     EndClause,
     /// An if-else compound action: `{{if x}} ... {{else if y}} ... {{else}} ... {{end}}`
@@ -124,10 +141,6 @@ pub enum SyntaxKind {
     VarDecl,
     /// A variable assignment: `$x = y`.
     VarAssign,
-    /// A boolean literal.
-    Bool,
-    /// An integer literal.
-    Int,
 
     #[doc(hidden)]
     __LAST,
@@ -139,7 +152,7 @@ impl SyntaxKind {
         unsafe { std::mem::transmute::<u16, SyntaxKind>(kind) }
     }
 
-    pub fn try_from_ident(ident: &str) -> Option<SyntaxKind> {
+    pub fn from_ident(ident: &str) -> Option<SyntaxKind> {
         use SyntaxKind::*;
         Some(match ident {
             "if" => If,
@@ -155,19 +168,29 @@ impl SyntaxKind {
         })
     }
 
-    pub fn name(self) -> &'static str {
+    pub fn is_literal(self) -> bool {
         use SyntaxKind::*;
-        match self {
+        matches!(self, Bool | Int | Float | InterpretedString | RawString | Char)
+    }
+}
+
+impl fmt::Display for SyntaxKind {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        use SyntaxKind::*;
+        f.write_str(match self {
             Eof => "end of file",
             Error => "syntax error",
-            InvalidChar => "invalid character in action",
+            InvalidCharInAction => "invalid character in action",
+
             Text => "text",
+
             LeftDelim => "`{{`",
             TrimmedLeftDelim => "`{{- `",
             RightDelim => "`}}`",
             TrimmedRightDelim => "` -}}`",
             Comment => "comment",
             Whitespace => "whitespace",
+
             Comma => "comma",
             ColonEq => "`:=`",
             Eq => "`=`",
@@ -175,9 +198,17 @@ impl SyntaxKind {
             Dot => "`.`",
             LeftParen => "`(`",
             RightParen => "`)`",
+
             Ident => "identifier",
             Var => "variable",
             Field => "field",
+            Bool => "boolean",
+            Int => "integer",
+            Float => "float",
+            InterpretedString => "double-quoted string",
+            RawString => "raw string",
+            Char => "character literal",
+
             If => "`if`",
             Else => "`else`",
             End => "`end`",
@@ -185,8 +216,10 @@ impl SyntaxKind {
             While => "`while`",
             Try => "`try`",
             Catch => "`catch`",
+
             Root => "root",
             ActionList => "action list",
+            CommentAction => "comment action",
             EndClause => "end clause",
             IfConditional => "if conditional",
             IfClause => "if clause",
@@ -199,7 +232,8 @@ impl SyntaxKind {
             TryCatchAction => "try-catch action",
             TryClause => "try clause",
             CatchClause => "catch clause",
-            ExprAction => "action",
+            ExprAction => "expression in action context",
+
             FuncCall => "function call",
             ExprCall => "expression called with arguments",
             ParenthesizedExpr => "parenthesized expression",
@@ -208,14 +242,12 @@ impl SyntaxKind {
             ContextAccess => "context access",
             ContextFieldChain => "context field chain",
             ExprFieldChain => "expression field chain",
-            Bool => "boolean literal",
-            Int => "integer literal",
             VarAccess => "variable access",
             VarAssign => "variable assignment",
             VarDecl => "variable declaration",
 
-            __LAST => "",
-        }
+            __LAST => "<SyntaxKind::__LAST>",
+        })
     }
 }
 

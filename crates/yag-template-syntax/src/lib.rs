@@ -1,5 +1,6 @@
 pub mod ast;
 mod error;
+mod go_lit_syntax;
 mod kind;
 pub mod lexer;
 pub mod parser;

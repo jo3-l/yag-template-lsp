@@ -1,3 +1,4 @@
+use std::error::Error;
 use std::fmt;
 
 use crate::TextRange;
@@ -22,3 +23,5 @@ impl fmt::Display for SyntaxError {
         self.message.fmt(f)
     }
 }
+
+impl Error for SyntaxError {}

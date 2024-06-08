@@ -10,7 +10,7 @@ use rowan::{GreenNode, GreenNodeBuilder};
 
 use crate::error::SyntaxError;
 use crate::lexer::Lexer;
-use crate::parser::token_set::{TokenSet, TRIVIA, WHITESPACE_OR_TRIVIA};
+use crate::parser::token_set::TokenSet;
 use crate::{SyntaxKind, TextRange, TextSize};
 
 pub fn parse(input: &str) -> Parse {
@@ -107,26 +107,33 @@ impl<'s> Parser<'s> {
         self.cur
     }
 
-    pub(crate) fn cur_name(&self) -> &str {
-        self.cur.name()
-    }
-
     pub(crate) fn peek(&mut self) -> SyntaxKind {
-        let checkpoint = self.lexer.checkpoint();
-        let token = self.lexer.next();
-        self.lexer.restore(checkpoint);
-        token
-    }
-
-    pub(crate) fn peek_non_space(&mut self) -> SyntaxKind {
         let checkpoint = self.lexer.checkpoint();
         loop {
             let token = self.lexer.next();
-            if !WHITESPACE_OR_TRIVIA.contains(token) {
+            if token != SyntaxKind::Comment {
                 self.lexer.restore(checkpoint);
                 break token;
             }
         }
+    }
+
+    pub(crate) fn peek_ignore_space(&mut self) -> SyntaxKind {
+        let checkpoint = self.lexer.checkpoint();
+        loop {
+            let token = self.lexer.next();
+            if !matches!(token, SyntaxKind::Whitespace | SyntaxKind::Comment) {
+                self.lexer.restore(checkpoint);
+                break token;
+            }
+        }
+    }
+
+    pub(crate) fn peek_include_trivia(&mut self) -> SyntaxKind {
+        let checkpoint = self.lexer.checkpoint();
+        let token = self.lexer.next();
+        self.lexer.restore(checkpoint);
+        token
     }
 
     pub(crate) fn cur_start(&self) -> TextSize {
@@ -151,7 +158,7 @@ impl<'s> Parser<'s> {
 
     pub(crate) fn at_ignore_space(&mut self, pat: impl TokenPattern) -> bool {
         if self.at(SyntaxKind::Whitespace) {
-            pat.matches(self.peek_non_space())
+            pat.matches(self.peek_ignore_space())
         } else {
             self.at(pat)
         }
@@ -169,7 +176,7 @@ impl<'s> Parser<'s> {
     /// the next non-trivia token.
     pub(crate) fn eat(&mut self) {
         if !self.at_eof() {
-            self.eat_cur();
+            self.only_eat_cur_token();
         }
         self.eat_trivia();
     }
@@ -177,20 +184,21 @@ impl<'s> Parser<'s> {
     /// Eat all leading whitespace and trivia and report whether any whitespace
     /// was consumed.
     pub(crate) fn eat_whitespace(&mut self) -> bool {
-        let at_whitespace = self.at(SyntaxKind::Whitespace);
+        let at = self.at(SyntaxKind::Whitespace);
         while self.at(SyntaxKind::Whitespace) {
             self.eat();
         }
-        at_whitespace
+        at
     }
 
     fn eat_trivia(&mut self) {
-        while self.at(TRIVIA) {
-            self.eat_cur();
+        while self.at(SyntaxKind::Comment) {
+            self.only_eat_cur_token();
         }
     }
 
-    fn eat_cur(&mut self) {
+    /// Eat only the current token; do not skip trailing trivia.
+    pub(crate) fn only_eat_cur_token(&mut self) {
         self.green.token(self.cur.into(), self.cur_text());
         self.cur_start = self.lexer.cursor();
         self.cur = self.lexer.next();
@@ -210,7 +218,7 @@ impl Parser<'_> {
         if at {
             self.eat();
         } else {
-            self.err_recover(format!("expected {}", kind.name()), recover);
+            self.err_recover(format!("expected {}", kind), recover);
         }
         at
     }
@@ -224,7 +232,7 @@ impl Parser<'_> {
         if at {
             self.eat();
         } else {
-            self.err_and_eat(format!("expected {}", kind.name()));
+            self.err_and_eat(format!("expected {}", kind));
         }
         at
     }

@@ -7,7 +7,7 @@ use crate::{SyntaxKind, TextRange};
 
 impl Parser<'_> {
     pub(crate) fn at_left_delim_and(&mut self, pat: impl TokenPattern) -> bool {
-        self.at(LEFT_DELIMS) && pat.matches(self.peek_non_space())
+        self.at(LEFT_DELIMS) && pat.matches(self.peek_ignore_space())
     }
 }
 
@@ -31,9 +31,9 @@ pub(crate) fn text_or_action(p: &mut Parser) {
     }
 
     if !p.at(LEFT_DELIMS) {
-        return p.err_and_eat(format!("expected left action delimiter; found {}", p.cur_name()));
+        return p.err_and_eat(format!("expected left action delimiter; found {}", p.cur()));
     }
-    match p.peek_non_space() {
+    match p.peek_ignore_space() {
         SyntaxKind::If => if_conditional(p),
         SyntaxKind::Range => range_loop(p),
         SyntaxKind::While => while_loop(p),
@@ -41,6 +41,14 @@ pub(crate) fn text_or_action(p: &mut Parser) {
         SyntaxKind::Else => wrap_err(else_clause, p, "unexpected {{else}}"),
         SyntaxKind::Catch => wrap_err(catch_clause, p, "unexpected {{catch}} outside of try-catch action"),
         SyntaxKind::End => wrap_err(end_clause, p, "unexpected {{end}}"),
+        SyntaxKind::RightDelim | SyntaxKind::TrimmedRightDelim => {
+            // peek_non_space saw a right delimiter, suggesting an empty action.
+            // But since peek_non_space implicitly skips trivia, it also may be
+            // the case that there's a comment in between:
+            //    {{/* ... */}}
+            // which is not an error -- we have to check.
+            empty_or_comment_action(p)
+        }
         _ => expr_action(p),
     }
 }
@@ -71,11 +79,11 @@ pub(crate) fn if_clause(p: &mut Parser) {
     p.eat_whitespace();
     p.expect(SyntaxKind::If);
     if !p.eat_whitespace() {
-        p.error_here(format!("expected space after `if` keyword; found {}", p.cur_name()));
+        p.error_here(format!("expected space after `if` keyword; found {}", p.cur()));
     }
     expr(p, "after `if` keyword");
     p.eat_whitespace();
-    right_delim(p, "in if action");
+    right_delim_or_recover(p, "in if action");
     if_clause.complete(p);
 }
 
@@ -139,14 +147,14 @@ pub(crate) fn else_clause(p: &mut Parser) -> (ElseBranchType, TextRange) {
             p.eat();
             expr(p, "after `else if`");
             p.eat_whitespace();
-            right_delim(p, "in else-if clause");
+            right_delim_or_recover(p, "in else-if clause");
             ElseBranchType::ElseIf
         }
         _ => {
             p.err_recover(
                 format!(
                     "expected `if` keyword or right action delimiter after `else` keyword; found {}",
-                    p.cur_name()
+                    p.cur()
                 ),
                 LEFT_DELIMS,
             );
@@ -172,7 +180,7 @@ pub(crate) fn end_clause(p: &mut Parser) {
     p.eat_whitespace();
     p.expect(SyntaxKind::End);
     p.eat_whitespace();
-    right_delim(p, "after `end` keyword");
+    right_delim_or_recover(p, "after `end` keyword");
     end_clause.complete(p);
 }
 
@@ -191,19 +199,19 @@ pub(crate) fn range_clause(p: &mut Parser) {
     p.eat_whitespace();
     p.expect(SyntaxKind::Range);
     if !p.eat_whitespace() {
-        p.error_here(format!("expected space after `range` keyword; found {}", p.cur_name()))
+        p.error_here(format!("expected space after `range` keyword; found {}", p.cur()))
     }
 
     // Iteration variables are tricky.
 
     let mut num_vars = 0;
     let mut saw_decl_or_assign_op = false;
-    'parse_iter_vars: while p.at(SyntaxKind::Var) {
-        match p.peek_non_space() {
+    'scan_iter_vars: while p.at(SyntaxKind::Var) {
+        match p.peek_ignore_space() {
             // {{range $x}}: $x is the expression to be iterated over,
             // so exit the loop and let expr() take care of it.
             SyntaxKind::RightDelim | SyntaxKind::TrimmedRightDelim => {
-                break 'parse_iter_vars;
+                break 'scan_iter_vars;
             }
 
             // {{range $x := expr}}: $x is the last iteration variable, so
@@ -216,7 +224,7 @@ pub(crate) fn range_clause(p: &mut Parser) {
                 p.eat_whitespace();
                 p.assert(SyntaxKind::ColonEq);
                 p.eat_whitespace();
-                break 'parse_iter_vars;
+                break 'scan_iter_vars;
             }
 
             // {{range $x = expr}}: similar to above.
@@ -230,7 +238,7 @@ pub(crate) fn range_clause(p: &mut Parser) {
                 }
                 p.assert(SyntaxKind::Eq);
                 p.eat_whitespace();
-                break 'parse_iter_vars;
+                break 'scan_iter_vars;
             }
 
             // {{range $x, $y := expr}}: we are at `$x,` and still have more
@@ -241,7 +249,7 @@ pub(crate) fn range_clause(p: &mut Parser) {
                 p.eat_whitespace();
                 p.assert(SyntaxKind::Comma);
                 p.eat_whitespace();
-                continue 'parse_iter_vars;
+                continue 'scan_iter_vars;
             }
 
             // {{range $x $y := expr}}: we are at `$x`; this construct is
@@ -252,12 +260,12 @@ pub(crate) fn range_clause(p: &mut Parser) {
                 p.eat_whitespace();
                 p.error_here("expected comma separating variables in range");
                 // don't eat the second variable; that's for the next iteration
-                continue 'parse_iter_vars;
+                continue 'scan_iter_vars;
             }
 
             // Something unexpected; just let expr() take care of it.
             _ => {
-                break 'parse_iter_vars;
+                break 'scan_iter_vars;
             }
         }
     }
@@ -270,7 +278,7 @@ pub(crate) fn range_clause(p: &mut Parser) {
     }
 
     expr(p, "in range action");
-    right_delim(p, "in range action");
+    right_delim_or_recover(p, "in range action");
     range_clause.complete(p);
 }
 
@@ -289,11 +297,11 @@ pub(crate) fn while_clause(p: &mut Parser) {
     p.eat_whitespace();
     p.expect(SyntaxKind::While);
     if !p.eat_whitespace() {
-        p.error_here(format!("expected space after `while` keyword; found {}", p.cur_name()))
+        p.error_here(format!("expected space after `while` keyword; found {}", p.cur()))
     }
     expr(p, "after `while` keyword");
     p.eat_whitespace();
-    right_delim(p, "in `while` clause");
+    right_delim_or_recover(p, "in `while` clause");
     while_clause.complete(p);
 }
 
@@ -317,7 +325,7 @@ pub(crate) fn try_clause(p: &mut Parser) {
     p.eat_whitespace();
     p.expect(SyntaxKind::Try);
     p.eat_whitespace();
-    right_delim(p, "after `try` keyword");
+    right_delim_or_recover(p, "after `try` keyword");
     try_clause.complete(p);
 }
 
@@ -327,8 +335,42 @@ pub(crate) fn catch_clause(p: &mut Parser) {
     p.eat_whitespace();
     p.expect(SyntaxKind::Catch);
     p.eat_whitespace();
-    right_delim(p, "after `catch` clause");
+    right_delim_or_recover(p, "after `catch` clause");
     catch_clause.complete(p);
+}
+
+// FIXME: Need to validate that comments only appear in valid positions;
+// {{ /* comment */ }} with the space is supposed to be an error and in general
+// the only valid location for a comment is when it appears exactly
+// like {{/* comment */}}. (Currently we accept comments nearly everywhere as a
+// consequence of implicitly skipping trivia.)
+pub(crate) fn empty_or_comment_action(p: &mut Parser) {
+    // NOTE: The implementation is complicated by the fact that most Parser
+    // methods implicitly skip comments (trivia), but since we actually care
+    // about comments we must restrict ourselves to using
+    // Parser::only_eat_cur_token.
+
+    let c = p.checkpoint();
+    let pos = p.cur_start();
+
+    assert!(p.at(LEFT_DELIMS));
+    p.only_eat_cur_token();
+    if p.at_ignore_space(SyntaxKind::Comment) {
+        p.only_eat_cur_token();
+        right_delim_or_recover(p, "after first comment in action");
+        p.wrap(c, SyntaxKind::CommentAction);
+    } else {
+        // no immediate comment means we are looking at an action that consists
+        // of a comment in an invalid position (e.g., `{{ /* comment */ }}` --
+        // note the spacing) or an empty action.
+        p.eat_whitespace();
+        right_delim(p);
+        p.wrap(c, SyntaxKind::Error);
+
+        // FIXME: This error is misleading if the action contains a comment with
+        // leading whitespace, such as `{{ /* comment */ }}`.
+        p.error("unexpected empty action", TextRange::new(pos, p.cur_start()));
+    }
 }
 
 pub(crate) fn expr_action(p: &mut Parser) {
@@ -337,25 +379,29 @@ pub(crate) fn expr_action(p: &mut Parser) {
     p.eat_whitespace();
     expr(p, "after `{{`");
     p.eat_whitespace();
-    right_delim(p, "in action");
+    right_delim_or_recover(p, "in action");
     expr_action.complete(p);
 }
 
 pub(crate) fn left_delim(p: &mut Parser) {
     if !p.eat_if(LEFT_DELIMS) {
-        p.err_and_eat(format!("expected left action delimiter; found {}", p.cur_name()));
+        p.err_and_eat(format!("expected left action delimiter; found {}", p.cur()));
     }
 }
 
-pub(crate) fn right_delim(p: &mut Parser, context: &str) {
+pub(crate) fn right_delim_or_recover(p: &mut Parser, context: &str) {
     while !p.at_eof() && !p.at(ACTION_DELIMS) {
-        if p.eat_if(SyntaxKind::InvalidChar) {
-            // lexer should already have emitted an error
+        if p.eat_if(SyntaxKind::InvalidCharInAction) {
+            // lexer should already have emitted an error; no need for another
         } else {
-            p.err_and_eat(format!("unexpected {} {context}", p.cur_name()))
+            p.err_and_eat(format!("unexpected {} {context}", p.cur()))
         }
     }
 
+    right_delim(p);
+}
+
+pub(crate) fn right_delim(p: &mut Parser) {
     if !p.eat_if(RIGHT_DELIMS) {
         p.err_recover("expected right action delimiter", LEFT_DELIMS);
     }

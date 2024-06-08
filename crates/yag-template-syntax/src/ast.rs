@@ -1,5 +1,7 @@
 pub use rowan::SyntaxText;
+use unscanny::Scanner;
 
+use crate::go_lit_syntax::{self, EscapeContext};
 use crate::kind::SyntaxKind;
 use crate::rowan_interface::{cast_children, cast_first_child};
 pub use crate::rowan_interface::{AstChildren, AstNode, NodeOrToken, SyntaxElement, SyntaxNode, SyntaxToken};
@@ -42,8 +44,8 @@ define_node! {
 }
 
 impl Text {
-    pub fn get(&self) -> SyntaxText {
-        self.syntax().text()
+    pub fn get(&self) -> String {
+        self.syntax().text().to_string()
     }
 }
 
@@ -326,6 +328,9 @@ pub enum Expr {
     VarAssign(VarAssign),
     Bool(Bool),
     Int(Int),
+    Float(Float),
+    Char(Char),
+    StringLiteral(StringLiteral),
 }
 
 impl AstNode for Expr {
@@ -343,6 +348,9 @@ impl AstNode for Expr {
             SyntaxKind::VarAssign => VarAssign::cast(node).map(Self::VarAssign),
             SyntaxKind::Bool => Bool::cast(node).map(Self::Bool),
             SyntaxKind::Int => Int::cast(node).map(Self::Int),
+            SyntaxKind::Float => Float::cast(node).map(Self::Float),
+            SyntaxKind::Char => Char::cast(node).map(Self::Char),
+            SyntaxKind::InterpretedString | SyntaxKind::RawString => StringLiteral::cast(node).map(Self::StringLiteral),
             _ => None,
         }
     }
@@ -361,6 +369,9 @@ impl AstNode for Expr {
             Expr::VarAssign(v) => v.syntax(),
             Expr::Bool(v) => v.syntax(),
             Expr::Int(v) => v.syntax(),
+            Expr::Float(v) => v.syntax(),
+            Expr::Char(v) => v.syntax(),
+            Expr::StringLiteral(v) => v.syntax(),
         }
     }
 }
@@ -370,8 +381,8 @@ define_node! {
 }
 
 impl Ident {
-    pub fn get(&self) -> SyntaxText {
-        self.syntax().text()
+    pub fn get(&self) -> String {
+        self.syntax().text().to_string()
     }
 }
 
@@ -446,10 +457,10 @@ define_node! {
 }
 
 impl Field {
-    pub fn name(&self) -> Option<SyntaxText> {
+    pub fn name(&self) -> Option<String> {
         let text = self.syntax().text();
         if text.len() > 1.into() && text.char_at(0.into()) == Some('.') {
-            Some(text.slice(1.into()..))
+            Some(text.slice(1.into()..).to_string())
         } else {
             None
         }
@@ -481,8 +492,8 @@ define_node! {
 }
 
 impl Var {
-    pub fn name(&self) -> SyntaxText {
-        self.syntax().text()
+    pub fn name(&self) -> String {
+        self.syntax().text().to_string()
     }
 }
 
@@ -539,7 +550,96 @@ define_node! {
 }
 
 impl Int {
-    pub fn get(&self) -> i64 {
-        todo!()
+    pub fn get(&self) -> Option<i64> {
+        go_lit_syntax::parse_int(&self.syntax().text().to_string()).ok()
     }
+}
+
+define_node! {
+    Float(SyntaxKind::Float)
+}
+
+impl Float {
+    pub fn get(&self) -> Option<f64> {
+        go_lit_syntax::parse_float(&self.syntax().text().to_string()).ok()
+    }
+}
+
+define_node! {
+    Char(SyntaxKind::Char)
+}
+
+impl Char {
+    pub fn get(&self) -> Option<char> {
+        let s = self.syntax().text().to_string();
+        let mut s = Scanner::new(&s);
+        s.eat_if('\'');
+        match s.eat() {
+            Some('\\') => {
+                let Some(after_slash) = s.eat() else { return None };
+                go_lit_syntax::scan_escape_sequence(&mut s, after_slash, EscapeContext::CharacterLiteral).ok()
+            }
+            Some(c) => Some(c),
+            None => None,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Hash)]
+pub enum StringLiteral {
+    Interpreted(InterpretedString),
+    Raw(RawString),
+}
+
+impl AstNode for StringLiteral {
+    fn cast(node: SyntaxNode) -> Option<Self> {
+        match node.kind() {
+            SyntaxKind::InterpretedString => InterpretedString::cast(node).map(Self::Interpreted),
+            SyntaxKind::RawString => RawString::cast(node).map(Self::Raw),
+            _ => None,
+        }
+    }
+
+    fn syntax(&self) -> &SyntaxNode {
+        match self {
+            Self::Interpreted(v) => v.syntax(),
+            Self::Raw(v) => v.syntax(),
+        }
+    }
+}
+
+impl StringLiteral {
+    pub fn get(&self) -> String {
+        match self {
+            Self::Interpreted(v) => v.get(),
+            Self::Raw(v) => v.get(),
+        }
+    }
+}
+
+define_node! {
+    InterpretedString(SyntaxKind::InterpretedString)
+}
+
+impl InterpretedString {
+    pub fn get(&self) -> String {
+        let src = self.syntax().text().to_string();
+        go_lit_syntax::interpret_string_content(strip_quotes(&src, '"'))
+    }
+}
+
+define_node! {
+    RawString(SyntaxKind::RawString)
+}
+
+impl RawString {
+    pub fn get(&self) -> String {
+        let s = self.syntax().text().to_string();
+        strip_quotes(&s, '`').to_string()
+    }
+}
+
+fn strip_quotes(s: &str, quote_char: char) -> &str {
+    let without_leading = s.strip_prefix(quote_char).unwrap_or(s);
+    without_leading.strip_suffix(quote_char).unwrap_or(without_leading)
 }
