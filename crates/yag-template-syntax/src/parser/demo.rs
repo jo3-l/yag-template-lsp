@@ -1,19 +1,19 @@
 #![allow(unused, unused_imports)]
-use crate::ast::{AstNode, NodeOrToken, SyntaxElement, SyntaxNode};
 use crate::parser::parse;
+use crate::{SyntaxElement, SyntaxNode};
 
 fn print(indent: usize, element: SyntaxElement) {
     let kind = element.kind();
     print!("{:indent$}", "");
     match element {
-        NodeOrToken::Node(node) => {
+        SyntaxElement::Node(node) => {
             println!("- {:?} {:?}", kind, node.text_range());
             for child in node.children_with_tokens() {
                 print(indent + 2, child);
             }
         }
 
-        NodeOrToken::Token(token) => {
+        SyntaxElement::Token(token) => {
             println!("- {:?} {:?} {:?}", token.text(), kind, token.text_range())
         }
     }

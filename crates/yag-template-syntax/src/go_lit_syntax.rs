@@ -1,3 +1,4 @@
+use std::borrow::Cow;
 use std::error::Error;
 use std::{fmt, iter};
 
@@ -149,7 +150,11 @@ impl<'s> ScannerExt<'s> for Scanner<'s> {
 /// in the case of erroneous escape sequences.)
 ///
 /// See also [iter_escape_sequences].
-pub(crate) fn interpret_string_content(src: &str) -> String {
+pub(crate) fn interpret_string_content<'s>(src: &'s str) -> Cow<'s, str> {
+    if src.find('\\').is_none() {
+        return Cow::Borrowed(src);
+    }
+
     let mut out = String::with_capacity(src.len());
     let mut last_end = 0;
     for (range, unescaped) in iter_escape_sequences(src, EscapeContext::StringLiteral) {
@@ -158,7 +163,7 @@ pub(crate) fn interpret_string_content(src: &str) -> String {
         last_end = range.end().into();
     }
     out.push_str(&src[last_end..]);
-    out
+    Cow::Owned(out)
 }
 
 /// Make a best effort to parse the input as a Go integer literal.

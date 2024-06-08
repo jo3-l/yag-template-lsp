@@ -10,3 +10,4 @@ pub use rowan::{TextRange, TextSize};
 
 pub use crate::error::SyntaxError;
 pub use crate::kind::SyntaxKind;
+pub use crate::rowan_interface::{SyntaxElement, SyntaxNode, SyntaxToken, YagTemplateLanguage};
