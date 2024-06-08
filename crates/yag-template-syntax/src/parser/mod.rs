@@ -107,17 +107,6 @@ impl<'s> Parser<'s> {
         self.cur
     }
 
-    pub(crate) fn peek(&mut self) -> SyntaxKind {
-        let checkpoint = self.lexer.checkpoint();
-        loop {
-            let token = self.lexer.next();
-            if token != SyntaxKind::Comment {
-                self.lexer.restore(checkpoint);
-                break token;
-            }
-        }
-    }
-
     pub(crate) fn peek_ignore_space(&mut self) -> SyntaxKind {
         let checkpoint = self.lexer.checkpoint();
         loop {
@@ -127,13 +116,6 @@ impl<'s> Parser<'s> {
                 break token;
             }
         }
-    }
-
-    pub(crate) fn peek_include_trivia(&mut self) -> SyntaxKind {
-        let checkpoint = self.lexer.checkpoint();
-        let token = self.lexer.next();
-        self.lexer.restore(checkpoint);
-        token
     }
 
     pub(crate) fn cur_start(&self) -> TextSize {
