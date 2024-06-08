@@ -52,14 +52,14 @@ pub(crate) fn expr(p: &mut Parser, context: &str) {
     maybe_wrap_trailing_call_args(p, c);
 }
 
-pub(crate) fn atom(p: &mut Parser) {
+pub(crate) fn arg(p: &mut Parser) {
     const ATOM_RECOVERY_SET: TokenSet = ACTION_DELIMS.add(SyntaxKind::RightParen);
 
     let saw_dot = p.at(SyntaxKind::Dot);
     let c = p.checkpoint();
     match p.cur() {
         SyntaxKind::LeftParen => parenthesized(p),
-        // Don't eat call arguments in atom context:
+        // Don't accept additional arguments:
         //   {{add currentHour 2}}
         // should be parsed as
         //   add(currentHour(), 2)
@@ -76,8 +76,7 @@ pub(crate) fn atom(p: &mut Parser) {
 
         SyntaxKind::InvalidCharInAction => p.eat(), // lexer should have already emitted an error; don't duplicate
         token => {
-            // "expected atom" is not great UX, so lie a little
-            return p.err_recover(format!("expected expression; found {}", token), ATOM_RECOVERY_SET);
+            return p.err_recover(format!("expected argument; found {}", token), ATOM_RECOVERY_SET);
         }
     }
 
@@ -121,7 +120,7 @@ fn maybe_wrap_trailing_call_args(p: &mut Parser, c: Checkpoint) {
     let mut num_args = 0;
     while !p.at_ignore_space(CALL_TERMINATORS) {
         p.eat_whitespace();
-        atom(p);
+        arg(p);
         num_args += 1;
     }
     if num_args > 0 {
@@ -153,7 +152,7 @@ fn func_call(p: &mut Parser, accept_args: bool) {
                     "expected space separating function name and argument"
                 });
             }
-            atom(p);
+            arg(p);
             num_args += 1;
         }
     }

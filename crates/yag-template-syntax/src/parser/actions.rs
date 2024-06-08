@@ -1,4 +1,4 @@
-use crate::parser::expr::{atom, expr_pipeline};
+use crate::parser::expr::{arg, expr_pipeline};
 use crate::parser::token_set::{TokenSet, ACTION_DELIMS, LEFT_DELIMS, RIGHT_DELIMS, STRING_LITERALS};
 use crate::parser::{Parser, TokenPattern};
 use crate::{SyntaxKind, TextRange};
@@ -425,11 +425,7 @@ fn template_invocation(p: &mut Parser) {
             // Perhaps something like `{{template $x}}`; though this construct
             // is erroneous (`template` only works with constant string literal
             // names), try to parse it and issue an error.
-            wrap_err(
-                atom,
-                p,
-                "template invocations only accept constant string literal names",
-            );
+            wrap_err(arg, p, "template invocations only accept constant string literal names");
         }
     }
     // Accept an optional expression denoting the context data to send.
