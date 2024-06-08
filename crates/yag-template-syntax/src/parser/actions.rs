@@ -33,6 +33,7 @@ pub(crate) fn text_or_action(p: &mut Parser) {
     }
     match p.peek_ignore_space() {
         SyntaxKind::If => if_conditional(p),
+        SyntaxKind::With => with_conditional(p),
         SyntaxKind::Range => range_loop(p),
         SyntaxKind::While => while_loop(p),
         SyntaxKind::Try => try_catch_action(p),
@@ -86,6 +87,30 @@ fn if_clause(p: &mut Parser) {
     p.eat_whitespace();
     right_delim_or_recover(p, "in if action");
     if_clause.complete(p);
+}
+
+// XXX: Consider deduplicating parsing of if/with actions?
+fn with_conditional(p: &mut Parser) {
+    let with_conditional = p.start(SyntaxKind::WithConditional);
+    with_clause(p);
+    action_list(p);
+    else_branches(p, "with action", true);
+    end_clause_or_recover(p, "with action");
+    with_conditional.complete(p);
+}
+
+fn with_clause(p: &mut Parser) {
+    let with_clause = p.start(SyntaxKind::WithClause);
+    left_delim(p);
+    p.eat_whitespace();
+    p.expect(SyntaxKind::With);
+    if !p.eat_whitespace() {
+        p.error_here(format!("expected space after `with` keyword; found {}", p.cur()));
+    }
+    expr_pipeline(p, "after `with` keyword");
+    p.eat_whitespace();
+    right_delim_or_recover(p, "in with action");
+    with_clause.complete(p);
 }
 
 fn else_branches(p: &mut Parser, parent_context: &str, permit_else_if: bool) {

@@ -48,6 +48,7 @@ pub enum Action {
     TemplateBlock(TemplateBlock),
     TemplateInvocation(TemplateInvocation),
     IfConditional(IfConditional),
+    WithConditional(WithConditional),
     RangeLoop(RangeLoop),
     WhileLoop(WhileLoop),
     TryCatch(TryCatchAction),
@@ -62,6 +63,7 @@ impl AstElement for Action {
             SyntaxKind::TemplateBlock => TemplateBlock::cast(element).map(Self::TemplateBlock),
             SyntaxKind::TemplateInvocation => TemplateInvocation::cast(element).map(Self::TemplateInvocation),
             SyntaxKind::IfConditional => IfConditional::cast(element).map(Self::IfConditional),
+            SyntaxKind::WithConditional => WithConditional::cast(element).map(Self::WithConditional),
             SyntaxKind::RangeLoop => RangeLoop::cast(element).map(Self::RangeLoop),
             SyntaxKind::WhileLoop => WhileLoop::cast(element).map(Self::WhileLoop),
             SyntaxKind::TryCatchAction => TryCatchAction::cast(element).map(Self::TryCatch),
@@ -79,6 +81,7 @@ impl Action {
             Self::TemplateBlock(v) => v.syntax().clone().into(),
             Self::TemplateInvocation(v) => v.syntax().clone().into(),
             Self::IfConditional(v) => v.syntax().clone().into(),
+            Self::WithConditional(v) => v.syntax().clone().into(),
             Self::RangeLoop(v) => v.syntax().clone().into(),
             Self::WhileLoop(v) => v.syntax().clone().into(),
             Self::TryCatch(v) => v.syntax().clone().into(),
@@ -222,6 +225,40 @@ delim_accessors!(IfClause);
 
 impl IfClause {
     pub fn if_expr(&self) -> Option<Expr> {
+        cast_first_child(self.syntax())
+    }
+}
+
+// XXX: Consider unifying IfConditional/WithConditional?
+define_node! {
+    WithConditional(SyntaxKind::WithConditional)
+}
+
+impl WithConditional {
+    pub fn with_clause(&self) -> Option<WithClause> {
+        cast_first_child(self.syntax())
+    }
+
+    pub fn action_list(&self) -> Option<ActionList> {
+        cast_first_child(self.syntax())
+    }
+
+    pub fn else_branches(&self) -> AstElementChildren<ElseBranch> {
+        cast_children(self.syntax())
+    }
+
+    pub fn end_clause(&self) -> Option<EndClause> {
+        cast_first_child(self.syntax())
+    }
+}
+
+define_node! {
+    WithClause(SyntaxKind::WithClause)
+}
+delim_accessors!(WithClause);
+
+impl WithClause {
+    pub fn with_expr(&self) -> Option<Expr> {
         cast_first_child(self.syntax())
     }
 }

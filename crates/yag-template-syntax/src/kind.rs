@@ -65,6 +65,8 @@ pub enum SyntaxKind {
 
     /// The `if` keyword.
     If,
+    /// The `with` keyword.
+    With,
     /// The `else` keyword.
     Else,
     /// The `end` keyword.
@@ -113,10 +115,14 @@ pub enum SyntaxKind {
     IfConditional,
     /// The `{{if x}}` clause within an if-else compound action.
     IfClause,
-    /// A single `{{else}} actions...` branch of an if-else compound action.
+    /// A single `{{else}} actions...` branch of an if-else or with-else compound action.
     ElseBranch,
     /// The `{{else}}` or `{{else if x}}` clause within an else branch.
     ElseClause,
+    /// A with-else compound action: `{{with x}} ... {{else if y}} ... {{else}} ... {{end}}`.
+    WithConditional,
+    /// The `{{with x}}` clause within a with-else compound action.
+    WithClause,
     /// A range loop compound action: `{{range x}} ... {{else}} ... {{end}}`.
     RangeLoop,
     /// The `{{range ...}}` clause within a range loop compound action.
@@ -180,6 +186,7 @@ impl SyntaxKind {
         use SyntaxKind::*;
         Some(match ident {
             "if" => If,
+            "with" => With,
             "else" => Else,
             "end" => End,
             "range" => Range,
@@ -238,6 +245,7 @@ impl fmt::Display for SyntaxKind {
             Nil => "nil constant",
 
             If => "`if`",
+            With => "`with`",
             Else => "`else`",
             End => "`end`",
             Range => "`range`",
@@ -264,6 +272,8 @@ impl fmt::Display for SyntaxKind {
             IfClause => "if clause",
             ElseBranch => "else branch",
             ElseClause => "else clause",
+            WithConditional => "with conditional",
+            WithClause => "with clause",
             RangeLoop => "range loop",
             RangeClause => "range clause",
             WhileLoop => "while loop",
