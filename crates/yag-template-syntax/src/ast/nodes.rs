@@ -44,6 +44,9 @@ impl Root {
 #[derive(Debug, Clone, Hash)]
 pub enum Action {
     Text(Text),
+    TemplateDefinition(TemplateDefinition),
+    TemplateBlock(TemplateBlock),
+    TemplateInvocation(TemplateInvocation),
     IfConditional(IfConditional),
     RangeLoop(RangeLoop),
     WhileLoop(WhileLoop),
@@ -55,6 +58,9 @@ impl AstElement for Action {
     fn cast(element: SyntaxElement) -> Option<Self> {
         match element.kind() {
             SyntaxKind::Text => Text::cast(element).map(Self::Text),
+            SyntaxKind::TemplateDefinition => TemplateDefinition::cast(element).map(Self::TemplateDefinition),
+            SyntaxKind::TemplateBlock => TemplateBlock::cast(element).map(Self::TemplateBlock),
+            SyntaxKind::TemplateInvocation => TemplateInvocation::cast(element).map(Self::TemplateInvocation),
             SyntaxKind::IfConditional => IfConditional::cast(element).map(Self::IfConditional),
             SyntaxKind::RangeLoop => RangeLoop::cast(element).map(Self::RangeLoop),
             SyntaxKind::WhileLoop => WhileLoop::cast(element).map(Self::WhileLoop),
@@ -69,22 +75,15 @@ impl Action {
     pub fn syntax(&self) -> SyntaxElement {
         match self {
             Self::Text(v) => v.syntax().clone().into(),
+            Self::TemplateDefinition(v) => v.syntax().clone().into(),
+            Self::TemplateBlock(v) => v.syntax().clone().into(),
+            Self::TemplateInvocation(v) => v.syntax().clone().into(),
             Self::IfConditional(v) => v.syntax().clone().into(),
             Self::RangeLoop(v) => v.syntax().clone().into(),
             Self::WhileLoop(v) => v.syntax().clone().into(),
             Self::TryCatch(v) => v.syntax().clone().into(),
             Self::ExprAction(v) => v.syntax().clone().into(),
         }
-    }
-}
-
-define_node! {
-    ActionList(SyntaxKind::ActionList)
-}
-
-impl ActionList {
-    pub fn actions(&self) -> AstElementChildren<Action> {
-        cast_children(self.syntax())
     }
 }
 
@@ -100,6 +99,93 @@ macro_rules! delim_accessors {
             }
         }
     };
+}
+
+define_node! {
+    ActionList(SyntaxKind::ActionList)
+}
+
+impl ActionList {
+    pub fn actions(&self) -> AstElementChildren<Action> {
+        cast_children(self.syntax())
+    }
+}
+
+define_node! {
+    TemplateDefinition(SyntaxKind::TemplateDefinition)
+}
+
+impl TemplateDefinition {
+    pub fn define_clause(&self) -> Option<DefineClause> {
+        cast_first_child(self.syntax())
+    }
+
+    pub fn action_list(&self) -> Option<ActionList> {
+        cast_first_child(self.syntax())
+    }
+
+    pub fn end_clause(&self) -> Option<EndClause> {
+        cast_first_child(self.syntax())
+    }
+}
+
+define_node! {
+    DefineClause(SyntaxKind::DefineClause)
+}
+delim_accessors!(DefineClause);
+
+impl DefineClause {
+    pub fn template_name(&self) -> Option<StringLiteral> {
+        cast_first_child(self.syntax())
+    }
+}
+
+define_node! {
+    TemplateBlock(SyntaxKind::TemplateBlock)
+}
+
+impl TemplateBlock {
+    pub fn block_clause(&self) -> Option<BlockClause> {
+        cast_first_child(self.syntax())
+    }
+
+    pub fn action_list(&self) -> Option<ActionList> {
+        cast_first_child(self.syntax())
+    }
+
+    pub fn end_clause(&self) -> Option<EndClause> {
+        cast_first_child(self.syntax())
+    }
+}
+
+define_node! {
+    BlockClause(SyntaxKind::BlockClause)
+}
+delim_accessors!(BlockClause);
+
+impl BlockClause {
+    pub fn template_name(&self) -> Option<StringLiteral> {
+        cast_first_child(self.syntax())
+    }
+
+    pub fn context_data_expr(&self) -> Option<Expr> {
+        cast_first_child(self.syntax())
+    }
+}
+
+define_node! {
+    TemplateInvocation(SyntaxKind::TemplateInvocation)
+}
+delim_accessors!(TemplateInvocation);
+
+impl TemplateInvocation {
+    pub fn template_name(&self) -> Option<StringLiteral> {
+        cast_first_child(self.syntax())
+    }
+
+    pub fn context_data_expr(&self) -> Option<Expr> {
+        cast_first_child(self.syntax())
+    }
 }
 
 define_node! {

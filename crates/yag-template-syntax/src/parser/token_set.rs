@@ -6,7 +6,7 @@ use crate::SyntaxKind;
 #[derive(Default, Copy, Clone)]
 pub(crate) struct TokenSet(u64);
 
-const _: () = assert!(SyntaxKind::__LAST as u32 <= u64::BITS);
+const _: () = assert!(SyntaxKind::__LAST_TOKEN_KIND as u32 <= u64::BITS);
 
 impl TokenSet {
     pub(crate) const fn new() -> TokenSet {
@@ -14,6 +14,7 @@ impl TokenSet {
     }
 
     pub(crate) const fn add(self, kind: SyntaxKind) -> TokenSet {
+        debug_assert!((kind as u16) < (SyntaxKind::__LAST_TOKEN_KIND as u16));
         TokenSet(self.0 | mask(kind))
     }
 
@@ -39,3 +40,7 @@ pub(crate) const RIGHT_DELIMS: TokenSet = TokenSet::new()
     .add(SyntaxKind::TrimmedRightDelim);
 
 pub(crate) const ACTION_DELIMS: TokenSet = LEFT_DELIMS.union(RIGHT_DELIMS);
+
+pub(crate) const STRING_LITERALS: TokenSet = TokenSet::new()
+    .add(SyntaxKind::InterpretedString)
+    .add(SyntaxKind::RawString);

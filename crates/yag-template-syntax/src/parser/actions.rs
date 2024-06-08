@@ -1,8 +1,6 @@
-use super::token_set::{ACTION_DELIMS, LEFT_DELIMS, RIGHT_DELIMS};
-use super::TokenPattern;
-use crate::parser::expr::expr;
-use crate::parser::token_set::TokenSet;
-use crate::parser::Parser;
+use crate::parser::expr::{atom, expr};
+use crate::parser::token_set::{TokenSet, ACTION_DELIMS, LEFT_DELIMS, RIGHT_DELIMS, STRING_LITERALS};
+use crate::parser::{Parser, TokenPattern};
 use crate::{SyntaxKind, TextRange};
 
 impl Parser<'_> {
@@ -38,6 +36,9 @@ pub(crate) fn text_or_action(p: &mut Parser) {
         SyntaxKind::Range => range_loop(p),
         SyntaxKind::While => while_loop(p),
         SyntaxKind::Try => try_catch_action(p),
+        SyntaxKind::Define => template_definition(p),
+        SyntaxKind::Block => template_block(p),
+        SyntaxKind::Template => template_invocation(p),
         SyntaxKind::Else => wrap_err(else_clause, p, "unexpected {{else}}"),
         SyntaxKind::Catch => wrap_err(catch_clause, p, "unexpected {{catch}} outside of try-catch action"),
         SyntaxKind::End => wrap_err(end_clause, p, "unexpected {{end}}"),
@@ -337,6 +338,113 @@ pub(crate) fn catch_clause(p: &mut Parser) {
     p.eat_whitespace();
     right_delim_or_recover(p, "after `catch` clause");
     catch_clause.complete(p);
+}
+
+// FIXME: Need to reject template definitions not at top level:
+pub(crate) fn template_definition(p: &mut Parser) {
+    let template_definition = p.start(SyntaxKind::TemplateDefinition);
+    define_clause(p);
+    action_list(p);
+    end_clause_or_recover(p, "template definition");
+    template_definition.complete(p);
+}
+
+pub(crate) fn define_clause(p: &mut Parser) {
+    let define_clause = p.start(SyntaxKind::DefineClause);
+    left_delim(p);
+    p.eat_whitespace();
+    p.expect(SyntaxKind::Define);
+    if !p.eat_whitespace() {
+        p.error_here(format!("expected space after `define` keyword; found {}", p.cur()));
+    }
+
+    if !p.eat_if(STRING_LITERALS) {
+        p.err_recover(
+            format!("expected name of template after `define` keyword; found {}", p.cur()),
+            ACTION_DELIMS,
+        );
+    }
+    p.eat_whitespace();
+    right_delim_or_recover(p, "in `define` clause");
+    define_clause.complete(p);
+}
+
+pub(crate) fn template_block(p: &mut Parser) {
+    let template_block = p.start(SyntaxKind::TemplateBlock);
+    block_clause(p);
+    action_list(p);
+    end_clause_or_recover(p, "template block");
+    template_block.complete(p);
+}
+
+pub(crate) fn block_clause(p: &mut Parser) {
+    let block_clause = p.start(SyntaxKind::BlockClause);
+    left_delim(p);
+    p.expect(SyntaxKind::Template);
+    if !p.eat_whitespace() {
+        p.error_here(format!("expected space after `block` keyword; found {}", p.cur()));
+    }
+
+    if !p.eat_if(STRING_LITERALS) {
+        p.err_recover(
+            format!("expected name of template after `block` keyword; found {}", p.cur()),
+            ACTION_DELIMS,
+        );
+    }
+
+    // Accept an optional expression denoting the context data to send.
+    if !p.at_ignore_space(RIGHT_DELIMS) {
+        if !p.eat_whitespace() {
+            p.error_here(format!(
+                "expected space separating template name and context data; found {}",
+                p.cur()
+            ));
+        }
+        expr(p, "for template block");
+    }
+
+    p.eat_whitespace();
+    right_delim_or_recover(p, "in `block` clause");
+    block_clause.complete(p);
+}
+
+pub(crate) fn template_invocation(p: &mut Parser) {
+    let template_invocation = p.start(SyntaxKind::TemplateInvocation);
+    left_delim(p);
+    p.expect(SyntaxKind::Template);
+    if !p.eat_whitespace() {
+        p.error_here(format!("expected space after `template` keyword; found {}", p.cur()));
+    }
+
+    match p.cur() {
+        SyntaxKind::InterpretedString | SyntaxKind::RawString => p.eat(),
+        SyntaxKind::RightDelim | SyntaxKind::TrimmedRightDelim => {
+            p.error_here("expected name of template to invoke after `template` keyword")
+        }
+        _ => {
+            // Perhaps something like `{{template $x}}`; though this construct
+            // is erroneous (`template` only works with constant string literal
+            // names), try to parse it and issue an error.
+            wrap_err(
+                atom,
+                p,
+                "template invocations only accept constant string literal names",
+            );
+        }
+    }
+    // Accept an optional expression denoting the context data to send.
+    if !p.at(RIGHT_DELIMS) {
+        if !p.eat_whitespace() {
+            p.error_here(format!(
+                "expected space separating template name and context data; found {}",
+                p.cur()
+            ));
+        }
+        expr(p, "for template invocation");
+    }
+    p.eat_whitespace();
+    right_delim_or_recover(p, "in `template` invocation");
+    template_invocation.complete(p);
 }
 
 // FIXME: Need to validate that comments only appear in valid positions;

@@ -21,7 +21,9 @@ fn print(indent: usize, element: SyntaxElement) {
 
 #[test]
 fn demo_parse() {
-    let text = r#"{{ /* test */ }}
+    let text = r#"{{define "foobar"}}
+    abcd
+    {{end}}
     "#;
     let parsed = parse(text);
     let node = SyntaxNode::new_root(parsed.root.clone());
