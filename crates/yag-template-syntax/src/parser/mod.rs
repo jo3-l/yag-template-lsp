@@ -203,6 +203,13 @@ impl Parser<'_> {
         self.error(err_msg, TextRange::new(start, self.cur_start));
     }
 
+    /// Eat leading whitespace and produce an error if none was found.
+    pub(crate) fn expect_whitespace(&mut self, context: &str) {
+        if !self.eat_whitespace() {
+            self.error_here(format!("expected space {context}; found {}", self.cur))
+        }
+    }
+
     /// Eat the current token if it matches `kind`, otherwise produce an error
     /// and continue via [Parser::err_recover]. The boolean result indicates
     /// whether the token matched.

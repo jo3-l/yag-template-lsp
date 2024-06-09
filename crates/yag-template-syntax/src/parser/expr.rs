@@ -145,12 +145,10 @@ fn func_call(p: &mut Parser, accept_args: bool) {
     if accept_args {
         let mut num_args = 0;
         while !p.at_ignore_space(CALL_TERMINATORS) {
-            if !p.eat_whitespace() {
-                p.error_here(if num_args > 0 {
-                    "expected space between function arguments"
-                } else {
-                    "expected space separating function name and argument"
-                });
+            if num_args > 0 {
+                p.expect_whitespace("between function arguments");
+            } else {
+                p.expect_whitespace("separating function name and argument");
             }
             arg(p);
             num_args += 1;

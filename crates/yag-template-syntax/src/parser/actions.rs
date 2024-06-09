@@ -69,9 +69,7 @@ fn if_clause(p: &mut Parser) {
     left_delim(p);
     p.eat_whitespace();
     p.expect(SyntaxKind::If);
-    if !p.eat_whitespace() {
-        p.error_here(format!("expected space after `if` keyword; found {}", p.cur()));
-    }
+    p.expect_whitespace("after `if` keyword");
     expr_pipeline(p, "after `if` keyword");
     p.eat_whitespace();
     right_delim_or_recover(p, "in if action");
@@ -93,9 +91,7 @@ fn with_clause(p: &mut Parser) {
     left_delim(p);
     p.eat_whitespace();
     p.expect(SyntaxKind::With);
-    if !p.eat_whitespace() {
-        p.error_here(format!("expected space after `with` keyword; found {}", p.cur()));
-    }
+    p.expect_whitespace("after `with` keyword");
     expr_pipeline(p, "after `with` keyword");
     p.eat_whitespace();
     right_delim_or_recover(p, "in with action");
@@ -213,9 +209,7 @@ fn range_clause(p: &mut Parser) {
     left_delim(p);
     p.eat_whitespace();
     p.expect(SyntaxKind::Range);
-    if !p.eat_whitespace() {
-        p.error_here(format!("expected space after `range` keyword; found {}", p.cur()))
-    }
+    p.expect_whitespace("after `range` keyword");
 
     // Iteration variables are tricky.
 
@@ -248,9 +242,7 @@ fn range_clause(p: &mut Parser) {
 
                 p.assert(SyntaxKind::Var);
                 num_vars += 1;
-                if !p.eat_whitespace() {
-                    p.error_here("space required before `=` in assignment")
-                }
+                p.expect_whitespace("before `=` in assignment");
                 p.assert(SyntaxKind::Eq);
                 p.eat_whitespace();
                 break 'scan_iter_vars;
@@ -311,9 +303,7 @@ fn while_clause(p: &mut Parser) {
     left_delim(p);
     p.eat_whitespace();
     p.expect(SyntaxKind::While);
-    if !p.eat_whitespace() {
-        p.error_here(format!("expected space after `while` keyword; found {}", p.cur()))
-    }
+    p.expect_whitespace("after `while` keyword");
     expr_pipeline(p, "after `while` keyword");
     p.eat_whitespace();
     right_delim_or_recover(p, "in `while` clause");
@@ -368,9 +358,7 @@ fn define_clause(p: &mut Parser) {
     left_delim(p);
     p.eat_whitespace();
     p.expect(SyntaxKind::Define);
-    if !p.eat_whitespace() {
-        p.error_here(format!("expected space after `define` keyword; found {}", p.cur()));
-    }
+    p.expect_whitespace("after `define` keyword");
 
     if !p.eat_if(STRING_LITERALS) {
         p.err_recover(
@@ -394,10 +382,8 @@ fn template_block(p: &mut Parser) {
 fn block_clause(p: &mut Parser) {
     let block_clause = p.start(SyntaxKind::BlockClause);
     left_delim(p);
-    p.expect(SyntaxKind::Template);
-    if !p.eat_whitespace() {
-        p.error_here(format!("expected space after `block` keyword; found {}", p.cur()));
-    }
+    p.expect(SyntaxKind::Block);
+    p.expect_whitespace("after `block` keyword");
 
     if !p.eat_if(STRING_LITERALS) {
         p.err_recover(
@@ -408,12 +394,7 @@ fn block_clause(p: &mut Parser) {
 
     // Accept an optional expression denoting the context data to send.
     if !p.at_ignore_space(RIGHT_DELIMS) {
-        if !p.eat_whitespace() {
-            p.error_here(format!(
-                "expected space separating template name and context data; found {}",
-                p.cur()
-            ));
-        }
+        p.expect_whitespace("separating template name and context data");
         expr_pipeline(p, "for template block");
     }
 
@@ -426,9 +407,7 @@ fn template_invocation(p: &mut Parser) {
     let template_invocation = p.start(SyntaxKind::TemplateInvocation);
     left_delim(p);
     p.expect(SyntaxKind::Template);
-    if !p.eat_whitespace() {
-        p.error_here(format!("expected space after `template` keyword; found {}", p.cur()));
-    }
+    p.expect_whitespace("after `template` keyword");
 
     match p.cur() {
         SyntaxKind::InterpretedString | SyntaxKind::RawString => p.eat(),
@@ -444,12 +423,7 @@ fn template_invocation(p: &mut Parser) {
     }
     // Accept an optional expression denoting the context data to send.
     if !p.at(RIGHT_DELIMS) {
-        if !p.eat_whitespace() {
-            p.error_here(format!(
-                "expected space separating template name and context data; found {}",
-                p.cur()
-            ));
-        }
+        p.expect_whitespace("separating template name and context data");
         expr_pipeline(p, "for template invocation");
     }
     p.eat_whitespace();
