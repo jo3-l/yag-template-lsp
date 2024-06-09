@@ -178,19 +178,21 @@ fn var(p: &mut Parser) {
         p.wrap(c, SyntaxKind::VarAccess);
     }
 
-    let saw_space_after_var = p.eat_whitespace();
-    match p.cur() {
+    match p.peek_ignore_space() {
         SyntaxKind::ColonEq => {
-            p.eat();
+            p.eat_whitespace();
+            p.expect(SyntaxKind::ColonEq);
+            p.eat_whitespace();
             expr(p, "after `:=`");
             p.wrap(c, SyntaxKind::VarDecl);
         }
         SyntaxKind::Eq => {
-            if saw_var && !saw_space_after_var {
-                p.error_here("space required before `=` in assignment");
-            }
+            p.eat_whitespace();
+            p.expect(SyntaxKind::Eq);
+            p.expect_whitespace("before `=` in assignment");
             expr(p, "after `=`");
+            p.wrap(c, SyntaxKind::VarAssign);
         }
-        _ => (),
+        _ => {}
     }
 }
