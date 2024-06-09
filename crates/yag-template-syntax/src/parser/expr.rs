@@ -78,8 +78,8 @@ pub(crate) fn arg(p: &mut Parser) {
         }
     }
 
-    if saw_dot && p.at(SyntaxKind::Dot) {
-        p.error_here("expected identifier");
+    if saw_dot && (p.at(SyntaxKind::Field) || p.at(SyntaxKind::Dot)) {
+        p.error_here("expected field name after `.`");
     }
     trailing_field_chain(p, c);
 }
@@ -130,7 +130,7 @@ fn parenthesized(p: &mut Parser) {
     let parenthesized = p.start(SyntaxKind::ParenthesizedExpr);
     p.expect(SyntaxKind::LeftParen);
     p.eat_whitespace();
-    expr(p, "after `(`");
+    expr_pipeline(p, "after `(`");
     p.eat_whitespace();
     p.expect_recover(SyntaxKind::RightParen, LEFT_DELIMS);
     parenthesized.complete(p);
