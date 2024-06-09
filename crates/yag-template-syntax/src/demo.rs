@@ -1,4 +1,4 @@
-use crate::ast::{self, ToAstElementExt};
+use crate::ast::{self, UntypedToTypedExt};
 use crate::{parser, SyntaxElement, SyntaxNode};
 
 fn print(indent: usize, element: SyntaxElement) {

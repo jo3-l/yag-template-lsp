@@ -1,7 +1,7 @@
 use super::AstElement;
 use crate::SyntaxElement;
 
-pub trait ToAstElementExt {
+pub trait UntypedToTypedExt {
     fn is<T: AstElement>(&self) -> bool {
         self.try_to::<T>().is_some()
     }
@@ -15,7 +15,7 @@ pub trait ToAstElementExt {
     fn try_to<T: AstElement>(&self) -> Option<T>;
 }
 
-impl<T: Into<SyntaxElement> + Clone> ToAstElementExt for T {
+impl<T: Into<SyntaxElement> + Clone> UntypedToTypedExt for T {
     fn try_to<A: AstElement>(&self) -> Option<A> {
         A::cast(self.clone().into())
     }
