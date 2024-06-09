@@ -5,9 +5,11 @@ use rowan::SyntaxElementChildren;
 use crate::{SyntaxElement, SyntaxNode, YagTemplateLanguage};
 
 mod nodes;
+mod to_ast_ext;
 mod tokens;
 
 pub use nodes::*;
+pub use to_ast_ext::ToAstElementExt;
 pub use tokens::*;
 
 pub trait AstElement: Sized {

@@ -1,4 +1,4 @@
-use crate::ast::{self, AstElement};
+use crate::ast::{self, ToAstElementExt};
 use crate::{parser, SyntaxElement, SyntaxNode};
 
 fn print(indent: usize, element: SyntaxElement) {
@@ -40,7 +40,7 @@ fn demo_parse() {
 
     println!();
     println!("ast: root");
-    let root = ast::Root::cast(node.into()).unwrap();
+    let root = node.to::<ast::Root>();
     for action in root.actions() {
         println!("  - {}", action.syntax().kind())
     }
