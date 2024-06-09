@@ -53,7 +53,7 @@ pub(crate) fn expr(p: &mut Parser, context: &str) {
 }
 
 pub(crate) fn arg(p: &mut Parser) {
-    const ATOM_RECOVERY_SET: TokenSet = ACTION_DELIMS.add(SyntaxKind::RightParen);
+    const ARG_RECOVERY_SET: TokenSet = ACTION_DELIMS.add(SyntaxKind::RightParen);
 
     let saw_dot = p.at(SyntaxKind::Dot);
     let c = p.checkpoint();
@@ -76,7 +76,7 @@ pub(crate) fn arg(p: &mut Parser) {
 
         SyntaxKind::InvalidCharInAction => p.eat(), // lexer should have already emitted an error; don't duplicate
         token => {
-            return p.err_recover(format!("expected argument; found {}", token), ATOM_RECOVERY_SET);
+            return p.err_recover(format!("expected argument; found {}", token), ARG_RECOVERY_SET);
         }
     }
 

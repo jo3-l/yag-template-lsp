@@ -98,7 +98,7 @@ fn with_clause(p: &mut Parser) {
     with_clause.complete(p);
 }
 
-fn else_branches(p: &mut Parser, parent_context: &str, permit_else_if: bool) {
+fn else_branches(p: &mut Parser, parent_action_type: &str, permit_else_if: bool) {
     // Make sure we issue an error if any additional {{else if}} or {{else}}
     // branches appear after the first unconditional {{else}} branch.
     //
@@ -111,13 +111,13 @@ fn else_branches(p: &mut Parser, parent_context: &str, permit_else_if: bool) {
         let (else_clause_type, else_clause_range) = else_branch(p);
         if saw_unconditional_else {
             p.error(
-                format!("{parent_context} must end immediately after first unconditional else branch"),
+                format!("{parent_action_type} must end immediately after first unconditional else branch"),
                 else_clause_range,
             );
             p.wrap(c, SyntaxKind::Error);
         } else if else_clause_type == ElseBranchType::ElseIf && !permit_else_if {
             p.error(
-                format!("{parent_context} does not support else-if branches"),
+                format!("{parent_action_type} does not support else-if branches"),
                 else_clause_range,
             );
             p.wrap(c, SyntaxKind::Error)
@@ -176,9 +176,9 @@ fn else_clause(p: &mut Parser) -> (ElseBranchType, TextRange) {
     (branch_type, TextRange::new(start, p.cur_start()))
 }
 
-fn end_clause_or_recover(p: &mut Parser, parent_context: &str) {
+fn end_clause_or_recover(p: &mut Parser, parent_action_type: &str) {
     if !p.at_left_delim_and(SyntaxKind::End) {
-        p.err_recover(format!("missing end clause for {parent_context}"), LEFT_DELIMS);
+        p.err_recover(format!("missing end clause for {parent_action_type}"), LEFT_DELIMS);
         return;
     }
 
@@ -340,7 +340,7 @@ fn catch_clause(p: &mut Parser) {
     p.eat_whitespace();
     p.expect(SyntaxKind::Catch);
     p.eat_whitespace();
-    right_delim_or_recover(p, "after `catch` clause");
+    right_delim_or_recover(p, "after `catch` keyword");
     catch_clause.complete(p);
 }
 

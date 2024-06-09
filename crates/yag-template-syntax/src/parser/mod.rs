@@ -192,7 +192,7 @@ impl<'s> Parser<'s> {
 
 // Methods for error reporting and recovery.
 impl Parser<'_> {
-    fn wrap_err<F, R>(&mut self, parser: F, err_msg: impl Into<String>)
+    pub(crate) fn wrap_err<F, R>(&mut self, parser: F, err_msg: impl Into<String>)
     where
         F: FnOnce(&mut Parser) -> R,
     {
