@@ -1,3 +1,5 @@
+use std::vec::Drain;
+
 use unscanny::Scanner;
 
 use crate::error::SyntaxError;
@@ -14,7 +16,7 @@ enum LexMode {
 pub struct Lexer<'s> {
     s: Scanner<'s>,
     mode: LexMode,
-    error: Option<SyntaxError>,
+    errors: Vec<SyntaxError>,
 }
 
 #[derive(Debug)]
@@ -28,7 +30,7 @@ impl<'s> Lexer<'s> {
         Lexer {
             s: Scanner::new(input),
             mode: LexMode::Text,
-            error: None,
+            errors: Vec::with_capacity(1),
         }
     }
 
@@ -56,15 +58,15 @@ impl<'s> Lexer<'s> {
         self.mode = checkpoint.mode;
     }
 
-    /// Extract the syntax error associated with the last token, if any.
-    pub fn take_error(&mut self) -> Option<SyntaxError> {
-        self.error.take()
+    /// Extract the syntax errors accumulated so far.
+    pub fn drain_errors(&mut self) -> Drain<'_, SyntaxError> {
+        self.errors.drain(..)
     }
 }
 
 impl Lexer<'_> {
     fn error(&mut self, message: impl Into<String>, range: TextRange) {
-        self.error = Some(SyntaxError::new(message, range));
+        self.errors.push(SyntaxError::new(message.into(), range))
     }
 
     fn error_at(&mut self, pos: TextSize, message: impl Into<String>) {
@@ -186,16 +188,13 @@ impl Lexer<'_> {
             self.error_at(self.cursor(), "unexpected newline in string")
         } else if self.s.eat_if('"') {
             // validate escape sequences
-            let mut errors =
+            self.errors.extend(
                 go_lit_syntax::iter_escape_sequences(self.s.from(start.into()), EscapeContext::StringLiteral)
                     .filter_map(|(range, result)| match result {
                         Ok(_) => None,
                         Err(err) => Some(SyntaxError::new(err.to_string(), range)),
-                    });
-            // NOTE: lexer only supports one error per token at the moment
-            if let Some(err) = errors.next() {
-                self.error(err.message, err.range);
-            }
+                    }),
+            );
         }
 
         SyntaxKind::InterpretedString

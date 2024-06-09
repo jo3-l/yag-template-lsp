@@ -184,9 +184,7 @@ impl<'s> Parser<'s> {
         self.green.token(self.cur.into(), self.cur_text());
         self.cur_start = self.lexer.cursor();
         self.cur = self.lexer.next();
-        if let Some(err) = self.lexer.take_error() {
-            self.errors.push(err);
-        }
+        self.errors.extend(self.lexer.drain_errors());
     }
 }
 
