@@ -105,7 +105,7 @@ pub(crate) fn scan_escape_sequence(
             }
 
             let value = u32::from_str_radix(octal_digits, 8)
-                .expect("octal_digits always represent an octal number fitting in a u32");
+                .expect("octal_digits should always represent an octal number fitting in a u32");
             if value > 255 {
                 return Err(EscapeError::OutOfRangeOctalEscape);
             }
@@ -144,10 +144,9 @@ impl<'s> ScannerExt<'s> for Scanner<'s> {
     }
 }
 
-/// Return a copy of the string — which is expected to be a Go string literal
-/// with the opening and closing `"` delimiters stripped — with escape sequences
-/// replaced with the character they represent (or REPLACEMENT CHARACTER U+FFFD
-/// in the case of erroneous escape sequences.)
+/// Return the string with escape sequences replaced with the character they
+/// represent (or REPLACEMENT CHARACTER U+FFFD in the case of erroneous escape
+/// sequences.)
 ///
 /// See also [iter_escape_sequences].
 pub(crate) fn interpret_string_content<'s>(src: &'s str) -> Cow<'s, str> {
