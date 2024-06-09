@@ -76,7 +76,6 @@ fn if_clause(p: &mut Parser) {
     if_clause.complete(p);
 }
 
-// XXX: Consider deduplicating parsing of if/with actions?
 fn with_conditional(p: &mut Parser) {
     let with_conditional = p.start(SyntaxKind::WithConditional);
     with_clause(p);

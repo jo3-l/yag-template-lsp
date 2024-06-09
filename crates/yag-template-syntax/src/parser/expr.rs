@@ -5,15 +5,13 @@ use crate::SyntaxKind;
 pub(crate) fn expr_pipeline(p: &mut Parser, context: &str) {
     let c = p.checkpoint();
     expr(p, context);
-    if !p.at_ignore_space(SyntaxKind::Pipe) {
-        return;
+    if p.at_ignore_space(SyntaxKind::Pipe) {
+        while p.at_ignore_space(SyntaxKind::Pipe) {
+            p.eat_whitespace();
+            pipeline_stage(p);
+        }
+        p.wrap(c, SyntaxKind::Pipeline)
     }
-
-    while p.at_ignore_space(SyntaxKind::Pipe) {
-        p.eat_whitespace();
-        pipeline_stage(p);
-    }
-    p.wrap(c, SyntaxKind::Pipeline);
 }
 
 fn pipeline_stage(p: &mut Parser) {
@@ -48,8 +46,8 @@ pub(crate) fn expr(p: &mut Parser, context: &str) {
     if saw_dot && (p.at(SyntaxKind::Field) || p.at(SyntaxKind::Dot)) {
         p.error_here("expected field name after `.`");
     }
-    maybe_wrap_trailing_field_chain(p, c);
-    maybe_wrap_trailing_call_args(p, c);
+    trailing_field_chain(p, c);
+    trailing_call_args(p, c);
 }
 
 pub(crate) fn arg(p: &mut Parser) {
@@ -83,10 +81,10 @@ pub(crate) fn arg(p: &mut Parser) {
     if saw_dot && p.at(SyntaxKind::Dot) {
         p.error_here("expected identifier");
     }
-    maybe_wrap_trailing_field_chain(p, c);
+    trailing_field_chain(p, c);
 }
 
-fn maybe_wrap_trailing_field_chain(p: &mut Parser, c: Checkpoint) {
+fn trailing_field_chain(p: &mut Parser, c: Checkpoint) {
     let num_fields = eat_fields(p);
     if num_fields > 0 {
         p.wrap(c, SyntaxKind::ExprFieldChain);
@@ -116,7 +114,7 @@ const CALL_TERMINATORS: TokenSet = LEFT_DELIMS
     .add(SyntaxKind::RightParen)
     .add(SyntaxKind::Eof);
 
-fn maybe_wrap_trailing_call_args(p: &mut Parser, c: Checkpoint) {
+fn trailing_call_args(p: &mut Parser, c: Checkpoint) {
     let mut num_args = 0;
     while !p.at_ignore_space(CALL_TERMINATORS) {
         p.eat_whitespace();
