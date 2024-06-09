@@ -26,15 +26,11 @@ impl Mapper {
 
             let character_size = c.len_utf16();
 
-            offset_to_position.extend(
-                (last_offset..new_offset)
-                    .map(|b| (TextSize::from(b as u32), Position { line, character })),
-            );
+            offset_to_position
+                .extend((last_offset..new_offset).map(|b| (TextSize::from(b as u32), Position { line, character })));
 
-            position_to_offset.extend(
-                (last_offset..new_offset)
-                    .map(|b| (Position { line, character }, TextSize::new(b as u32))),
-            );
+            position_to_offset
+                .extend((last_offset..new_offset).map(|b| (Position { line, character }, TextSize::new(b as u32))));
 
             last_offset = new_offset;
 
@@ -47,14 +43,8 @@ impl Mapper {
         }
 
         // Last imaginary character.
-        offset_to_position.insert(
-            TextSize::from(last_offset as u32),
-            Position { line, character },
-        );
-        position_to_offset.insert(
-            Position { line, character },
-            TextSize::from(last_offset as u32),
-        );
+        offset_to_position.insert(TextSize::from(last_offset as u32), Position { line, character });
+        position_to_offset.insert(Position { line, character }, TextSize::from(last_offset as u32));
 
         Self {
             offset_to_position,
@@ -99,10 +89,7 @@ impl Mapper {
     #[must_use]
     pub fn all_range(&self) -> Range {
         Range {
-            start: Position {
-                line: 0,
-                character: 0,
-            },
+            start: Position { line: 0, character: 0 },
             end: self.end,
         }
     }

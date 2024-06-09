@@ -31,9 +31,7 @@ impl LanguageServer for YagTemplateLanguageServer {
                     }),
                     ..Default::default()
                 }),
-                text_document_sync: Some(TextDocumentSyncCapability::Kind(
-                    TextDocumentSyncKind::FULL,
-                )),
+                text_document_sync: Some(TextDocumentSyncCapability::Kind(TextDocumentSyncKind::FULL)),
                 ..Default::default()
             },
             server_info: Some(ServerInfo {

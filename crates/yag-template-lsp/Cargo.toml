@@ -7,3 +7,5 @@ edition = "2021"
 tokio = { version = "1.17.0", features = ["full"] }
 tower-lsp = "0.20.0"
 yag-template-syntax = { path = "../yag-template-syntax" }
+tracing = "0.1.40"
+tracing-subscriber = "0.3.18"
