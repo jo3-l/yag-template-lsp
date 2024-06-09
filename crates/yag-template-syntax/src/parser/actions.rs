@@ -40,6 +40,9 @@ pub(crate) fn text_or_action(p: &mut Parser) {
         SyntaxKind::Define => template_definition(p),
         SyntaxKind::Block => template_block(p),
         SyntaxKind::Template => template_invocation(p),
+        SyntaxKind::Break => loop_break(p),
+        SyntaxKind::Continue => loop_continue(p),
+        SyntaxKind::Return => return_action(p),
         SyntaxKind::Else => p.wrap_err(else_clause, "unexpected {{else}}"),
         SyntaxKind::Catch => p.wrap_err(catch_clause, "unexpected {{catch}} outside of try-catch action"),
         SyntaxKind::End => p.wrap_err(end_clause, "unexpected {{end}}"),
@@ -421,13 +424,47 @@ fn template_invocation(p: &mut Parser) {
         }
     }
     // Accept an optional expression denoting the context data to send.
-    if !p.at(RIGHT_DELIMS) {
+    if !p.at_ignore_space(RIGHT_DELIMS) {
         p.expect_whitespace("separating template name and context data");
-        expr_pipeline(p, "for template invocation");
+        expr_pipeline(p, "to pass to template");
     }
     p.eat_whitespace();
     right_delim_or_recover(p, "in `template` invocation");
     template_invocation.complete(p);
+}
+
+fn loop_break(p: &mut Parser) {
+    let loop_break = p.start(SyntaxKind::LoopBreak);
+    left_delim(p);
+    p.eat_whitespace();
+    p.expect(SyntaxKind::Break);
+    p.eat_whitespace();
+    right_delim_or_recover(p, "after `break` keyword");
+    loop_break.complete(p);
+}
+
+fn loop_continue(p: &mut Parser) {
+    let loop_continue = p.start(SyntaxKind::LoopContinue);
+    left_delim(p);
+    p.eat_whitespace();
+    p.expect(SyntaxKind::Continue);
+    p.eat_whitespace();
+    right_delim_or_recover(p, "after `continue` keyword");
+    loop_continue.complete(p);
+}
+
+fn return_action(p: &mut Parser) {
+    let return_action = p.start(SyntaxKind::ReturnAction);
+    left_delim(p);
+    p.eat_whitespace();
+    p.expect(SyntaxKind::Return);
+    if !p.at_ignore_space(RIGHT_DELIMS) {
+        p.expect_whitespace("separating `return` keyword and expression");
+        expr_pipeline(p, "to return");
+    }
+    p.eat_whitespace();
+    right_delim_or_recover(p, "in `return` action");
+    return_action.complete(p);
 }
 
 // FIXME: Need to validate that comments only appear in valid positions;

@@ -47,10 +47,13 @@ pub enum Action {
     TemplateDefinition(TemplateDefinition),
     TemplateBlock(TemplateBlock),
     TemplateInvocation(TemplateInvocation),
+    Return(ReturnAction),
     IfConditional(IfConditional),
     WithConditional(WithConditional),
     RangeLoop(RangeLoop),
     WhileLoop(WhileLoop),
+    LoopBreak(LoopBreak),
+    LoopContinue(LoopContinue),
     TryCatch(TryCatchAction),
     ExprAction(ExprAction),
 }
@@ -62,10 +65,13 @@ impl AstElement for Action {
             SyntaxKind::TemplateDefinition => TemplateDefinition::cast(element).map(Self::TemplateDefinition),
             SyntaxKind::TemplateBlock => TemplateBlock::cast(element).map(Self::TemplateBlock),
             SyntaxKind::TemplateInvocation => TemplateInvocation::cast(element).map(Self::TemplateInvocation),
+            SyntaxKind::Return => ReturnAction::cast(element).map(Self::Return),
             SyntaxKind::IfConditional => IfConditional::cast(element).map(Self::IfConditional),
             SyntaxKind::WithConditional => WithConditional::cast(element).map(Self::WithConditional),
             SyntaxKind::RangeLoop => RangeLoop::cast(element).map(Self::RangeLoop),
             SyntaxKind::WhileLoop => WhileLoop::cast(element).map(Self::WhileLoop),
+            SyntaxKind::LoopBreak => LoopBreak::cast(element).map(Self::LoopBreak),
+            SyntaxKind::LoopContinue => LoopContinue::cast(element).map(Self::LoopContinue),
             SyntaxKind::TryCatchAction => TryCatchAction::cast(element).map(Self::TryCatch),
             SyntaxKind::ExprAction => ExprAction::cast(element).map(Self::ExprAction),
             _ => None,
@@ -80,10 +86,13 @@ impl Action {
             Self::TemplateDefinition(v) => v.syntax().clone().into(),
             Self::TemplateBlock(v) => v.syntax().clone().into(),
             Self::TemplateInvocation(v) => v.syntax().clone().into(),
+            Self::Return(v) => v.syntax().clone().into(),
             Self::IfConditional(v) => v.syntax().clone().into(),
             Self::WithConditional(v) => v.syntax().clone().into(),
             Self::RangeLoop(v) => v.syntax().clone().into(),
             Self::WhileLoop(v) => v.syntax().clone().into(),
+            Self::LoopBreak(v) => v.syntax().clone().into(),
+            Self::LoopContinue(v) => v.syntax().clone().into(),
             Self::TryCatch(v) => v.syntax().clone().into(),
             Self::ExprAction(v) => v.syntax().clone().into(),
         }
@@ -187,6 +196,17 @@ impl TemplateInvocation {
     }
 
     pub fn context_data_expr(&self) -> Option<Expr> {
+        cast_first_child(self.syntax())
+    }
+}
+
+define_node! {
+    ReturnAction(SyntaxKind::ReturnAction)
+}
+delim_accessors!(ReturnAction);
+
+impl ReturnAction {
+    pub fn return_expr(&self) -> Option<Expr> {
         cast_first_child(self.syntax())
     }
 }
@@ -369,6 +389,16 @@ impl WhileClause {
         cast_first_child(self.syntax())
     }
 }
+
+define_node! {
+    LoopBreak(SyntaxKind::LoopBreak)
+}
+delim_accessors!(LoopBreak);
+
+define_node! {
+    LoopContinue(SyntaxKind::LoopContinue)
+}
+delim_accessors!(LoopContinue);
 
 define_node! {
     TryCatchAction(SyntaxKind::TryCatchAction)
