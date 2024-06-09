@@ -2,7 +2,8 @@ use crate::parser::token_set::{TokenSet, ACTION_DELIMS, LEFT_DELIMS, RIGHT_DELIM
 use crate::parser::{Checkpoint, Parser};
 use crate::SyntaxKind;
 
-/// Parse an expression, possibly pipelined.
+/// Parse a pipeline of expressions. (If there is only one expression,
+/// `expr_pipeline` behaves identically to `expr`.)
 pub(crate) fn expr_pipeline(p: &mut Parser, context: &str) {
     let c = p.checkpoint();
     expr(p, context);
