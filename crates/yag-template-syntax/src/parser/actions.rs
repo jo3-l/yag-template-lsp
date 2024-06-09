@@ -4,7 +4,7 @@ use crate::parser::{Parser, TokenPattern};
 use crate::{SyntaxKind, TextRange};
 
 impl Parser<'_> {
-    pub(crate) fn at_left_delim_and(&mut self, pat: impl TokenPattern) -> bool {
+    fn at_left_delim_and(&mut self, pat: impl TokenPattern) -> bool {
         self.at(LEFT_DELIMS) && pat.matches(self.peek_ignore_space())
     }
 }
@@ -40,9 +40,9 @@ pub(crate) fn text_or_action(p: &mut Parser) {
         SyntaxKind::Define => template_definition(p),
         SyntaxKind::Block => template_block(p),
         SyntaxKind::Template => template_invocation(p),
-        SyntaxKind::Else => wrap_err(else_clause, p, "unexpected {{else}}"),
-        SyntaxKind::Catch => wrap_err(catch_clause, p, "unexpected {{catch}} outside of try-catch action"),
-        SyntaxKind::End => wrap_err(end_clause, p, "unexpected {{end}}"),
+        SyntaxKind::Else => p.wrap_err(else_clause, "unexpected {{else}}"),
+        SyntaxKind::Catch => p.wrap_err(catch_clause, "unexpected {{catch}} outside of try-catch action"),
+        SyntaxKind::End => p.wrap_err(end_clause, "unexpected {{end}}"),
         SyntaxKind::RightDelim | SyntaxKind::TrimmedRightDelim => {
             // peek_non_space saw a right delimiter, suggesting an empty action.
             // But since peek_non_space implicitly skips trivia, it also may be
@@ -53,17 +53,6 @@ pub(crate) fn text_or_action(p: &mut Parser) {
         }
         _ => expr_action(p),
     }
-}
-
-fn wrap_err<F, R>(f: F, p: &mut Parser, err_msg: impl Into<String>)
-where
-    F: FnOnce(&mut Parser) -> R,
-{
-    let error = p.start(SyntaxKind::Error);
-    let start = p.cur_start();
-    f(p);
-    error.complete(p);
-    p.error(err_msg, TextRange::new(start, p.cur_start()));
 }
 
 fn if_conditional(p: &mut Parser) {
@@ -450,7 +439,7 @@ fn template_invocation(p: &mut Parser) {
             // Perhaps something like `{{template $x}}`; though this construct
             // is erroneous (`template` only works with constant string literal
             // names), try to parse it and issue an error.
-            wrap_err(arg, p, "template invocations only accept constant string literal names");
+            p.wrap_err(arg, "template invocations only accept constant string literal names");
         }
     }
     // Accept an optional expression denoting the context data to send.

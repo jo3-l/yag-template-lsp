@@ -69,7 +69,7 @@ impl Marker {
     }
 }
 
-// Manipulating the parse tree.
+// Methods for manipulating the parse tree.
 impl Parser<'_> {
     /// Begin a new subtree of the given kind, containing all subsequent nodes
     /// until `Marker::complete` is called.
@@ -96,8 +96,8 @@ impl Parser<'_> {
     }
 }
 
-// Accessing and consuming tokens. In general, all methods ignore trivia but not
-// whitespace (which can be significant) unless stated otherwise.
+// Methods for accessing and consuming tokens. In general, all methods ignore
+// trivia but not whitespace (which can be significant) unless stated otherwise.
 impl<'s> Parser<'s> {
     pub(crate) fn at_eof(&self) -> bool {
         self.cur == SyntaxKind::Eof
@@ -190,8 +190,19 @@ impl<'s> Parser<'s> {
     }
 }
 
-// Error reporting and recovery.
+// Methods for error reporting and recovery.
 impl Parser<'_> {
+    fn wrap_err<F, R>(&mut self, parser: F, err_msg: impl Into<String>)
+    where
+        F: FnOnce(&mut Parser) -> R,
+    {
+        let error = self.start(SyntaxKind::Error);
+        let start = self.cur_start;
+        parser(self);
+        error.complete(self);
+        self.error(err_msg, TextRange::new(start, self.cur_start));
+    }
+
     /// Eat the current token if it matches `kind`, otherwise produce an error
     /// and continue via [Parser::err_recover]. The boolean result indicates
     /// whether the token matched.
