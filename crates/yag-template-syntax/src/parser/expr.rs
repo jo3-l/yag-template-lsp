@@ -2,6 +2,7 @@ use crate::parser::token_set::{TokenSet, ACTION_DELIMS, LEFT_DELIMS, RIGHT_DELIM
 use crate::parser::{Checkpoint, Parser};
 use crate::SyntaxKind;
 
+/// Parse an expression, possibly pipelined.
 pub(crate) fn expr_pipeline(p: &mut Parser, context: &str) {
     let c = p.checkpoint();
     expr(p, context);
@@ -22,6 +23,7 @@ fn pipeline_stage(p: &mut Parser) {
     pipeline_stage.complete(p);
 }
 
+/// Parse an expression, possibly with trailing field chain and call arguments.
 pub(crate) fn expr(p: &mut Parser, context: &str) {
     const EXPR_RECOVERY_SET: TokenSet = ACTION_DELIMS.add(SyntaxKind::RightParen);
 
@@ -37,7 +39,7 @@ pub(crate) fn expr(p: &mut Parser, context: &str) {
 
         SyntaxKind::InvalidCharInAction => p.eat(), // lexer should have already emitted an error; don't duplicate
         token => p.err_recover(
-            format!("expected expression {context}; found {}", token),
+            format!("expected expression {context}; found {token}"),
             EXPR_RECOVERY_SET,
         ),
     }
@@ -50,6 +52,7 @@ pub(crate) fn expr(p: &mut Parser, context: &str) {
     trailing_call_args(p, c);
 }
 
+/// Parse an argument to a call.
 pub(crate) fn arg(p: &mut Parser) {
     const ARG_RECOVERY_SET: TokenSet = ACTION_DELIMS.add(SyntaxKind::RightParen);
 
@@ -66,6 +69,10 @@ pub(crate) fn arg(p: &mut Parser) {
         SyntaxKind::Ident => func_call(p, false),
         SyntaxKind::Field => context_field_chain(p),
         SyntaxKind::Dot => context_access(p),
+        // Variables in argument position can only
+        // be variable accesses, not assignments or declarations:
+        //   {{add $x := 2 3}}
+        // is invalid.
         SyntaxKind::Var => {
             p.eat();
             p.wrap(c, SyntaxKind::VarAccess);
@@ -73,9 +80,7 @@ pub(crate) fn arg(p: &mut Parser) {
         token if token.is_literal() => p.eat(),
 
         SyntaxKind::InvalidCharInAction => p.eat(), // lexer should have already emitted an error; don't duplicate
-        token => {
-            return p.err_recover(format!("expected argument; found {}", token), ARG_RECOVERY_SET);
-        }
+        token => p.err_recover(format!("expected argument; found {token}"), ARG_RECOVERY_SET),
     }
 
     if saw_dot && (p.at(SyntaxKind::Field) || p.at(SyntaxKind::Dot)) {
