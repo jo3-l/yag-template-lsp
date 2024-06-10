@@ -1,10 +1,10 @@
 pub mod ast;
+mod demo;
 mod error;
 mod go_lit_syntax;
 mod kind;
 pub mod lexer;
 pub mod parser;
-mod demo;
 mod rowan_interface;
 
 pub use rowan::{TextRange, TextSize};

@@ -1,11 +1,36 @@
 use std::collections::BTreeMap;
 
+use anyhow::anyhow;
 use tower_lsp::lsp_types::{Position, Range};
-use yag_template_syntax::{TextRange, TextSize};
+use yag_template_analysis::{self, Analysis};
+use yag_template_syntax::ast::{self, SyntaxNodeExt};
+use yag_template_syntax::parser::{self, Parse};
+use yag_template_syntax::{SyntaxNode, TextRange, TextSize};
+
+pub(crate) struct Document {
+    pub(crate) parse: Parse,
+    pub(crate) mapper: Mapper,
+    pub(crate) analysis: Analysis,
+}
+
+impl Document {
+    pub fn new(src: &str) -> anyhow::Result<Self> {
+        let parse = parser::parse(src);
+        let root = SyntaxNode::new_root(parse.root.clone())
+            .try_to::<ast::Root>()
+            .ok_or_else(|| anyhow!("root node of parse tree should be an ast::Root"))?;
+        let document = Self {
+            parse: parse.clone(),
+            mapper: Mapper::new_utf16(src),
+            analysis: yag_template_analysis::analyze(root),
+        };
+        Ok(document)
+    }
+}
 
 /// A mapper that translates offset:length bytes to 0-based line:row characters.
 /// Extracted from the `lsp-async-stub` crate (MIT license, Ferenc Tamás).
-pub struct Mapper {
+pub(crate) struct Mapper {
     offset_to_position: BTreeMap<TextSize, Position>,
     position_to_offset: BTreeMap<Position, TextSize>,
     lines: usize,
@@ -13,7 +38,7 @@ pub struct Mapper {
 }
 
 impl Mapper {
-    pub fn new_utf16(source: &str) -> Self {
+    pub(crate) fn new_utf16(source: &str) -> Self {
         let mut offset_to_position = BTreeMap::new();
         let mut position_to_offset = BTreeMap::new();
 
@@ -54,40 +79,33 @@ impl Mapper {
         }
     }
 
-    #[must_use]
-    pub fn offset(&self, position: Position) -> Option<TextSize> {
+    pub(crate) fn offset(&self, position: Position) -> Option<TextSize> {
         self.position_to_offset.get(&position).copied()
     }
 
-    #[must_use]
-    pub fn text_range(&self, range: Range) -> Option<TextRange> {
+    pub(crate) fn text_range(&self, range: Range) -> Option<TextRange> {
         self.offset(range.start)
             .and_then(|start| self.offset(range.end).map(|end| TextRange::new(start, end)))
     }
 
-    #[must_use]
-    pub fn position(&self, offset: TextSize) -> Option<Position> {
+    pub(crate) fn position(&self, offset: TextSize) -> Option<Position> {
         self.offset_to_position.get(&offset).copied()
     }
 
-    #[must_use]
-    pub fn range(&self, range: TextRange) -> Option<Range> {
+    pub(crate) fn range(&self, range: TextRange) -> Option<Range> {
         self.position(range.start())
             .and_then(|start| self.position(range.end()).map(|end| Range { start, end }))
     }
 
-    #[must_use]
-    pub fn mappings(&self) -> (&BTreeMap<TextSize, Position>, &BTreeMap<Position, TextSize>) {
+    pub(crate) fn mappings(&self) -> (&BTreeMap<TextSize, Position>, &BTreeMap<Position, TextSize>) {
         (&self.offset_to_position, &self.position_to_offset)
     }
 
-    #[must_use]
-    pub fn line_count(&self) -> usize {
+    pub(crate) fn line_count(&self) -> usize {
         self.lines
     }
 
-    #[must_use]
-    pub fn all_range(&self) -> Range {
+    pub(crate) fn all_range(&self) -> Range {
         Range {
             start: Position { line: 0, character: 0 },
             end: self.end,

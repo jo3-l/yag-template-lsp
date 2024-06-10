@@ -2,9 +2,9 @@ use std::borrow::Cow;
 
 use unscanny::Scanner;
 
-use crate::ast::AstElement;
+use crate::ast::AstToken;
 use crate::go_lit_syntax::EscapeContext;
-use crate::{go_lit_syntax, SyntaxElement, SyntaxKind, SyntaxToken};
+use crate::{go_lit_syntax, SyntaxKind, SyntaxToken};
 
 macro_rules! define_token {
     ($(#[$attr:meta])* $name:ident($pat:pat)) => {
@@ -12,23 +12,19 @@ macro_rules! define_token {
         #[repr(transparent)]
         $(#[$attr])*
         pub struct $name {
-            syntax: SyntaxToken,
+            pub(crate) syntax: SyntaxToken,
         }
 
-        impl AstElement for $name {
-            fn cast(element: SyntaxElement) -> Option<Self> {
-                element.into_token().and_then(|token| {
-                    if matches!(token.kind(), $pat) {
-                        Some(Self { syntax: token })
-                    } else {
-                        None
-                    }
-                })
+        impl AstToken for $name {
+            fn cast(syntax: SyntaxToken) -> Option<Self> {
+                if matches!(syntax.kind(), $pat) {
+                    Some(Self { syntax })
+                } else {
+                    None
+                }
             }
-        }
 
-        impl $name {
-            pub fn syntax(&self) -> &SyntaxToken {
+            fn syntax(&self) -> &SyntaxToken {
                 &self.syntax
             }
         }
@@ -121,7 +117,7 @@ define_token! {
 
 impl Float {
     pub fn get(&self) -> Option<f64> {
-        go_lit_syntax::parse_float(self.syntax().text()).ok()
+        go_lit_syntax::parse_float(self.syntax.text()).ok()
     }
 }
 
@@ -148,34 +144,25 @@ define_token! {
     Nil(SyntaxKind::Nil)
 }
 
-#[derive(Debug, Clone, Hash)]
+#[derive(Debug, Clone, Eq, PartialEq, Hash)]
 pub enum StringLiteral {
     Interpreted(InterpretedString),
     Raw(RawString),
 }
 
-impl AstElement for StringLiteral {
-    fn cast(element: SyntaxElement) -> Option<Self> {
-        match element.kind() {
-            SyntaxKind::InterpretedString => InterpretedString::cast(element).map(Self::Interpreted),
-            SyntaxKind::RawString => RawString::cast(element).map(Self::Raw),
+impl AstToken for StringLiteral {
+    fn cast(syntax: SyntaxToken) -> Option<Self> {
+        match syntax.kind() {
+            SyntaxKind::InterpretedString => InterpretedString::cast(syntax).map(Self::Interpreted),
+            SyntaxKind::RawString => RawString::cast(syntax).map(Self::Raw),
             _ => None,
         }
     }
-}
 
-impl<'a> StringLiteral {
-    pub fn syntax(&self) -> &SyntaxToken {
+    fn syntax(&self) -> &SyntaxToken {
         match self {
             Self::Interpreted(v) => &v.syntax,
             Self::Raw(v) => &v.syntax,
-        }
-    }
-
-    pub fn get(&'a self) -> Cow<'a, str> {
-        match self {
-            Self::Interpreted(v) => v.get(),
-            Self::Raw(v) => Cow::Borrowed(v.get()),
         }
     }
 }

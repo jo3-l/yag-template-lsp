@@ -7,10 +7,9 @@ use tracing_subscriber::layer::SubscriberExt;
 use tracing_subscriber::util::SubscriberInitExt;
 use tracing_subscriber::Registry;
 
-mod diagnostics;
-mod mapper;
+mod provider;
 mod server;
-mod workspace;
+mod session;
 
 #[tokio::main]
 async fn main() {

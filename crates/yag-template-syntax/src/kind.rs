@@ -183,6 +183,8 @@ pub enum SyntaxKind {
     VarDecl,
     /// A variable assignment: `$x = y`.
     VarAssign,
+    /// A literal constant.
+    Literal,
 
     #[doc(hidden)]
     __LAST,
@@ -216,6 +218,12 @@ impl SyntaxKind {
             "true" | "false" => Bool,
             _ => return None,
         })
+    }
+
+    pub fn is_trivia(self) -> bool {
+        // NOTE: Whitespace can be significant in some parts of the grammar, so
+        // is not considered trivia.
+        self == SyntaxKind::Comment
     }
 
     pub fn is_literal(self) -> bool {
@@ -315,6 +323,7 @@ impl fmt::Display for SyntaxKind {
             VarAccess => "variable access",
             VarAssign => "variable assignment",
             VarDecl => "variable declaration",
+            Literal => "literal constant",
 
             __LAST => "<SyntaxKind::__LAST>",
         })

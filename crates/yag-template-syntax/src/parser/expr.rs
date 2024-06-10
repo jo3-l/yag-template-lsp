@@ -36,7 +36,7 @@ pub(crate) fn expr(p: &mut Parser, context: &str) {
         SyntaxKind::Field => context_field_chain(p),
         SyntaxKind::Dot => context_access(p),
         SyntaxKind::Var => var(p),
-        token if token.is_literal() => p.eat(),
+        token if token.is_literal() => literal(p),
 
         SyntaxKind::InvalidCharInAction => p.eat(), // lexer should have already emitted an error; don't duplicate
         token => p.err_recover(
@@ -78,7 +78,7 @@ pub(crate) fn arg(p: &mut Parser) {
             p.eat();
             p.wrap(c, SyntaxKind::VarAccess);
         }
-        token if token.is_literal() => p.eat(),
+        token if token.is_literal() => literal(p),
 
         SyntaxKind::InvalidCharInAction => p.eat(), // lexer should have already emitted an error; don't duplicate
         token => p.err_recover(format!("expected argument; found {token}"), ARG_RECOVERY_SET),
@@ -201,4 +201,10 @@ fn var(p: &mut Parser) {
         }
         _ => {}
     }
+}
+
+fn literal(p: &mut Parser) {
+    let literal = p.start(SyntaxKind::Literal);
+    p.eat();
+    literal.complete(p);
 }

@@ -1,4 +1,6 @@
-use crate::ast::{self, UntypedToTypedExt};
+#[allow(unused)]
+use crate::ast::{self, AstNode, SyntaxNodeExt};
+#[allow(unused)]
 use crate::{parser, SyntaxElement, SyntaxNode};
 
 fn print(indent: usize, element: SyntaxElement) {
@@ -21,11 +23,13 @@ fn print(indent: usize, element: SyntaxElement) {
 #[test]
 fn demo_parse() {
     let src = r#"
-    {{$x := 2}}
-    {{if $x}}
-        {{$x = add $x 2}}
-        text
-    {{end}}
+{{$t := "test"}}
+{{if 1}}
+    {{$x := "test"}}
+    {{$y := "foo"}}
+{{end}}
+{{template "foo" $z := 123}}
+ {{$
     "#;
     let parse = parser::parse(src);
     let node = SyntaxNode::new_root(parse.root.clone());

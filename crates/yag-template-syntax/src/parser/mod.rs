@@ -173,8 +173,8 @@ impl<'s> Parser<'s> {
     }
 
     fn eat_trivia(&mut self) {
-        while self.at(SyntaxKind::Comment) {
-            self.only_eat_cur_token();
+        while self.cur.is_trivia() {
+            self.only_eat_cur_token()
         }
     }
 
