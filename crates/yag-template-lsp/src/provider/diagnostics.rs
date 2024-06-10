@@ -21,3 +21,11 @@ pub(crate) async fn publish_diagnostics(session: &Session, uri: &Url) -> anyhow:
         .await;
     Ok(())
 }
+
+pub(crate) async fn clear_diagnostics(session: &Session, uri: &Url) {
+    let version = Default::default();
+    session
+        .client
+        .publish_diagnostics(uri.clone(), Vec::new(), Some(version))
+        .await
+}

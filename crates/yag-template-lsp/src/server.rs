@@ -49,6 +49,6 @@ impl LanguageServer for YagTemplateLanguageServer {
     }
 
     async fn did_close(&self, params: DidCloseTextDocumentParams) {
-        session::sync::on_document_close(&self.session, params)
+        session::sync::on_document_close(&self.session, params).await;
     }
 }
