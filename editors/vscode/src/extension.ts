@@ -19,14 +19,14 @@ export function deactivate() {
 }
 
 async function startClient() {
-	const lspExecutable = {
-		command: findLspExecutable(),
+	const run = {
+		command: locateLanguageServerExecutable(),
 		options: { env: { ...process.env, RUST_BACKTRACE: '1' } },
 	};
 
 	const serverOptions: ServerOptions = {
-		run: lspExecutable,
-		debug: lspExecutable,
+		run,
+		debug: run,
 	};
 
 	const clientOptions: LanguageClientOptions = {
@@ -37,6 +37,6 @@ async function startClient() {
 	return client.start();
 }
 
-function findLspExecutable(): string {
+function locateLanguageServerExecutable(): string {
 	return resolve(__dirname, 'yag-template-lsp');
 }
