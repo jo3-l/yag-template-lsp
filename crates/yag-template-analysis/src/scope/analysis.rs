@@ -127,6 +127,8 @@ impl ScopeAnalyzer {
         for else_branch in else_branches {
             if let Some(else_clause) = else_branch.else_clause() {
                 parent_scope = self.enter_scope_with_parent(else_clause.syntax().text_range(), parent_scope);
+                self.push_var_decls_in(|| else_clause.cond_expr());
+                self.exit_scope();
             }
 
             if let Some(else_list) = else_branch.action_list() {
@@ -231,7 +233,7 @@ impl ScopeAnalyzer {
 
     fn enter_scope(&mut self, text_range: TextRange, parent: Option<ScopeId>) -> ScopeId {
         if let Some(old_scope) = self.stack.last().copied() {
-            self.link_pending_vars_to(old_scope);
+            self.drain_pending_vars_to(old_scope);
         }
         let new_scope = self.scopes.insert(Scope::new(text_range, Vec::new(), parent));
         self.stack.push(new_scope);
@@ -243,10 +245,10 @@ impl ScopeAnalyzer {
             .stack
             .pop()
             .expect("call to exit_scope() should correspond to an earlier enter_scope()");
-        self.link_pending_vars_to(scope_to_exit);
+        self.drain_pending_vars_to(scope_to_exit);
     }
 
-    fn link_pending_vars_to(&mut self, to: ScopeId) {
+    fn drain_pending_vars_to(&mut self, to: ScopeId) {
         self.scopes[to].vars.append(&mut self.pending_vars)
     }
 }
