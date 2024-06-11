@@ -213,7 +213,13 @@ pub static FUNCS: phf::Map<&'static str, &'static Func> = ::phf::Map {
                 doc: "",
             },
         ),
-        ("ne", &Func { name: "ne", doc: "" }),
+        (
+            "ne",
+            &Func {
+                name: "ne",
+                doc: "Returns the boolean truth of `arg1 != arg2`.",
+            },
+        ),
         (
             "snowflakeToTime",
             &Func {
@@ -243,7 +249,13 @@ pub static FUNCS: phf::Map<&'static str, &'static Func> = ::phf::Map {
                 doc: "",
             },
         ),
-        ("call", &Func { name: "call", doc: "" }),
+        (
+            "call",
+            &Func {
+                name: "call",
+                doc: "Returns the result of calling the first argument, which must be a function, with the remaining arguments as parameters. Thus `call .X.Y 1 2` is, in Go notation, `dot.X.Y(1, 2)` where Y is a func-valued field, map entry, or the like.\n\nThe first argument must be the result of an evaluation that yields a value of function type (as distinct from a predefined function such as print). The function must return either one or two result values, the second of which is of type error. If the arguments don't match the function or the returned error value is non-nil, execution stops.",
+            },
+        ),
         (
             "dbGetPatternReverse",
             &Func {
@@ -258,8 +270,20 @@ pub static FUNCS: phf::Map<&'static str, &'static Func> = ::phf::Map {
                 doc: "",
             },
         ),
-        ("index", &Func { name: "index", doc: "" }),
-        ("le", &Func { name: "le", doc: "" }),
+        (
+            "index",
+            &Func {
+                name: "index",
+                doc: "Return the result of indexing its first argument by the following arguments. Thus `index x 1 2 3` is, in Go syntax, `x[1][2][3]`. Each indexed item must be a map, slice, or array.",
+            },
+        ),
+        (
+            "le",
+            &Func {
+                name: "le",
+                doc: "Returns the boolean truth of `arg1 <= arg2`.",
+            },
+        ),
         (
             "bitwiseLeftShift",
             &Func {
@@ -316,12 +340,18 @@ pub static FUNCS: phf::Map<&'static str, &'static Func> = ::phf::Map {
                 doc: "",
             },
         ),
-        ("js", &Func { name: "js", doc: "" }),
+        (
+            "js",
+            &Func {
+                name: "js",
+                doc: "Returns the escaped JavaScript equivalent of the textual representation of its arguments.",
+            },
+        ),
         (
             "and",
             &Func {
                 name: "and",
-                doc: "Returns the boolean AND of its arguments by returning the first empty argument or the last argument. That is, \"and x y\" behaves as \"if x then y else x.\"\n\nEvaluation proceeds through the arguments left to right and returns when the result is determined.",
+                doc: "Returns the boolean AND of its arguments by returning the first empty argument or the last argument. That is, `and x y` behaves as `if x then y else x`.\n\nNote that and does not short-circuit: all the arguments are evaluated.",
             },
         ),
         (
@@ -355,7 +385,13 @@ pub static FUNCS: phf::Map<&'static str, &'static Func> = ::phf::Map {
         ),
         ("parseTime", &Func { name: "parseTime", doc: "" }),
         ("sub", &Func { name: "sub", doc: "" }),
-        ("ge", &Func { name: "ge", doc: "" }),
+        (
+            "ge",
+            &Func {
+                name: "ge",
+                doc: "Returns the boolean truth of `arg1 >= arg2`.",
+            },
+        ),
         ("cbrt", &Func { name: "cbrt", doc: "" }),
         (
             "humanizeDurationMinutes",
@@ -465,16 +501,28 @@ pub static FUNCS: phf::Map<&'static str, &'static Func> = ::phf::Map {
         ("roundEven", &Func { name: "roundEven", doc: "" }),
         ("toInt", &Func { name: "toInt", doc: "" }),
         ("title", &Func { name: "title", doc: "" }),
-        ("lt", &Func { name: "lt", doc: "" }),
+        (
+            "lt",
+            &Func {
+                name: "lt",
+                doc: "Returns the boolean truth of `arg1 < arg2`.",
+            },
+        ),
         (
             "execTemplate",
             &Func {
                 name: "execTemplate",
-                doc: "",
+                doc: "Executes the associated template with the name and context data provided, If the associated template returns a value, `execTemplate` evaluates to that value and `nil` otherwise.",
             },
         ),
         ("dbSet", &Func { name: "dbSet", doc: "" }),
-        ("html", &Func { name: "html", doc: "" }),
+        (
+            "html",
+            &Func {
+                name: "html",
+                doc: "Returns the escaped HTML equivalent of the textual representation of its arguments.",
+            },
+        ),
         ("roleAbove", &Func { name: "roleAbove", doc: "" }),
         ("setRoles", &Func { name: "setRoles", doc: "" }),
         (
@@ -575,8 +623,20 @@ pub static FUNCS: phf::Map<&'static str, &'static Func> = ::phf::Map {
         ("dbGet", &Func { name: "dbGet", doc: "" }),
         ("dbRank", &Func { name: "dbRank", doc: "" }),
         ("json", &Func { name: "json", doc: "" }),
-        ("urlquery", &Func { name: "urlquery", doc: "" }),
-        ("len", &Func { name: "len", doc: "" }),
+        (
+            "urlquery",
+            &Func {
+                name: "urlquery",
+                doc: "Returns the escaped value of the textual representation of its arguments in a form suitable for embedding in a URL query.",
+            },
+        ),
+        (
+            "len",
+            &Func {
+                name: "len",
+                doc: "Returns the integer length of its argument.",
+            },
+        ),
         (
             "deleteTrigger",
             &Func {
@@ -587,8 +647,20 @@ pub static FUNCS: phf::Map<&'static str, &'static Func> = ::phf::Map {
         ("reFind", &Func { name: "reFind", doc: "" }),
         ("sdict", &Func { name: "sdict", doc: "" }),
         ("reSplit", &Func { name: "reSplit", doc: "" }),
-        ("not", &Func { name: "not", doc: "" }),
-        ("eq", &Func { name: "eq", doc: "" }),
+        (
+            "not",
+            &Func {
+                name: "not",
+                doc: "Returns the boolean negation of its argument.",
+            },
+        ),
+        (
+            "eq",
+            &Func {
+                name: "eq",
+                doc: "Return the boolean truth of `arg1 == arg2`.\n\nFor simpler multi-way equality tests, eq accepts two or more arguments and compares the second and subsequent to the first, returning in effect\n\n``` arg1==arg2 || arg1==arg3 || arg1==arg4 ... ```\n\n(Unlike with || in Go, however, eq is a function call and all the arguments will be evaluated.)",
+            },
+        ),
         ("sleep", &Func { name: "sleep", doc: "" }),
         ("kindOf", &Func { name: "kindOf", doc: "" }),
         ("add", &Func { name: "add", doc: "" }),
@@ -698,7 +770,13 @@ pub static FUNCS: phf::Map<&'static str, &'static Func> = ::phf::Map {
                 doc: "",
             },
         ),
-        ("or", &Func { name: "or", doc: "" }),
+        (
+            "or",
+            &Func {
+                name: "or",
+                doc: "Returns the boolean OR of its arguments by returning the first non-empty argument or the last argument, that is, `or x y` behaves as `if x then x else y`. All the arguments are evaluated.",
+            },
+        ),
         ("div", &Func { name: "div", doc: "" }),
         (
             "scheduleUniqueCC",
@@ -785,7 +863,13 @@ pub static FUNCS: phf::Map<&'static str, &'static Func> = ::phf::Map {
                 doc: "",
             },
         ),
-        ("gt", &Func { name: "gt", doc: "" }),
+        (
+            "gt",
+            &Func {
+                name: "gt",
+                doc: "Returns the boolean truth of `arg1 > arg2`.",
+            },
+        ),
         (
             "cancelScheduledUniqueCC",
             &Func {

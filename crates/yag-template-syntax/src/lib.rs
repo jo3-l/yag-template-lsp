@@ -8,8 +8,6 @@ pub mod parser;
 pub mod query;
 mod rowan_interface;
 
-use std::ops::Deref;
-
 pub use rowan::{TextRange, TextSize};
 
 pub use crate::error::SyntaxError;

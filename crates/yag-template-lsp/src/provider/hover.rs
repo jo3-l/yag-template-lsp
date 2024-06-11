@@ -28,10 +28,11 @@ fn hover_for_func(doc: &Document, func_ident: ast::Ident) -> Option<Hover> {
     let func_name = func_ident.get();
     let func = typedefs::FUNCS.get(func_name)?;
     if !func.doc.is_empty() {
+        let hover_info = format!("```go\nfunc {func_name}\n```\n\n{}", func.doc);
         Some(Hover {
             contents: HoverContents::Markup(MarkupContent {
                 kind: MarkupKind::Markdown,
-                value: func.doc.to_string(),
+                value: hover_info,
             }),
             range: doc.mapper.range(func_ident.syntax().text_range()),
         })
