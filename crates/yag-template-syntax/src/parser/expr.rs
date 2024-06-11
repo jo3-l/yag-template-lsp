@@ -187,28 +187,21 @@ fn var(p: &mut Parser) {
 
     let c = p.checkpoint();
 
-    // gracefully handle declarations and assignments with missing variable names
-    let saw_var = p.expect_recover(SyntaxKind::Var, DECLARE_ASSIGN_OPS);
-    if saw_var && !DECLARE_ASSIGN_OPS.contains(p.peek_ignore_space()) {
-        p.wrap(c, SyntaxKind::VarAccess);
-    }
-
-    match p.peek_ignore_space() {
-        SyntaxKind::ColonEq => {
-            p.eat_whitespace();
-            p.expect(SyntaxKind::ColonEq);
-            p.eat_whitespace();
-            expr(p, "after `:=`");
-            p.wrap(c, SyntaxKind::VarDecl);
-        }
-        SyntaxKind::Eq => {
-            p.eat_whitespace();
-            p.expect(SyntaxKind::Eq);
-            p.expect_whitespace("before `=` in assignment");
-            expr(p, "after `=`");
-            p.wrap(c, SyntaxKind::VarAssign);
-        }
-        _ => {}
+    p.expect_recover(SyntaxKind::Var, DECLARE_ASSIGN_OPS);
+    if p.at_ignore_space(SyntaxKind::ColonEq) {
+        p.eat_whitespace();
+        p.expect(SyntaxKind::ColonEq);
+        p.eat_whitespace();
+        expr(p, "after `:=`");
+        p.wrap(c, SyntaxKind::VarDecl);
+    } else if p.at_ignore_space(SyntaxKind::Eq) {
+        p.expect_whitespace("before `=` in assignment");
+        p.expect(SyntaxKind::Eq);
+        p.eat_whitespace();
+        expr(p, "after `=`");
+        p.wrap(c, SyntaxKind::VarAssign);
+    } else {
+        p.wrap(c, SyntaxKind::VarAccess)
     }
 }
 

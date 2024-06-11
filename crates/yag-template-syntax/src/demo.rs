@@ -23,15 +23,8 @@ fn print(indent: usize, element: SyntaxElement) {
 #[test]
 fn demo_parse() {
     let src = r#"
-{{$t := "test"}}
-{{if 1}}
-    {{$x := "test"}}
-    {{$y := "foo"}}
-    {{$bcd := "test"}}
-{{end}}
-{{template "foo" $z := 123}}
-{{range $x, $y := "test" }}
-    {{$"#;
+    {{$x:=
+"#;
     let parse = parser::parse(src);
     let node = SyntaxNode::new_root(parse.root.clone());
     print(0, node.clone().into());
