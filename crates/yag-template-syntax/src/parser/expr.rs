@@ -187,20 +187,27 @@ fn var(p: &mut Parser) {
 
     let c = p.checkpoint();
 
+    // recover from missing variable name
     p.expect_recover(SyntaxKind::Var, DECLARE_ASSIGN_OPS);
+
     if p.at_ignore_space(SyntaxKind::ColonEq) {
+        // $x := expr assignment; whitespace is optional
         p.eat_whitespace();
         p.expect(SyntaxKind::ColonEq);
         p.eat_whitespace();
         expr(p, "after `:=`");
         p.wrap(c, SyntaxKind::VarDecl);
     } else if p.at_ignore_space(SyntaxKind::Eq) {
+        // $x = expr; must have whitespace between the variable and the `=`
+        // symbol but not necessarily after the `=`
         p.expect_whitespace("before `=` in assignment");
         p.expect(SyntaxKind::Eq);
         p.eat_whitespace();
         expr(p, "after `=`");
         p.wrap(c, SyntaxKind::VarAssign);
     } else {
+        // neither followed by `:=` nor by `=`, so treat as normal variable
+        // access
         p.wrap(c, SyntaxKind::VarAccess)
     }
 }
