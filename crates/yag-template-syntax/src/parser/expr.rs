@@ -1,4 +1,4 @@
-use crate::parser::token_set::{TokenSet, ACTION_DELIMS, LEFT_DELIMS, RIGHT_DELIMS};
+use crate::parser::token_set::{TokenSet, ACTION_DELIMS, LEFT_DELIMS};
 use crate::parser::{Checkpoint, Parser};
 use crate::SyntaxKind;
 
@@ -114,15 +114,20 @@ fn eat_fields(p: &mut Parser) -> usize {
     }
 }
 
-const CALL_TERMINATORS: TokenSet = LEFT_DELIMS
-    .union(RIGHT_DELIMS)
-    .add(SyntaxKind::Pipe)
-    .add(SyntaxKind::RightParen)
-    .add(SyntaxKind::Eof);
+fn at_call_terminator(p: &mut Parser) -> bool {
+    const SPACE_INDEPENDENT_TERMINATORS: TokenSet = ACTION_DELIMS
+        .add(SyntaxKind::Pipe)
+        .add(SyntaxKind::RightParen)
+        .add(SyntaxKind::Eof);
+
+    p.at_ignore_space(SPACE_INDEPENDENT_TERMINATORS)
+        // func.Field has no arguments, but func .Field has 1 argument
+        || p.at(SyntaxKind::Field)
+}
 
 fn trailing_call_args(p: &mut Parser, c: Checkpoint) {
     let mut num_args = 0;
-    while !p.at_ignore_space(CALL_TERMINATORS) {
+    while !at_call_terminator(p) {
         if num_args > 0 {
             p.expect_whitespace("between call arguments");
         } else {
@@ -152,7 +157,7 @@ fn func_call(p: &mut Parser, accept_args: bool) {
 
     if accept_args {
         let mut num_args = 0;
-        while !p.at_ignore_space(CALL_TERMINATORS) {
+        while !at_call_terminator(p) {
             if num_args > 0 {
                 p.expect_whitespace("between function arguments");
             } else {
