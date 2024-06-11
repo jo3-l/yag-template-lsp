@@ -2,17 +2,17 @@ use std::path::{Path, PathBuf};
 
 use itertools::Itertools;
 
-pub(crate) fn ensure_file_contents(path: impl AsRef<Path>, contents: impl AsRef<str>) {
+pub(crate) fn ensure_file_contents(path: impl AsRef<Path>, new_contents: impl AsRef<str>) {
     let path = path.as_ref();
-    let contents = normalize_newlines(contents.as_ref());
+    let new_contents = normalize_newlines(new_contents.as_ref());
     if let Ok(old_contents) = std::fs::read_to_string(path) {
-        if contents == normalize_newlines(&old_contents) {
+        if new_contents == normalize_newlines(&old_contents) {
             return;
         }
     }
 
     eprintln!("{} not up-to-date; overwriting...", path.display());
-    std::fs::write(path, contents).unwrap();
+    std::fs::write(path, new_contents).unwrap();
     panic!("generated file was updated; re-run tests")
 }
 
