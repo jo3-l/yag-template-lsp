@@ -107,14 +107,8 @@ impl<'s> Parser<'s> {
     }
 
     pub(crate) fn peek_ignore_space(&mut self) -> SyntaxKind {
-        let checkpoint = self.lexer.checkpoint();
-        loop {
-            let token = self.lexer.next();
-            if !matches!(token, SyntaxKind::Whitespace | SyntaxKind::Comment) {
-                self.lexer.restore(checkpoint);
-                break token;
-            }
-        }
+        self.lexer
+            .peek_next_satisfying(|token| token != SyntaxKind::Whitespace && token != SyntaxKind::Comment)
     }
 
     pub(crate) fn cur_start(&self) -> TextSize {

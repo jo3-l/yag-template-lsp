@@ -19,12 +19,6 @@ pub struct Lexer<'s> {
     errors: Vec<SyntaxError>,
 }
 
-#[derive(Debug)]
-pub struct Checkpoint {
-    cursor: usize,
-    mode: LexMode,
-}
-
 impl<'s> Lexer<'s> {
     pub fn new(input: &'s str) -> Lexer<'s> {
         Lexer {
@@ -42,20 +36,26 @@ impl<'s> Lexer<'s> {
         self.s.done()
     }
 
-    pub fn cursor(&self) -> TextSize {
-        TextSize::new(self.s.cursor() as u32)
-    }
-
-    pub fn checkpoint(&self) -> Checkpoint {
-        Checkpoint {
-            cursor: self.s.cursor(),
-            mode: self.mode,
+    pub fn peek_next_satisfying<P>(&mut self, pred: P) -> SyntaxKind
+    where
+        P: Fn(SyntaxKind) -> bool,
+    {
+        let orig_pos = self.s.cursor();
+        let orig_mode = self.mode;
+        let orig_error_count = self.errors.len();
+        loop {
+            let token = self.next();
+            if pred(token) {
+                self.s.jump(orig_pos);
+                self.mode = orig_mode;
+                self.errors.truncate(orig_error_count);
+                break token;
+            }
         }
     }
 
-    pub fn restore(&mut self, checkpoint: Checkpoint) {
-        self.s.jump(checkpoint.cursor);
-        self.mode = checkpoint.mode;
+    pub fn cursor(&self) -> TextSize {
+        TextSize::new(self.s.cursor() as u32)
     }
 
     /// Extract the syntax errors accumulated so far.
