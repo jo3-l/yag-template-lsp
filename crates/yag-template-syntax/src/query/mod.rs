@@ -3,38 +3,37 @@ use crate::{SyntaxKind, SyntaxNode, SyntaxToken, TextSize};
 
 pub struct Query {
     pub offset: TextSize,
-    /// The token right before the cursor.
-    pub before: SyntaxToken,
+    /// The token at the offset (left-biased in the case where the offset sits
+    /// between two tokens.)
+    pub token: SyntaxToken,
 }
 
 impl Query {
     pub fn at(root: &SyntaxNode, offset: TextSize) -> Option<Self> {
         let before = root.token_at_offset(offset).left_biased()?;
-        let query = Query { offset, before };
+        let query = Query { offset, token: before };
         Some(query)
     }
 }
 
 impl Query {
     pub fn is_var_access(&self) -> bool {
-        self.before.kind() == SyntaxKind::Var
-            && self.before.parent().is_some_and(|parent| parent.is::<ast::VarAccess>())
+        self.token.kind() == SyntaxKind::Var && self.token.parent().is_some_and(|parent| parent.is::<ast::VarAccess>())
     }
 
     pub fn var(&self) -> Option<ast::Var> {
-        ast::Var::cast(self.before.clone())
+        ast::Var::cast(self.token.clone())
     }
 
-    pub fn can_complete_fn_name(&self) -> bool {
-        self.before.kind() == SyntaxKind::Ident
-            && self.before.parent().is_some_and(|parent| parent.is::<ast::FuncCall>())
+    pub fn in_func_name(&self) -> bool {
+        self.token.kind() == SyntaxKind::Ident && self.token.parent().is_some_and(|parent| parent.is::<ast::FuncCall>())
     }
 
     pub fn ident(&self) -> Option<ast::Ident> {
-        ast::Ident::cast(self.before.clone())
+        ast::Ident::cast(self.token.clone())
     }
 
     pub fn parent_expr(&self) -> Option<ast::Expr> {
-        self.before.parent_ancestors().find_map(ast::Expr::cast)
+        self.token.parent_ancestors().find_map(ast::Expr::cast)
     }
 }

@@ -1,9 +1,10 @@
 func and
-	Returns the boolean AND of its arguments by returning the
-	first empty argument or the last argument. That is,
-	"and x y" behaves as "if x then y else x."
-	Evaluation proceeds through the arguments left to right
-	and returns when the result is determined.
+	Returns the boolean AND of its arguments by returning the first empty
+	argument or the last argument. That is, "and x y" behaves as "if x then y
+	else x."
+	
+	Evaluation proceeds through the arguments left to right and returns when the
+	result is determined.
 
 func call
 

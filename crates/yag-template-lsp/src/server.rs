@@ -36,6 +36,7 @@ impl LanguageServer for YagTemplateLanguageServer {
                     trigger_characters: Some(completion_trigger_chars),
                     ..Default::default()
                 }),
+                hover_provider: Some(HoverProviderCapability::Simple(true)),
                 ..Default::default()
             },
             server_info: Some(ServerInfo {
@@ -63,6 +64,12 @@ impl LanguageServer for YagTemplateLanguageServer {
 
     async fn completion(&self, params: CompletionParams) -> Result<Option<CompletionResponse>> {
         provider::completion::complete(&self.session, params)
+            .await
+            .map_err(|_| jsonrpc::Error::internal_error())
+    }
+
+    async fn hover(&self, params: HoverParams) -> Result<Option<Hover>> {
+        provider::hover::hover(&self.session, params)
             .await
             .map_err(|_| jsonrpc::Error::internal_error())
     }

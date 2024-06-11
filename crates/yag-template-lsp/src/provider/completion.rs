@@ -1,9 +1,8 @@
-use anyhow::anyhow;
 use tower_lsp::lsp_types::{
     CompletionItem, CompletionItemKind, CompletionParams, CompletionResponse, CompletionTextEdit, TextEdit,
 };
 use yag_template_analysis::scope::ScopeInfo;
-use yag_template_analysis::typeck;
+use yag_template_analysis::typeck::typedefs;
 use yag_template_syntax::ast::AstToken;
 use yag_template_syntax::query::Query;
 use yag_template_syntax::{ast, SyntaxNode};
@@ -16,13 +15,10 @@ pub(crate) async fn complete(
 ) -> anyhow::Result<Option<CompletionResponse>> {
     let uri = params.text_document_position.text_document.uri;
     let doc = session.document(&uri)?;
-    let pos = doc
-        .mapper
-        .offset(params.text_document_position.position)
-        .ok_or_else(|| anyhow!("could not map position in document"))?;
+    let pos = doc.mapper.offset(params.text_document_position.position).unwrap();
 
     let root = SyntaxNode::new_root(doc.parse.root.clone());
-    let query = Query::at(&root, pos).ok_or_else(|| anyhow!("position info query failed"))?;
+    let query = Query::at(&root, pos).unwrap();
     if query.is_var_access() {
         let existing_var = query.var().unwrap();
         let scope_info = &doc.analysis.scope_info;
@@ -32,7 +28,7 @@ pub(crate) async fn complete(
             existing_var,
             scope_info,
         ))))
-    } else if query.can_complete_fn_name() {
+    } else if query.in_func_name() {
         let existing_ident = query.ident().unwrap();
         Ok(Some(CompletionResponse::Array(func_completion(&doc, existing_ident))))
     } else {
@@ -62,8 +58,8 @@ fn var_completion(doc: &Document, query: Query, existing_var: ast::Var, scope_in
 }
 
 fn func_completion(doc: &Document, existing_ident: ast::Ident) -> Vec<CompletionItem> {
-    typeck::DEFINED_FUNCS
-        .iter()
+    typedefs::FUNCS
+        .values()
         .filter(|func| func.name.starts_with(existing_ident.get()))
         .map(|func| CompletionItem {
             label: func.name.to_string(),

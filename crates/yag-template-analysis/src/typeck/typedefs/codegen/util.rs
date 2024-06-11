@@ -21,7 +21,7 @@ fn normalize_newlines(s: &str) -> String {
 }
 
 pub(crate) fn format(tokens: proc_macro2::TokenStream) -> String {
-    prettyplease::unparse(&syn::parse2::<syn::File>(tokens).expect("should generate valid code"))
+    prettyplease::unparse(&syn::parse2(tokens).expect("should only format valid code"))
 }
 
 pub(crate) fn unwrap_doc(doc: &str) -> String {
