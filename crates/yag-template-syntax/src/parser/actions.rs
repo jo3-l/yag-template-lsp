@@ -149,15 +149,17 @@ fn else_clause(p: &mut Parser) -> (ElseBranchType, TextRange) {
 
     let else_clause = p.start(SyntaxKind::ElseClause);
     left_delim(p);
+    p.eat_whitespace();
     p.expect(SyntaxKind::Else);
     p.eat_whitespace();
     let branch_type = match p.cur() {
         SyntaxKind::RightDelim | SyntaxKind::TrimmedRightDelim => {
-            p.eat();
+            right_delim(p);
             ElseBranchType::Else
         }
         SyntaxKind::If => {
             p.eat();
+            p.eat_whitespace();
             expr_pipeline(p, "after `else if`");
             p.eat_whitespace();
             right_delim_or_recover(p, "in else-if clause");
@@ -287,6 +289,7 @@ fn range_clause(p: &mut Parser) {
     }
 
     expr_pipeline(p, "in range action");
+    p.eat_whitespace();
     right_delim_or_recover(p, "in range action");
     range_clause.complete(p);
 }
