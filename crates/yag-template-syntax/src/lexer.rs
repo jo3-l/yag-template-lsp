@@ -305,7 +305,7 @@ mod upstream_compat {
     /// https://github.com/golang/go/blob/master/src/text/template/parse/lex.go#L676
     pub(super) fn is_alphanumeric(c: char) -> bool {
         match c {
-            '_' | 'a'..='z' | 'A'..='Z' => true,
+            '_' | '0'..='9' | 'a'..='z' | 'A'..='Z' => true,
             c if c > '\x7f' => {
                 let category = GeneralCategory::of(c);
                 category.is_letter() || category == GeneralCategory::DecimalNumber
