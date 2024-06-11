@@ -22,11 +22,18 @@ impl YagTemplateLanguageServer {
 #[async_trait]
 impl LanguageServer for YagTemplateLanguageServer {
     async fn initialize(&self, _: InitializeParams) -> Result<InitializeResult> {
+        let extra_completion_trigger_chars = vec!['.'];
+        let completion_trigger_chars: Vec<String> = ('a'..='z')
+            .chain('A'..='Z')
+            .chain(extra_completion_trigger_chars)
+            .map(|c| c.to_string())
+            .collect();
+
         Ok(InitializeResult {
             capabilities: ServerCapabilities {
                 text_document_sync: Some(TextDocumentSyncCapability::Kind(TextDocumentSyncKind::FULL)),
                 completion_provider: Some(CompletionOptions {
-                    trigger_characters: Some(vec!["$".to_string()]),
+                    trigger_characters: Some(completion_trigger_chars),
                     ..Default::default()
                 }),
                 ..Default::default()

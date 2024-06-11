@@ -1,8 +1,9 @@
 use anyhow::anyhow;
 use tower_lsp::lsp_types::{
-    CompletionItem, CompletionItemKind, CompletionParams, CompletionResponse, CompletionTextEdit, TextEdit, Url,
+    CompletionItem, CompletionItemKind, CompletionParams, CompletionResponse, CompletionTextEdit, TextEdit,
 };
 use yag_template_analysis::scope::ScopeInfo;
+use yag_template_analysis::typeck;
 use yag_template_syntax::ast::AstToken;
 use yag_template_syntax::query::Query;
 use yag_template_syntax::{ast, SyntaxNode};
@@ -32,8 +33,8 @@ pub(crate) async fn complete(
             scope_info,
         ))))
     } else if query.can_complete_fn_name() {
-        // TODO
-        Ok(None)
+        let existing_ident = query.ident().unwrap();
+        Ok(Some(CompletionResponse::Array(func_completion(&doc, existing_ident))))
     } else {
         Ok(None)
     }
@@ -58,4 +59,20 @@ fn var_completion(doc: &Document, query: Query, existing_var: ast::Var, scope_in
         )
     }
     completions
+}
+
+fn func_completion(doc: &Document, existing_ident: ast::Ident) -> Vec<CompletionItem> {
+    typeck::DEFINED_FUNCS
+        .iter()
+        .filter(|func| func.name.starts_with(existing_ident.get()))
+        .map(|func| CompletionItem {
+            label: func.name.to_string(),
+            kind: Some(CompletionItemKind::FUNCTION),
+            text_edit: Some(CompletionTextEdit::Edit(TextEdit {
+                new_text: func.name.to_string(),
+                range: doc.mapper.range(existing_ident.syntax().text_range()).unwrap(),
+            })),
+            ..Default::default()
+        })
+        .collect()
 }

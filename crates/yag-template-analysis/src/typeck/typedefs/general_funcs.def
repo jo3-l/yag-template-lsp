@@ -1,0 +1,159 @@
+func str
+
+func toString
+
+func toInt
+
+func toInt64
+
+func toFloat
+
+func toDuration
+
+func toRune
+
+func toByte
+
+func hasPrefix
+
+func hasSuffix
+
+func joinStr
+
+func lower
+
+func slice
+
+func split
+
+func title
+
+func trimSpace
+
+func upper
+
+func urlescape
+
+func urlunescape
+
+func print
+
+func println
+
+func printf
+
+func sanitizeText
+
+func reQuoteMeta
+
+func add
+
+func cbrt
+
+func div
+
+func fdiv
+
+func log
+
+func mathConst
+
+func max
+
+func min
+
+func mod
+
+func mult
+
+func pow
+
+func round
+
+func roundCeil
+
+func roundEven
+
+func roundFloor
+
+func sqrt
+
+func sub
+
+func bitwiseAnd
+
+func bitwiseOr
+
+func bitwiseXor
+
+func bitwiseNot
+
+func bitwiseAndNot
+
+func bitwiseLeftShift
+
+func bitwiseRightShift
+
+func humanizeThousands
+
+func dict
+
+func sdict
+
+func structToSdict
+
+func cembed
+
+func cslice
+
+func complexMessage
+
+func complexMessageEdit
+
+func kindOf
+
+func adjective
+
+func in
+
+func inFold
+
+func json
+
+func jsonToSdict
+
+func noun
+
+func randInt
+
+func roleAbove
+
+func seq
+
+func shuffle
+
+func verb
+
+func currentTime
+
+func parseTime
+
+func formatTime
+
+func loadLocation
+
+func newDate
+
+func snowflakeToTime
+
+func timestampToTime
+
+func weekNumber
+
+func humanizeDurationHours
+
+func humanizeDurationMinutes
+
+func humanizeDurationSeconds
+
+func humanizeTimeSinceDays

@@ -1,0 +1,36 @@
+func and
+	Returns the boolean AND of its arguments by returning the
+	first empty argument or the last argument. That is,
+	"and x y" behaves as "if x then y else x."
+	Evaluation proceeds through the arguments left to right
+	and returns when the result is determined.
+
+func call
+
+func execTemplate
+
+func html
+
+func index
+
+func js
+
+func len
+
+func not
+
+func or
+
+func urlquery
+
+func eq
+
+func ge
+
+func gt
+
+func le
+
+func lt
+
+func ne
