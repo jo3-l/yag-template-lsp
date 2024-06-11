@@ -411,6 +411,7 @@ fn block_clause(p: &mut Parser) {
 fn template_invocation(p: &mut Parser) {
     let template_invocation = p.start(SyntaxKind::TemplateInvocation);
     left_delim(p);
+    p.eat_whitespace();
     p.expect(SyntaxKind::Template);
     p.expect_whitespace("after `template` keyword");
 
