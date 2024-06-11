@@ -1,21 +1,19 @@
 use std::sync::Arc;
 
-use tower_lsp::jsonrpc::Result;
+use tower_lsp::jsonrpc::{self, Result};
 use tower_lsp::lsp_types::*;
 use tower_lsp::{async_trait, Client, LanguageServer};
 
-use crate::session::Session;
-use crate::{provider, session};
+use crate::provider;
+use crate::session::{self, Session};
 
 pub(super) struct YagTemplateLanguageServer {
-    client: Client,
     session: Arc<Session>,
 }
 
 impl YagTemplateLanguageServer {
     pub(super) fn new(client: Client) -> Self {
         Self {
-            client: client.clone(),
             session: Arc::new(Session::new(client)),
         }
     }
@@ -27,6 +25,10 @@ impl LanguageServer for YagTemplateLanguageServer {
         Ok(InitializeResult {
             capabilities: ServerCapabilities {
                 text_document_sync: Some(TextDocumentSyncCapability::Kind(TextDocumentSyncKind::FULL)),
+                completion_provider: Some(CompletionOptions {
+                    trigger_characters: Some(vec!["$".to_string()]),
+                    ..Default::default()
+                }),
                 ..Default::default()
             },
             server_info: Some(ServerInfo {
@@ -50,5 +52,11 @@ impl LanguageServer for YagTemplateLanguageServer {
 
     async fn did_close(&self, params: DidCloseTextDocumentParams) {
         session::sync::on_document_close(&self.session, params).await;
+    }
+
+    async fn completion(&self, params: CompletionParams) -> Result<Option<CompletionResponse>> {
+        provider::completion::complete(&self.session, params)
+            .await
+            .map_err(|_| jsonrpc::Error::internal_error())
     }
 }

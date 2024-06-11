@@ -17,16 +17,16 @@ impl ScopeInfo {
 }
 
 impl ScopeInfo {
-    pub fn find_innermost_containing(&mut self, offset: TextSize) -> Option<ScopeId> {
+    pub fn find_innermost_containing(&self, offset: TextSize) -> Option<ScopeId> {
         self.0
             .iter()
-            .filter(|(_, scope)| scope.text_range.contains(offset))
+            .filter(|(_, scope)| scope.text_range.contains_inclusive(offset))
             .min_by_key(|(_, scope)| scope.text_range.len())
             .map(|(id, _)| id)
     }
 
     /// Iterate over the scopes containing the offset, from the innermost outward.
-    pub fn scopes_containing(&mut self, offset: TextSize) -> ParentScopesIter {
+    pub fn scopes_containing(&self, offset: TextSize) -> ParentScopesIter {
         ParentScopesIter::new(self.find_innermost_containing(offset), self)
     }
 }
@@ -103,7 +103,7 @@ impl Scope {
         }
     }
 
-    pub fn vars_visible_at_offset(&mut self, offset: TextSize) -> impl Iterator<Item = &Var> {
+    pub fn vars_visible_at_offset(&self, offset: TextSize) -> impl Iterator<Item = &Var> {
         self.vars.iter().filter(move |var| offset >= var.visible_from)
     }
 }

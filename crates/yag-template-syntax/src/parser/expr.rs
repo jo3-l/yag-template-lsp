@@ -123,7 +123,11 @@ const CALL_TERMINATORS: TokenSet = LEFT_DELIMS
 fn trailing_call_args(p: &mut Parser, c: Checkpoint) {
     let mut num_args = 0;
     while !p.at_ignore_space(CALL_TERMINATORS) {
-        p.eat_whitespace();
+        if num_args > 0 {
+            p.expect_whitespace("between call arguments");
+        } else {
+            p.expect_whitespace("separating expression and call arguments");
+        }
         arg(p);
         num_args += 1;
     }

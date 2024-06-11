@@ -33,8 +33,11 @@ pub trait SyntaxNodeExt: Sized + Clone {
 
     fn try_to<N: AstNode>(self) -> Option<N>;
 
-    fn cast_first_child<N: AstNode>(&self) -> Option<N>;
-    fn cast_first_token<T: AstToken>(&self) -> Option<T>;
+    fn find_first_child<N: AstNode>(&self) -> Option<N>;
+    fn find_last_child<N: AstNode>(&self) -> Option<N>;
+
+    fn find_first_token<T: AstToken>(&self) -> Option<T>;
+    fn find_last_token<T: AstToken>(&self) -> Option<T>;
 
     fn cast_children<N: AstNode>(&self) -> AstChildren<N>;
     fn cast_tokens<T: AstToken>(&self) -> AstTokenChildren<T>;
@@ -45,13 +48,35 @@ impl SyntaxNodeExt for SyntaxNode {
         N::cast(self)
     }
 
-    fn cast_first_child<N: AstNode>(&self) -> Option<N> {
+    fn find_first_child<N: AstNode>(&self) -> Option<N> {
         self.children().find_map(N::cast)
     }
 
-    fn cast_first_token<T: AstToken>(&self) -> Option<T> {
+    fn find_last_child<N: AstNode>(&self) -> Option<N> {
+        let mut cur = self.last_child_or_token();
+        while let Some(element) = cur {
+            if let Some(node) = element.clone().into_node().and_then(N::cast) {
+                return Some(node);
+            }
+            cur = element.prev_sibling_or_token();
+        }
+        None
+    }
+
+    fn find_first_token<T: AstToken>(&self) -> Option<T> {
         self.children_with_tokens()
             .find_map(|element| element.into_token().and_then(T::cast))
+    }
+
+    fn find_last_token<T: AstToken>(&self) -> Option<T> {
+        let mut cursor = self.last_child_or_token();
+        while let Some(element) = cursor {
+            if let Some(token) = element.clone().into_token().and_then(T::cast) {
+                return Some(token);
+            }
+            cursor = element.prev_sibling_or_token();
+        }
+        None
     }
 
     fn cast_children<N: AstNode>(&self) -> AstChildren<N> {

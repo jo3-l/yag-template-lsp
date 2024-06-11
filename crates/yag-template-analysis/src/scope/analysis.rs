@@ -1,12 +1,15 @@
 use slotmap::SlotMap;
+use smol_str::SmolStr;
 use yag_template_syntax::ast::{self, Action, AstNode, AstToken, SyntaxNodeExt};
-use yag_template_syntax::{SyntaxNode, TextRange};
+use yag_template_syntax::{SyntaxNode, TextRange, TextSize};
 
 use crate::scope::info::{Scope, ScopeId, ScopeInfo, Var};
 
 pub fn analyze(root: ast::Root) -> ScopeInfo {
     let mut s = ScopeAnalyzer::new();
     s.enter_inner_scope(root.syntax().text_range());
+    // The variable $ is predefined as the initial context data.
+    s.push_synthetic_var("$", 0.into());
     s.analyze_all(root.actions());
     s.exit_scope();
     s.finish()
@@ -58,6 +61,9 @@ impl ScopeAnalyzer {
     fn analyze_template_def(&mut self, def: ast::TemplateDefinition) {
         if let Some(list) = def.action_list() {
             self.enter_detached_scope(list.syntax().text_range());
+            // All associated template executions have the variable $ predefined
+            // as the initial context data.
+            self.push_synthetic_var("$", list.syntax().text_range().start());
             self.analyze_all(list.actions());
             self.exit_scope();
         }
@@ -68,6 +74,7 @@ impl ScopeAnalyzer {
 
         if let Some(list) = block.action_list() {
             self.enter_detached_scope(list.syntax().text_range());
+            self.push_synthetic_var("$", list.syntax().text_range().start());
             self.analyze_all(list.actions());
             self.exit_scope();
         }
@@ -88,7 +95,7 @@ impl ScopeAnalyzer {
         let if_clause_scope = self.enter_inner_scope(if_clause.syntax().text_range());
         self.push_var_decls_in(|| if_clause.if_expr());
         self.exit_scope();
-        if let Some(if_list) = if_conditional.action_list() {
+        if let Some(if_list) = if_conditional.if_action_list() {
             self.enter_scope_with_parent(if_list.syntax().text_range(), if_clause_scope);
             self.analyze_all(if_list.actions());
             self.exit_scope();
@@ -103,7 +110,7 @@ impl ScopeAnalyzer {
         let with_clause_scope = self.enter_inner_scope(with_clause.syntax().text_range());
         self.push_var_decls_in(|| with_clause.with_expr());
         self.exit_scope();
-        if let Some(with_list) = with_conditional.action_list() {
+        if let Some(with_list) = with_conditional.with_action_list() {
             self.enter_scope_with_parent(with_list.syntax().text_range(), with_clause_scope);
             self.analyze_all(with_list.actions());
             self.exit_scope();
@@ -195,6 +202,10 @@ impl ScopeAnalyzer {
 
     fn analyze_expr_action(&mut self, expr_action: ast::ExprAction) {
         self.push_var_decls_in(|| expr_action.expr());
+    }
+
+    fn push_synthetic_var(&mut self, name: impl Into<SmolStr>, visible_from: TextSize) {
+        self.pending_vars.push(Var::new(name, visible_from, None));
     }
 
     fn push_var_decls_in<F>(&mut self, f: F)

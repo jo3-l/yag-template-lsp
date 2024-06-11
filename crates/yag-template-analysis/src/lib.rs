@@ -1,8 +1,8 @@
 use scope::ScopeInfo;
 use yag_template_syntax::ast;
 
-mod scope;
-mod typeck;
+pub mod scope;
+pub mod typeck;
 
 pub fn analyze(root: ast::Root) -> Analysis {
     Analysis {

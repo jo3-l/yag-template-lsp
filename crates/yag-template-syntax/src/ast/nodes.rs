@@ -1,3 +1,5 @@
+use std::iter::Skip;
+
 use rowan::SyntaxElementChildren;
 
 use super::AstTokenChildren;
@@ -129,11 +131,11 @@ macro_rules! delim_accessors {
     ($name:ident) => {
         impl $name {
             pub fn left_delim(&self) -> Option<tokens::LeftDelim> {
-                self.syntax.cast_first_token()
+                self.syntax.find_first_token()
             }
 
             pub fn right_delim(&self) -> Option<tokens::RightDelim> {
-                self.syntax.cast_first_token()
+                self.syntax.find_last_token()
             }
         }
     };
@@ -159,15 +161,15 @@ define_node! {
 
 impl TemplateDefinition {
     pub fn define_clause(&self) -> Option<DefineClause> {
-        self.syntax.cast_first_child()
+        self.syntax.find_first_child()
     }
 
     pub fn action_list(&self) -> Option<ActionList> {
-        self.syntax.cast_first_child()
+        self.syntax.find_first_child()
     }
 
     pub fn end_clause(&self) -> Option<EndClause> {
-        self.syntax.cast_first_child()
+        self.syntax.find_last_child()
     }
 }
 
@@ -178,7 +180,7 @@ delim_accessors!(DefineClause);
 
 impl DefineClause {
     pub fn template_name(&self) -> Option<tokens::StringLiteral> {
-        self.syntax.cast_first_token()
+        self.syntax.find_first_token()
     }
 }
 
@@ -188,15 +190,15 @@ define_node! {
 
 impl TemplateBlock {
     pub fn block_clause(&self) -> Option<BlockClause> {
-        self.syntax.cast_first_child()
+        self.syntax.find_first_child()
     }
 
     pub fn action_list(&self) -> Option<ActionList> {
-        self.syntax.cast_first_child()
+        self.syntax.find_first_child()
     }
 
     pub fn end_clause(&self) -> Option<EndClause> {
-        self.syntax.cast_first_child()
+        self.syntax.find_last_child()
     }
 }
 
@@ -207,11 +209,11 @@ delim_accessors!(BlockClause);
 
 impl BlockClause {
     pub fn template_name(&self) -> Option<tokens::StringLiteral> {
-        self.syntax.cast_first_token()
+        self.syntax.find_first_token()
     }
 
     pub fn context_expr(&self) -> Option<Expr> {
-        self.syntax.cast_first_child()
+        self.syntax.find_last_child()
     }
 }
 
@@ -222,11 +224,11 @@ delim_accessors!(TemplateInvocation);
 
 impl TemplateInvocation {
     pub fn template_name(&self) -> Option<tokens::StringLiteral> {
-        self.syntax.cast_first_token()
+        self.syntax.find_first_token()
     }
 
     pub fn context_expr(&self) -> Option<Expr> {
-        self.syntax.cast_first_child()
+        self.syntax.find_last_child()
     }
 }
 
@@ -237,7 +239,7 @@ delim_accessors!(ReturnAction);
 
 impl ReturnAction {
     pub fn return_expr(&self) -> Option<Expr> {
-        self.syntax.cast_first_child()
+        self.syntax.find_first_child()
     }
 }
 
@@ -252,11 +254,11 @@ define_node! {
 
 impl IfConditional {
     pub fn if_clause(&self) -> Option<IfClause> {
-        self.syntax.cast_first_child()
+        self.syntax.find_first_child()
     }
 
-    pub fn action_list(&self) -> Option<ActionList> {
-        self.syntax.cast_first_child()
+    pub fn if_action_list(&self) -> Option<ActionList> {
+        self.syntax.find_first_child()
     }
 
     pub fn else_branches(&self) -> AstChildren<ElseBranch> {
@@ -264,7 +266,7 @@ impl IfConditional {
     }
 
     pub fn end_clause(&self) -> Option<EndClause> {
-        self.syntax.cast_first_child()
+        self.syntax.find_last_child()
     }
 }
 
@@ -275,7 +277,7 @@ delim_accessors!(IfClause);
 
 impl IfClause {
     pub fn if_expr(&self) -> Option<Expr> {
-        self.syntax.cast_first_child()
+        self.syntax.find_first_child()
     }
 }
 
@@ -285,11 +287,11 @@ define_node! {
 
 impl WithConditional {
     pub fn with_clause(&self) -> Option<WithClause> {
-        self.syntax.cast_first_child()
+        self.syntax.find_first_child()
     }
 
-    pub fn action_list(&self) -> Option<ActionList> {
-        self.syntax.cast_first_child()
+    pub fn with_action_list(&self) -> Option<ActionList> {
+        self.syntax.find_first_child()
     }
 
     pub fn else_branches(&self) -> AstChildren<ElseBranch> {
@@ -297,7 +299,7 @@ impl WithConditional {
     }
 
     pub fn end_clause(&self) -> Option<EndClause> {
-        self.syntax.cast_first_child()
+        self.syntax.find_last_child()
     }
 }
 
@@ -308,7 +310,7 @@ delim_accessors!(WithClause);
 
 impl WithClause {
     pub fn with_expr(&self) -> Option<Expr> {
-        self.syntax.cast_first_child()
+        self.syntax.find_first_child()
     }
 }
 
@@ -318,11 +320,11 @@ define_node! {
 
 impl ElseBranch {
     pub fn else_clause(&self) -> Option<ElseClause> {
-        self.syntax.cast_first_child()
+        self.syntax.find_first_child()
     }
 
     pub fn action_list(&self) -> Option<ActionList> {
-        self.syntax.cast_first_child()
+        self.syntax.find_first_child()
     }
 }
 
@@ -333,7 +335,7 @@ delim_accessors!(ElseClause);
 
 impl ElseClause {
     pub fn cond_expr(&self) -> Option<Expr> {
-        self.syntax.cast_first_child()
+        self.syntax.find_first_child()
     }
 }
 
@@ -343,19 +345,19 @@ define_node! {
 
 impl RangeLoop {
     pub fn range_clause(&self) -> Option<RangeClause> {
-        self.syntax.cast_first_child()
+        self.syntax.find_first_child()
     }
 
     pub fn action_list(&self) -> Option<ActionList> {
-        self.syntax.cast_first_child()
+        self.syntax.find_first_child()
     }
 
     pub fn else_branch(&self) -> Option<ElseBranch> {
-        self.syntax.cast_first_child()
+        self.syntax.find_first_child()
     }
 
     pub fn end_clause(&self) -> Option<EndClause> {
-        self.syntax.cast_first_child()
+        self.syntax.find_last_child()
     }
 }
 
@@ -370,7 +372,7 @@ impl RangeClause {
     }
 
     pub fn range_expr(&self) -> Option<Expr> {
-        self.syntax.cast_first_child()
+        self.syntax.find_first_child()
     }
 
     pub fn declares_vars(&self) -> bool {
@@ -392,19 +394,19 @@ define_node! {
 
 impl WhileLoop {
     pub fn while_clause(&self) -> Option<WhileClause> {
-        self.syntax.cast_first_child()
+        self.syntax.find_first_child()
     }
 
     pub fn action_list(&self) -> Option<ActionList> {
-        self.syntax.cast_first_child()
+        self.syntax.find_first_child()
     }
 
     pub fn else_branch(&self) -> Option<ElseBranch> {
-        self.syntax.cast_first_child()
+        self.syntax.find_first_child()
     }
 
     pub fn end_clause(&self) -> Option<EndClause> {
-        self.syntax.cast_first_child()
+        self.syntax.find_first_child()
     }
 }
 
@@ -415,7 +417,7 @@ delim_accessors!(WhileClause);
 
 impl WhileClause {
     pub fn cond_expr(&self) -> Option<Expr> {
-        self.syntax.cast_first_child()
+        self.syntax.find_first_child()
     }
 }
 
@@ -435,15 +437,15 @@ define_node! {
 
 impl TryCatchAction {
     pub fn try_clause(&self) -> Option<TryClause> {
-        self.syntax.cast_first_child()
+        self.syntax.find_first_child()
     }
 
     pub fn try_action_list(&self) -> Option<ActionList> {
-        self.syntax.cast_first_child()
+        self.syntax.find_first_child()
     }
 
     pub fn catch_clause(&self) -> Option<CatchClause> {
-        self.syntax.cast_first_child()
+        self.syntax.find_first_child()
     }
 
     pub fn catch_action_list(&self) -> Option<ActionList> {
@@ -468,7 +470,7 @@ delim_accessors!(ExprAction);
 
 impl ExprAction {
     pub fn expr(&self) -> Option<Expr> {
-        self.syntax.cast_first_child()
+        self.syntax.find_first_child()
     }
 }
 
@@ -528,7 +530,7 @@ define_node! {
 
 impl FuncCall {
     pub fn func_name(&self) -> Option<tokens::Ident> {
-        self.syntax.cast_first_token()
+        self.syntax.find_first_token()
     }
 
     pub fn call_args(&self) -> AstChildren<Expr> {
@@ -542,11 +544,13 @@ define_node! {
 
 impl ExprCall {
     pub fn callee(&self) -> Option<Expr> {
-        self.syntax.cast_first_child()
+        self.syntax.find_first_child()
     }
 
-    pub fn call_args(&self) -> AstChildren<Expr> {
-        self.syntax.cast_children()
+    pub fn call_args(&self) -> Skip<AstChildren<Expr>> {
+        self.syntax
+            .cast_children()
+            .skip(if self.callee().is_some() { 1 } else { 0 })
     }
 }
 
@@ -556,7 +560,7 @@ define_node! {
 
 impl ParenthesizedExpr {
     pub fn inner_expr(&self) -> Option<Expr> {
-        self.syntax.cast_first_child()
+        self.syntax.find_first_child()
     }
 }
 
@@ -566,7 +570,7 @@ define_node! {
 
 impl Pipeline {
     pub fn init_expr(&self) -> Option<Expr> {
-        self.syntax.cast_first_child()
+        self.syntax.find_first_child()
     }
 
     pub fn stages(&self) -> AstChildren<PipelineStage> {
@@ -580,7 +584,7 @@ define_node! {
 
 impl PipelineStage {
     pub fn target_expr(&self) -> Option<Expr> {
-        self.syntax.cast_first_child()
+        self.syntax.find_first_child()
     }
 }
 
@@ -614,7 +618,7 @@ define_node! {
 
 impl VarAccess {
     pub fn var(&self) -> Option<tokens::Var> {
-        self.syntax.cast_first_token()
+        self.syntax.find_first_token()
     }
 }
 
@@ -624,11 +628,11 @@ define_node! {
 
 impl VarDecl {
     pub fn var(&self) -> Option<tokens::Var> {
-        self.syntax.cast_first_token()
+        self.syntax.find_first_token()
     }
 
     pub fn initializer(&self) -> Option<Expr> {
-        self.syntax.cast_first_child()
+        self.syntax.find_last_child()
     }
 }
 
@@ -638,11 +642,11 @@ define_node! {
 
 impl VarAssign {
     pub fn var(&self) -> Option<tokens::Var> {
-        self.syntax.cast_first_token()
+        self.syntax.find_first_token()
     }
 
-    pub fn new_val(&self) -> Option<Expr> {
-        self.syntax.cast_first_child()
+    pub fn assign_expr(&self) -> Option<Expr> {
+        self.syntax.find_last_child()
     }
 }
 

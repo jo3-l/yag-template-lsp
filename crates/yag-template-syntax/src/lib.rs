@@ -5,7 +5,10 @@ mod go_lit_syntax;
 mod kind;
 pub mod lexer;
 pub mod parser;
+pub mod query;
 mod rowan_interface;
+
+use std::ops::Deref;
 
 pub use rowan::{TextRange, TextSize};
 

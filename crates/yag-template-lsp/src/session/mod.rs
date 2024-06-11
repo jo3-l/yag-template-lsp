@@ -1,3 +1,5 @@
+use std::hash::RandomState;
+
 use anyhow::anyhow;
 use dashmap::mapref::one::Ref;
 use dashmap::DashMap;
@@ -22,7 +24,7 @@ impl Session {
         }
     }
 
-    pub(crate) fn document(&self, uri: &Url) -> anyhow::Result<Ref<'_, Url, Document>> {
+    pub(crate) fn document(&self, uri: &Url) -> anyhow::Result<Ref<'_, Url, Document, RandomState>> {
         self.documents
             .get(uri)
             .ok_or_else(|| anyhow!("could not find document {uri}"))

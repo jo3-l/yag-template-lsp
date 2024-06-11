@@ -27,10 +27,11 @@ fn demo_parse() {
 {{if 1}}
     {{$x := "test"}}
     {{$y := "foo"}}
+    {{$bcd := "test"}}
 {{end}}
 {{template "foo" $z := 123}}
- {{$
-    "#;
+{{range $x, $y := "test" }}
+    {{$"#;
     let parse = parser::parse(src);
     let node = SyntaxNode::new_root(parse.root.clone());
     print(0, node.clone().into());
