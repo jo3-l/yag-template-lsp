@@ -58,8 +58,8 @@ pub enum SyntaxKind {
     InterpretedString,
     /// A raw string literal: `` `...` ``.
     RawString,
-    /// A character literal: `'c'`.
-    Char,
+    /// A rune (character) literal: `'c'`.
+    Rune,
     /// An untyped nil constant: `nil`.
     Nil,
 
@@ -228,7 +228,7 @@ impl SyntaxKind {
 
     pub fn is_literal(self) -> bool {
         use SyntaxKind::*;
-        matches!(self, Bool | Int | Float | InterpretedString | RawString | Char | Nil)
+        matches!(self, Bool | Int | Float | InterpretedString | RawString | Rune | Nil)
     }
 }
 
@@ -264,7 +264,7 @@ impl fmt::Display for SyntaxKind {
             Float => "float",
             InterpretedString => "double-quoted string",
             RawString => "raw string",
-            Char => "character literal",
+            Rune => "rune literal",
             Nil => "nil constant",
 
             If => "`if`",

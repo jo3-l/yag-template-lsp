@@ -1,7 +1,7 @@
 use std::ops::Index;
 
+use ecow::EcoString;
 use slotmap::{new_key_type, SlotMap};
-use smol_str::SmolStr;
 use yag_template_syntax::ast::{self, AstNode};
 use yag_template_syntax::{TextRange, TextSize};
 
@@ -62,13 +62,13 @@ impl Index<ScopeId> for ScopeInfo {
 
 #[derive(Debug)]
 pub struct Var {
-    pub name: SmolStr,
+    pub name: EcoString,
     pub visible_from: TextSize,
     pub decl_range: Option<TextRange>,
 }
 
 impl Var {
-    pub(crate) fn new(name: impl Into<SmolStr>, visible_from: TextSize, decl_range: Option<TextRange>) -> Self {
+    pub(crate) fn new(name: impl Into<EcoString>, visible_from: TextSize, decl_range: Option<TextRange>) -> Self {
         Self {
             name: name.into(),
             visible_from,

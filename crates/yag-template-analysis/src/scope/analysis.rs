@@ -1,5 +1,5 @@
+use ecow::EcoString;
 use slotmap::SlotMap;
-use smol_str::SmolStr;
 use yag_template_syntax::ast::{self, Action, AstNode, AstToken, SyntaxNodeExt};
 use yag_template_syntax::{SyntaxNode, TextRange, TextSize};
 
@@ -206,7 +206,7 @@ impl ScopeAnalyzer {
         self.push_var_decls_in(|| expr_action.expr());
     }
 
-    fn push_synthetic_var(&mut self, name: impl Into<SmolStr>, visible_from: TextSize) {
+    fn push_synthetic_var(&mut self, name: impl Into<EcoString>, visible_from: TextSize) {
         self.pending_vars.push(Var::new(name, visible_from, None));
     }
 
@@ -244,7 +244,7 @@ impl ScopeAnalyzer {
         let scope_to_exit = self
             .stack
             .pop()
-            .expect("call to exit_scope() should correspond to an earlier enter_scope()");
+            .expect("call to exit_scope() should correspond to an earlier enter_scope() call");
         self.drain_pending_vars_to(scope_to_exit);
     }
 

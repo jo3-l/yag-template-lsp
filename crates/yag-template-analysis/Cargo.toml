@@ -4,16 +4,8 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-slotmap = "1.0.7"
 yag-template-syntax = { path = "../yag-template-syntax" }
-smol_str = "0.2.2"
-phf = { version = "0.11.1", default-features = false }
-
-[dev-dependencies]
-quote = "1.0"
-prettyplease = "0.2.20"
-syn = "2.0"
-textwrap = "0.16.1"
-itertools = "0.13.0"
-proc-macro2 = "1.0"
-phf_codegen = "0.11.1"
+slotmap = "1.0.7"
+ecow = "0.2.2"
+thiserror = "1.0"
+fnv = "1.0.3"

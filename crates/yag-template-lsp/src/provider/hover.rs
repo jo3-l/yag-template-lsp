@@ -1,5 +1,5 @@
 use tower_lsp::lsp_types::{Hover, HoverContents, HoverParams, MarkupContent, MarkupKind};
-use yag_template_analysis::typeck::typedefs;
+use yag_template_analysis::typeck::ty;
 use yag_template_syntax::ast::AstToken;
 use yag_template_syntax::query::Query;
 use yag_template_syntax::{ast, SyntaxNode};
@@ -26,7 +26,7 @@ pub(crate) async fn hover(session: &Session, params: HoverParams) -> anyhow::Res
 
 fn hover_for_func(doc: &Document, func_ident: ast::Ident) -> Option<Hover> {
     let func_name = func_ident.get();
-    let func = typedefs::FUNCS.get(func_name)?;
+    let func = ty::FUNCS.get(func_name)?;
     if !func.doc.is_empty() {
         let hover_info = format!("```go\nfunc {func_name}\n```\n\n{}", func.doc);
         Some(Hover {

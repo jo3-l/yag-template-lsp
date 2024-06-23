@@ -133,7 +133,7 @@ impl Lexer<'_> {
             '$' => self.var(),
             '"' => self.interpreted_string(start),
             '`' => self.raw_string(start),
-            '\'' => self.char_literal(start),
+            '\'' => self.rune_literal(start),
             '+' | '-' | '0'..='9' => {
                 self.s.uneat();
                 self.number()
@@ -208,10 +208,10 @@ impl Lexer<'_> {
         SyntaxKind::RawString
     }
 
-    fn char_literal(&mut self, start: TextSize) -> SyntaxKind {
+    fn rune_literal(&mut self, start: TextSize) -> SyntaxKind {
         let Some(c) = self.s.eat() else {
             self.error_at(self.cursor(), "expected character after `'`");
-            return SyntaxKind::Char;
+            return SyntaxKind::Rune;
         };
 
         if c == '\\' {
@@ -229,7 +229,7 @@ impl Lexer<'_> {
         if !self.s.eat_if('\'') {
             self.error_at(self.cursor(), "expected `'` closing character literal");
         }
-        SyntaxKind::Char
+        SyntaxKind::Rune
     }
 
     fn number(&mut self) -> SyntaxKind {

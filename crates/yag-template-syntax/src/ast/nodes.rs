@@ -660,7 +660,7 @@ pub enum LiteralKind {
     Bool(tokens::Bool),
     Int(tokens::Int),
     Float(tokens::Float),
-    Char(tokens::Char),
+    Rune(tokens::Rune),
     Nil(tokens::Nil),
 }
 
@@ -680,8 +680,8 @@ impl Literal {
             LiteralKind::Int(t)
         } else if let Some(t) = tokens::Float::cast(token.clone()) {
             LiteralKind::Float(t)
-        } else if let Some(t) = tokens::Char::cast(token.clone()) {
-            LiteralKind::Char(t)
+        } else if let Some(t) = tokens::Rune::cast(token.clone()) {
+            LiteralKind::Rune(t)
         } else if let Some(t) = tokens::Nil::cast(token.clone()) {
             LiteralKind::Nil(t)
         } else {

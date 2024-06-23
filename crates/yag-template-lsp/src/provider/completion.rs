@@ -2,7 +2,7 @@ use tower_lsp::lsp_types::{
     CompletionItem, CompletionItemKind, CompletionParams, CompletionResponse, CompletionTextEdit, TextEdit,
 };
 use yag_template_analysis::scope::ScopeInfo;
-use yag_template_analysis::typeck::typedefs;
+use yag_template_analysis::typeck::ty;
 use yag_template_syntax::ast::AstToken;
 use yag_template_syntax::query::Query;
 use yag_template_syntax::{ast, SyntaxNode};
@@ -58,7 +58,7 @@ fn var_completion(doc: &Document, query: Query, existing_var: ast::Var, scope_in
 }
 
 fn func_completion(doc: &Document, existing_ident: ast::Ident) -> Vec<CompletionItem> {
-    typedefs::FUNCS
+    ty::FUNCS
         .values()
         .filter(|func| func.name.starts_with(existing_ident.get()))
         .map(|func| CompletionItem {

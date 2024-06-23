@@ -122,10 +122,10 @@ impl Float {
 }
 
 define_token! {
-    Char(SyntaxKind::Char)
+    Rune(SyntaxKind::Rune)
 }
 
-impl Char {
+impl Rune {
     pub fn get(&self) -> Option<char> {
         let mut s = Scanner::new(self.syntax.text());
         s.eat_if('\'');
@@ -150,6 +150,15 @@ pub enum StringLiteral {
     Raw(RawString),
 }
 
+impl StringLiteral {
+    pub fn get(&self) -> Cow<str> {
+        match self {
+            StringLiteral::Interpreted(v) => v.get(),
+            StringLiteral::Raw(v) => Cow::Borrowed(v.get()),
+        }
+    }
+}
+
 impl AstToken for StringLiteral {
     fn cast(syntax: SyntaxToken) -> Option<Self> {
         match syntax.kind() {
@@ -171,8 +180,8 @@ define_token! {
     InterpretedString(SyntaxKind::InterpretedString)
 }
 
-impl<'a> InterpretedString {
-    pub fn get(&'a self) -> Cow<'a, str> {
+impl InterpretedString {
+    pub fn get(&self) -> Cow<str> {
         let content = strip_quotes(self.syntax.text(), '"');
         go_lit_syntax::interpret_string_content(content)
     }
