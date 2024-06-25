@@ -19,6 +19,14 @@
     - functions
     - fields/methods on base expr
     - function option keys AND nested in sdict (latter might be yucky). need to think more about this
+      - solution: store map contextual_suggestions ast::Expr.syntaxnodeptr -> ContextualSuggestion
+        - ContextualSuggestion is enum of
+          - TemplateName(...) see below
+          - DictKey(...) where these are only set for invalid dict key names, stores Vec<...> since we dont expect too many invalid
+          - FuncOptionName(...) where these are only set for invalid literal function option names, stores Vec<...>
+          - space for future additions
+        - breaks abstraction boundary a little tbh but whatever, we can check how ts etc does it later
+          - alternate is to attach this suggestion info to diagnostics/errors but that seems yucky if lsp is using it for autocompletion...
     - assoc template names
 - scoping and dataflow analysis
   - stack of blocks

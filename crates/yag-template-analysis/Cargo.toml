@@ -8,4 +8,4 @@ yag-template-syntax = { path = "../yag-template-syntax" }
 slotmap = "1.0.7"
 ecow = "0.2.2"
 thiserror = "1.0"
-fnv = "1.0.3"
+rustc-hash = "2.0"

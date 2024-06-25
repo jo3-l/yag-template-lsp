@@ -1,6 +1,6 @@
 use std::fmt;
 
-use fnv::FnvHashMap;
+use rustc_hash::FxHashMap;
 use slotmap::{new_key_type, SlotMap};
 
 use super::Ty;
@@ -8,7 +8,7 @@ use super::Ty;
 #[derive(Debug)]
 pub struct TypeDefinitions {
     pub initial_context_ty: Ty,
-    pub funcs: FnvHashMap<String, Func>,
+    pub funcs: FxHashMap<String, Func>,
     pub struct_types: SlotMap<StructHandle, StructTy>,
     pub callable_types: SlotMap<CallableHandle, CallableTy>,
     pub newtypes: SlotMap<NewtypeHandle, NewtypeTy>,
@@ -34,7 +34,7 @@ impl fmt::Display for Func {
 pub enum CallSignature {
     Exact(Vec<Ty>),
     Variadic(Vec<Ty>, Ty),
-    VariadicOptions(Vec<Ty>, FnvHashMap<String, FuncOption>),
+    VariadicOptions(Vec<Ty>, FxHashMap<String, FuncOption>),
 }
 
 #[derive(Debug)]
@@ -49,7 +49,7 @@ new_key_type! { pub struct StructHandle; }
 pub struct StructTy {
     pub name: String,
     pub doc: String,
-    pub fields_and_methods: FnvHashMap<String, FieldOrMethod>,
+    pub fields_and_methods: FxHashMap<String, FieldOrMethod>,
 }
 
 impl fmt::Display for StructTy {
@@ -90,7 +90,7 @@ new_key_type! { pub struct NewtypeHandle; }
 pub struct NewtypeTy {
     pub name: String,
     pub underlying: Ty,
-    pub methods: FnvHashMap<String, CallableTy>,
+    pub methods: FxHashMap<String, CallableTy>,
 }
 
 impl fmt::Display for NewtypeTy {
@@ -113,7 +113,7 @@ new_key_type! { pub struct TypedStrMapHandle; }
 pub struct TypedStrMapTy {
     pub name: String,
     pub doc: String,
-    pub fields: FnvHashMap<String, Field>,
+    pub fields: FxHashMap<String, Field>,
 }
 
 impl fmt::Display for TypedStrMapTy {
