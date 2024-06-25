@@ -1,0 +1,33 @@
+map ContextData
+    Name: ...
+
+// An instant in time with nanosecond precision.
+type time.Time of int64
+    // The name of the field.
+    func Add() -> (string, error)
+
+struct discordgo.Member
+    // The name of the member.
+    Name: int
+
+    // The name of the whatever.
+    Arg: int
+
+    // Etc.
+    Boo: int
+
+@intrinsic <- can only be added to function/method with no overloads
+@hidden <- dont show in docs, applies to a singular overload
+@variadicParams(struct|map) <- resolves to a CallSignature::VariadicOptions with each struct field being key and value of (struct field ty | struct field ty converted to static map ty)
+
+@hidden
+func add() -> int64;
+func add(v: int64) -> 
+func add()
+func
+
+func 
+
+struct templates.ParsedArgs
+
+type templates.Slice

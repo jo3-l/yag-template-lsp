@@ -3,5 +3,5 @@ members = [
     "crates/yag-template-analysis",
     "crates/yag-template-lsp",
     "crates/yag-template-syntax",
-    "crates/yag-template-typedef",
+    "crates/yag-template-typedefs",
 ]
