@@ -329,9 +329,3 @@ impl fmt::Display for SyntaxKind {
         })
     }
 }
-
-impl From<SyntaxKind> for rowan::SyntaxKind {
-    fn from(value: SyntaxKind) -> Self {
-        rowan::SyntaxKind(value as u16)
-    }
-}

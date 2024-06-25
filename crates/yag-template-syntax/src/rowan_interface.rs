@@ -3,6 +3,12 @@ use crate::SyntaxKind;
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum YagTemplateLanguage {}
 
+impl From<SyntaxKind> for rowan::SyntaxKind {
+    fn from(value: SyntaxKind) -> Self {
+        rowan::SyntaxKind(value as u16)
+    }
+}
+
 impl rowan::Language for YagTemplateLanguage {
     type Kind = SyntaxKind;
 

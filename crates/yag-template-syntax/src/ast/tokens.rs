@@ -2,7 +2,7 @@ use std::borrow::Cow;
 
 use unscanny::Scanner;
 
-use crate::ast::AstToken;
+use super::AstToken;
 use crate::go_lit_syntax::EscapeContext;
 use crate::{go_lit_syntax, SyntaxKind, SyntaxToken};
 

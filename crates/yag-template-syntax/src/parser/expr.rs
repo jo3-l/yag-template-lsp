@@ -1,5 +1,5 @@
-use crate::parser::token_set::{TokenSet, ACTION_DELIMS, LEFT_DELIMS};
-use crate::parser::{Checkpoint, Parser};
+use super::token_set::{TokenSet, ACTION_DELIMS, LEFT_DELIMS};
+use super::{Checkpoint, Parser};
 use crate::SyntaxKind;
 
 /// Parse a pipeline of expressions. (If there is only one expression,

@@ -3,7 +3,7 @@ use slotmap::SlotMap;
 use yag_template_syntax::ast::{self, Action, AstNode, AstToken, SyntaxNodeExt};
 use yag_template_syntax::{SyntaxNode, TextRange, TextSize};
 
-use crate::scope::info::{Scope, ScopeId, ScopeInfo, Var};
+use super::info::{Scope, ScopeId, ScopeInfo, Var};
 
 pub fn analyze(root: ast::Root) -> ScopeInfo {
     let mut s = ScopeAnalyzer::new();

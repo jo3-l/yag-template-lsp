@@ -2,8 +2,7 @@ use std::iter::Skip;
 
 use rowan::SyntaxElementChildren;
 
-use super::AstTokenChildren;
-use crate::ast::{tokens, AstChildren, AstNode, AstToken, SyntaxNodeExt};
+use super::{tokens, AstChildren, AstNode, AstToken, AstTokenChildren, SyntaxNodeExt};
 use crate::{SyntaxElement, SyntaxKind, SyntaxNode, YagTemplateLanguage};
 
 macro_rules! define_node {
@@ -263,6 +262,12 @@ impl IfConditional {
 
     pub fn else_branches(&self) -> AstChildren<ElseBranch> {
         self.syntax.cast_children()
+    }
+
+    pub fn has_unconditional_else(&self) -> bool {
+        self.syntax
+            .find_last_child::<ElseBranch>()
+            .is_some_and(|branch| branch.else_clause().is_some_and(|clause| clause.cond_expr().is_none()))
     }
 
     pub fn end_clause(&self) -> Option<EndClause> {
