@@ -9,11 +9,11 @@
 - function calls
 - typecheck output for lsp
   - need to be able to figure out type of arbitrary expression
-    - just store map of ast::Expr.syntax().text_range() -> Ty
+    - just store map of ast::Expr.syntaxnodeptr -> Ty
   - need to be able to show doc for function
     - easy
   - need to be able to show doc for field/method/func
-    - fields/methods kinda complicated, isnt covered by the ast::Expr map since the field might be in the middle of one FieldChain... need to figure out later
+    - fields/methods: store map of ast::Field.syntaxnodeptr -> FieldOrMethod
   - need to be able to suggest
     - variables (easy)
     - functions
@@ -40,6 +40,11 @@
     - prevent infinite check loops: record call stack and bail out (report type any) if recursion
     - if too many distinct context types (eg 5), bail; recheck with context type `any` and use that for all future invocations
     - at the end, if we didnt hit the limit as above, recheck with context type `observed_context_ty1 | observed_context_ty2 | ...`, and only enable errors for this round
+
+TODO
+
+- need to design structure of typechecker and functions
+- hash out specifics of how assoc template checking works (state reuse)
 
 block merging algo
 
