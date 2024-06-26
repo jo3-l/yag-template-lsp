@@ -47,7 +47,7 @@ impl fmt::Display for TyDisplay<'_> {
                     value = map_ty.value_ty.display(self.env)
                 )?;
             }
-            TypedStrMap(h) => self.env.typed_str_map_types[*h].fmt(f)?,
+            StaticStrMap(h) => self.env.static_str_map_types[*h].fmt(f)?,
             Slice(h) => {
                 let slice_ty = &self.env.slice_types[*h];
                 write!(f, "[]{el}", el = slice_ty.el_ty.display(self.env))?;

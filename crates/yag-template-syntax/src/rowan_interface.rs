@@ -22,5 +22,6 @@ impl rowan::Language for YagTemplateLanguage {
 }
 
 pub type SyntaxNode = rowan::SyntaxNode<YagTemplateLanguage>;
+pub type SyntaxNodePtr = rowan::ast::SyntaxNodePtr<YagTemplateLanguage>;
 pub type SyntaxToken = rowan::SyntaxToken<YagTemplateLanguage>;
 pub type SyntaxElement = rowan::SyntaxElement<YagTemplateLanguage>;

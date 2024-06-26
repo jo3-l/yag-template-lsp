@@ -11,5 +11,5 @@ mod syntax_kind;
 pub use rowan::{TextRange, TextSize};
 
 pub use crate::error::SyntaxError;
-pub use crate::rowan_interface::{SyntaxElement, SyntaxNode, SyntaxToken, YagTemplateLanguage};
+pub use crate::rowan_interface::{SyntaxElement, SyntaxNode, SyntaxNodePtr, SyntaxToken, YagTemplateLanguage};
 pub use crate::syntax_kind::SyntaxKind;

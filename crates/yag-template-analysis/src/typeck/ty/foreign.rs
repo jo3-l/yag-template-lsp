@@ -13,7 +13,7 @@ pub struct TypeDefinitions {
     pub method_types: SlotMap<MethodHandle, MethodTy>,
     pub newtypes: SlotMap<NewtypeHandle, NewtypeTy>,
     pub map_types: SlotMap<MapHandle, MapTy>,
-    pub typed_str_map_types: SlotMap<TypedStrMapHandle, TypedStrMapTy>,
+    pub static_str_map_types: SlotMap<StaticStrMapHandle, StaticStrMapTy>,
     pub slice_types: SlotMap<SliceHandle, SliceTy>,
 }
 
@@ -124,16 +124,16 @@ pub struct MapTy {
     pub value_ty: Ty,
 }
 
-new_key_type! { pub struct TypedStrMapHandle; }
+new_key_type! { pub struct StaticStrMapHandle; }
 
 #[derive(Debug)]
-pub struct TypedStrMapTy {
+pub struct StaticStrMapTy {
     pub name: String,
     pub doc: String,
     pub fields: FxHashMap<String, Field>,
 }
 
-impl fmt::Display for TypedStrMapTy {
+impl fmt::Display for StaticStrMapTy {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.write_str(&self.name)
     }
