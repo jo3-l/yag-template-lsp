@@ -13,10 +13,25 @@ pub(crate) struct VarAssignInfo {
 }
 
 #[derive(Debug)]
+pub(crate) struct ReturnInfo {
+    pub(crate) ty: Ty,
+    pub(crate) occurs_in_all_paths: bool,
+}
+
+impl ReturnInfo {
+    pub(crate) fn never() -> Self {
+        Self {
+            ty: Ty::Never,
+            occurs_in_all_paths: false,
+        }
+    }
+}
+
+#[derive(Debug)]
 pub(crate) struct Block {
-    /// The context type at the beginning of this block.
     pub(crate) initial_context_ty: Ty,
-    /// The variable names declared within this block.
+    pub(crate) ret: ReturnInfo,
+    pub(crate) throw_ty: Ty,
     pub(crate) declared_vars: FxHashSet<EcoString>,
     /// The potential variable assignments occurring in this block.
     pub(crate) var_assigns: FxHashMap<EcoString, VarAssignInfo>,
@@ -27,9 +42,11 @@ pub(crate) struct Block {
 }
 
 impl Block {
-    pub(crate) fn new(context_ty: Ty) -> Self {
+    pub(crate) fn new(initial_context_ty: Ty) -> Self {
         Self {
-            initial_context_ty: context_ty,
+            initial_context_ty,
+            ret: ReturnInfo::never(),
+            throw_ty: Ty::Never,
             declared_vars: FxHashSet::default(),
             var_assigns: FxHashMap::default(),
             resolved_var_types: FxHashMap::default(),

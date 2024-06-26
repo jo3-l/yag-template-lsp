@@ -10,7 +10,7 @@ pub struct TypeDefinitions {
     pub initial_context_ty: Ty,
     pub funcs: FxHashMap<String, Func>,
     pub struct_types: SlotMap<StructHandle, StructTy>,
-    pub callable_types: SlotMap<CallableHandle, CallableTy>,
+    pub method_types: SlotMap<MethodHandle, MethodTy>,
     pub newtypes: SlotMap<NewtypeHandle, NewtypeTy>,
     pub map_types: SlotMap<MapHandle, MapTy>,
     pub typed_str_map_types: SlotMap<TypedStrMapHandle, TypedStrMapTy>,
@@ -31,7 +31,14 @@ impl fmt::Display for Func {
 }
 
 #[derive(Debug)]
-pub enum CallSignature {
+pub struct CallSignature {
+    pub kind: CallSignatureKind,
+    pub ret_ty: Ty,
+    pub throw_ty: Ty,
+}
+
+#[derive(Debug)]
+pub enum CallSignatureKind {
     Exact(Vec<Ty>),
     Variadic(Vec<Ty>, Ty),
     VariadicOptions(Vec<Ty>, FxHashMap<String, FuncOption>),
@@ -61,26 +68,36 @@ impl fmt::Display for StructTy {
 #[derive(Debug)]
 pub enum FieldOrMethod {
     Field(Field),
-    Method(CallableTy),
+    Method(MethodTy),
 }
 
 #[derive(Debug)]
 pub struct Field {
+    pub parent_ty_name: String,
+    pub name: String,
     pub doc: String,
     pub ty: Ty,
 }
 
-new_key_type! { pub struct CallableHandle; }
+impl fmt::Display for Field {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "field {}.{}", self.parent_ty_name, self.name)
+    }
+}
+
+new_key_type! { pub struct MethodHandle; }
 
 #[derive(Debug)]
-pub struct CallableTy {
+pub struct MethodTy {
+    pub recv_ty_name: String,
+    pub name: String,
     pub doc: String,
     pub call_signatures: Vec<CallSignature>,
 }
 
-impl fmt::Display for CallableTy {
+impl fmt::Display for MethodTy {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.write_str("callable")
+        write!(f, "func {}.{}", self.recv_ty_name, self.name)
     }
 }
 
@@ -90,7 +107,7 @@ new_key_type! { pub struct NewtypeHandle; }
 pub struct NewtypeTy {
     pub name: String,
     pub underlying: Ty,
-    pub methods: FxHashMap<String, CallableTy>,
+    pub methods: FxHashMap<String, MethodTy>,
 }
 
 impl fmt::Display for NewtypeTy {

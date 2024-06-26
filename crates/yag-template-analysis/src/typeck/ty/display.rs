@@ -19,24 +19,24 @@ impl fmt::Display for TyDisplay<'_> {
         use Ty::*;
         match &self.ty {
             Any => f.write_str("any")?,
+            Never => f.write_str("never")?,
             Union(constituents) => {
                 let mut constituents = constituents.iter();
-                if let Some(first_ty) = constituents.next() {
-                    f.write_char('(')?;
-                    first_ty.display(self.env).fmt(f)?;
-                    for ty in constituents {
-                        f.write_str(" | ")?;
-                        ty.display(self.env).fmt(f)?;
-                    }
-                    f.write_char(')')?;
-                } else {
-                    f.write_str("never")?;
+                f.write_char('(')?;
+                let first_ty = constituents
+                    .next()
+                    .expect("union should always have 2 or more constituents");
+                first_ty.display(self.env).fmt(f)?;
+                for ty in constituents {
+                    f.write_str(" | ")?;
+                    ty.display(self.env).fmt(f)?;
                 }
+                f.write_char(')')?;
             }
             Pointer(derefs_to_ty) => write!(f, "*{}", derefs_to_ty.display(self.env))?,
 
             Struct(h) => self.env.struct_types[*h].fmt(f)?,
-            Callable(h) => self.env.callable_types[*h].fmt(f)?,
+            Method(h) => self.env.method_types[*h].fmt(f)?,
             Newtype(h) => self.env.newtypes[*h].fmt(f)?,
             Map(h) => {
                 let map_ty = &self.env.map_types[*h];
@@ -54,6 +54,7 @@ impl fmt::Display for TyDisplay<'_> {
             }
 
             Primitive(p) => p.fmt(f)?,
+            TemplateName => f.write_str("TemplateName")?,
         }
         Ok(())
     }

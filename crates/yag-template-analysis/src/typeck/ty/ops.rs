@@ -1,4 +1,6 @@
-use super::{foreign, MapTy, PrimitiveTy, Ty, TypedStrMapTy};
+use ecow::eco_vec;
+
+use super::{foreign, MapTy, PrimitiveTy, Ty, TypedStrMapTy, UnionTy};
 
 pub fn indirect(mut ty: &Ty) -> &Ty {
     while let Ty::Pointer(derefs_to_ty) = ty {
@@ -20,6 +22,22 @@ where
     }
 }
 
+pub fn union(x: &Ty, y: &Ty) -> Ty {
+    match (x, y) {
+        (x, y) if x == y => x.clone(),
+        (x, Ty::Never) => x.clone(),
+        (Ty::Never, y) => y.clone(),
+
+        (Ty::Any, _) | (_, Ty::Any) => Ty::Any,
+
+        (Ty::Union(xs), Ty::Union(ys)) => Ty::Union(xs.add_constituents(ys.iter())),
+        (Ty::Union(xs), y) => Ty::Union(xs.add_constituents([y])),
+        (x, Ty::Union(ys)) => Ty::Union(ys.add_constituents([x])),
+
+        (x, y) => Ty::Union(UnionTy(eco_vec![x.clone(), y.clone()])),
+    }
+}
+
 /// Whether ty is loosely assignable to target_ty. The relation is symmetric, so
 /// `loosely_assignable(x, y, env) <=> loosely_assignable(y, x, env)`.
 pub fn loosely_assignable(ty: &Ty, target_ty: &Ty, defs: &foreign::TypeDefinitions) -> bool {
@@ -32,12 +50,12 @@ pub fn loosely_assignable(ty: &Ty, target_ty: &Ty, defs: &foreign::TypeDefinitio
 
         // A union type U is loosely assignable to type T (and vice versa) if any constituent of U
         // is loosely assignable to T.
-        (Ty::Union(x_constituents), y) => x_constituents.iter().any(|x_c| loosely_assignable(x_c, y, defs)),
-        (x, Ty::Union(y_constituents)) => y_constituents.iter().any(|y_c| loosely_assignable(x, y_c, defs)),
+        (Ty::Union(xs), y) => xs.iter().any(|x_c| loosely_assignable(x_c, y, defs)),
+        (x, Ty::Union(ys)) => ys.iter().any(|y_c| loosely_assignable(x, y_c, defs)),
 
         // Structs and callables are exact types.
         (Ty::Struct(handle), Ty::Struct(target_handle)) => handle == target_handle,
-        (Ty::Callable(handle), Ty::Callable(target_handle)) => handle == target_handle,
+        (Ty::Method(handle), Ty::Method(target_handle)) => handle == target_handle,
 
         // Map types are loosely assignable to one another if their key types and value types are loosely assignable as well.
         (Ty::Map(xh), Ty::Map(yh)) => {
@@ -62,6 +80,10 @@ pub fn loosely_assignable(ty: &Ty, target_ty: &Ty, defs: &foreign::TypeDefinitio
 
         // Primitive types are loosely assignable to one another if they are in the same class.
         (Ty::Primitive(x), Ty::Primitive(y)) => x.class() == y.class(),
+
+        // Strings are loosely assignable to template names, and vice versa.
+        (Ty::Primitive(PrimitiveTy::String), Ty::TemplateName) => true,
+        (Ty::TemplateName, Ty::Primitive(PrimitiveTy::String)) => true,
 
         _ => false,
     }
