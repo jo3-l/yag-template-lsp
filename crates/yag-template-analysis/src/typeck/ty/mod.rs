@@ -33,11 +33,10 @@ where
     }
 }
 
-/// An immutable, cheaply cloneable type.
-#[derive(Debug, Default, Clone, PartialEq, PartialOrd, Ord, Eq, Hash)]
+/// An immutable, cheaply cloneable representation of a type in YAGPDB's templating system.
+#[derive(Debug, Clone, PartialEq, PartialOrd, Ord, Eq, Hash)]
 pub enum Ty {
     Any,
-    #[default]
     Never,
     Union(UnionTy),
     Pointer(Box<Ty>),

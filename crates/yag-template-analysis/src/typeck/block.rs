@@ -18,7 +18,13 @@ pub(crate) enum BlockKind {
 pub(crate) struct Block {
     pub(crate) kind: BlockKind,
     pub(crate) initial_context_ty: Ty,
-    pub(crate) flow: FlowInfo,
+    pub(crate) flow_flags: FlowFlags,
+    /// The union of all possible types returned from this block, or `Ty::Never` if there are no
+    /// return actions in the block.
+    pub(crate) return_ty: Ty,
+    /// The union of all possible error types thrown from function calls in the block, or
+    /// `Ty::Never` if no fallible function calls are present.
+    pub(crate) throw_ty: Ty,
     pub(crate) declared_vars: FxHashSet<EcoString>,
     pub(crate) var_assigns: FxHashMap<EcoString, VarAssignInfo>,
     /// Types of variables that are declared or potentially assigned to within the block. When
@@ -32,23 +38,14 @@ impl Block {
         Self {
             kind,
             initial_context_ty,
-            flow: FlowInfo::default(),
+            flow_flags: FlowFlags::default(),
+            return_ty: Ty::Never,
+            throw_ty: Ty::Never,
             declared_vars: FxHashSet::default(),
             var_assigns: FxHashMap::default(),
             resolved_var_types: FxHashMap::default(),
         }
     }
-}
-
-#[derive(Debug, Default)]
-pub(crate) struct FlowInfo {
-    /// The union of all possible types returned from this block, or `Ty::Never` if there are no
-    /// return actions in the block.
-    pub(crate) return_ty: Ty,
-    /// The union of all possible error types thrown from function calls, or `Ty::Never` if there
-    /// are no fallible function calls in the block.
-    pub(crate) throw_ty: Ty,
-    pub(crate) flags: FlowFlags,
 }
 
 bitflags! {

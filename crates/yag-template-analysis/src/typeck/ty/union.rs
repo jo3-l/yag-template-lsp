@@ -45,7 +45,6 @@ impl UnionTy {
         match &self.0 {
             Repr::Small(constituents) => {
                 if constituents.contains(ty) {
-                    //
                     self.clone()
                 } else {
                     let (a, b, c) = algo::sort3(constituents[0].clone(), constituents[1].clone(), ty.clone());
