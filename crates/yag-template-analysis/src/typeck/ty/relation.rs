@@ -1,24 +1,4 @@
-use super::{foreign, MapTy, PrimitiveTy, StaticStrMapTy, Ty};
-
-pub fn indirect(mut ty: &Ty) -> &Ty {
-    while let Ty::Pointer(derefs_to_ty) = ty {
-        ty = &derefs_to_ty;
-    }
-    ty
-}
-
-pub fn base_ty<'t, 'e>(ty: &'t Ty, defs: &'e foreign::TypeDefinitions) -> &'t Ty
-where
-    'e: 't,
-{
-    match indirect(ty) {
-        Ty::Newtype(handle) => {
-            let newtype = &defs.newtypes[*handle];
-            base_ty(&newtype.underlying, defs)
-        }
-        ty => ty,
-    }
-}
+use super::{base_ty, foreign, MapTy, PrimitiveTy, StaticStrMapTy, Ty};
 
 /// Whether type x is loosely assignable to type y. The relation is symmetric, so
 /// `loosely_assignable(x, y) <=> loosely_assignable(y, x)`.

@@ -1,28 +1,29 @@
 use ecow::EcoString;
 use rustc_hash::FxHashMap;
-use yag_template_syntax::{SyntaxNodePtr, TextRange};
+use yag_template_syntax::SyntaxNodePtr;
 
 use super::ty::foreign::FieldOrMethod;
 use super::ty::Ty;
+use super::Error;
 
 #[derive(Debug)]
 pub struct TypeckOutput {
-    expr_types: FxHashMap<SyntaxNodePtr, Ty>,
-    field_method_access_info: FxHashMap<SyntaxNodePtr, FieldMethodAccessInfo>,
-    contextual_types: FxHashMap<SyntaxNodePtr, Ty>,
-    assoc_templates: Vec<AssocTemplateInfo>,
-    errors: Vec<Error>, // TODO
+    pub(crate) expr_types: FxHashMap<SyntaxNodePtr, Ty>,
+    pub(crate) field_method_access_info: FxHashMap<SyntaxNodePtr, FieldMethodAccessInfo>,
+    pub(crate) contextual_types: FxHashMap<SyntaxNodePtr, Ty>,
+    pub(crate) assoc_template_info: Vec<AssocTemplateInfo>,
+    pub(crate) errors: Vec<Error>, // TODO
 }
 
 #[derive(Debug)]
 pub struct FieldMethodAccessInfo {
     pub base_ty: Ty,
-    pub field_or_method: Option<FieldOrMethod>,
+    pub resolved: Option<FieldOrMethod>,
 }
 
 #[derive(Debug)]
 pub struct AssocTemplateInfo {
     pub name: EcoString,
-    pub defn_range: TextRange,
     pub context_ty: Ty,
+    pub ret_ty: Ty,
 }

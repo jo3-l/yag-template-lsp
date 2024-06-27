@@ -10,7 +10,6 @@ use super::ty::Ty;
 #[derive(Debug)]
 pub(crate) struct TypeckContext<'e> {
     pub(crate) env: &'e TypeDefinitions,
-    pub(crate) is_main_template: bool,
     pub(crate) cur_block: Block,
     pub(crate) parent_blocks: Vec<Block>,
     pub(crate) call_stack: Vec<EcoString>,
@@ -20,7 +19,7 @@ pub(crate) struct TypeckContext<'e> {
 
 #[derive(Debug)]
 pub(crate) struct AssocTemplate {
-    actions: ast::ActionList,
-    erased: bool,
-    instantiations: FxHashMap<Ty, Ty>,
+    pub(crate) actions: ast::ActionList,
+    pub(crate) exceeded_max_instantiations: bool,
+    pub(crate) instantiations: FxHashMap<Ty, Ty>,
 }

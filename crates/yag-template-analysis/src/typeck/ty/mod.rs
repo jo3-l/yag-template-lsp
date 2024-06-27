@@ -2,7 +2,7 @@ use std::fmt;
 
 mod display;
 pub mod foreign;
-mod ops;
+mod relation;
 mod union;
 
 pub use display::TyDisplay;
@@ -10,8 +10,28 @@ pub use foreign::{
     MapHandle, MapTy, MethodHandle, MethodTy, NewtypeHandle, NewtypeTy, SliceHandle, SliceTy, StaticStrMapHandle,
     StaticStrMapTy, StructHandle, StructTy,
 };
-pub use ops::{base_ty, indirect, loosely_assignable};
+pub use relation::loosely_assignable;
 pub use union::{union, UnionTy};
+
+pub fn indirect(mut ty: &Ty) -> &Ty {
+    while let Ty::Pointer(derefs_to_ty) = ty {
+        ty = &derefs_to_ty;
+    }
+    ty
+}
+
+pub fn base_ty<'t, 'e>(ty: &'t Ty, defs: &'e foreign::TypeDefinitions) -> &'t Ty
+where
+    'e: 't,
+{
+    match indirect(ty) {
+        Ty::Newtype(handle) => {
+            let newtype = &defs.newtypes[*handle];
+            base_ty(&newtype.underlying, defs)
+        }
+        ty => ty,
+    }
+}
 
 /// An immutable, cheaply cloneable type.
 #[derive(Debug, Clone, PartialEq, PartialOrd, Ord, Eq, Hash)]
