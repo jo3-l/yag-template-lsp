@@ -15,7 +15,7 @@ pub use union::{union, UnionTy};
 
 pub fn indirect(mut ty: &Ty) -> &Ty {
     while let Ty::Pointer(derefs_to_ty) = ty {
-        ty = &derefs_to_ty;
+        ty = derefs_to_ty;
     }
     ty
 }

@@ -131,7 +131,7 @@ impl Rune {
         s.eat_if('\'');
         match s.eat() {
             Some('\\') => {
-                let Some(after_slash) = s.eat() else { return None };
+                let after_slash = s.eat()?;
                 go_lit_syntax::scan_escape_sequence(&mut s, after_slash, EscapeContext::CharacterLiteral).ok()
             }
             Some(c) => Some(c),

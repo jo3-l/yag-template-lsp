@@ -42,7 +42,7 @@ pub(crate) enum EscapeContext {
 /// interpreted string and rune literals].
 ///
 /// [Go specification]: https://go.dev/ref/spec#Rune_literals
-pub(crate) fn iter_escape_sequences<'s>(src: &'s str, ctx: EscapeContext) -> EscapeSequences<'s> {
+pub(crate) fn iter_escape_sequences(src: &str, ctx: EscapeContext) -> EscapeSequences {
     EscapeSequences {
         s: Scanner::new(src),
         ctx,
@@ -149,7 +149,7 @@ impl<'s> ScannerExt<'s> for Scanner<'s> {
 /// sequences.)
 ///
 /// See also [iter_escape_sequences].
-pub(crate) fn interpret_string_content<'s>(src: &'s str) -> Cow<'s, str> {
+pub(crate) fn interpret_string_content(src: &str) -> Cow<str> {
     if src.find('\\').is_none() {
         return Cow::Borrowed(src);
     }

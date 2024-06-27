@@ -12,7 +12,7 @@ pub(crate) fn expr_pipeline(p: &mut Parser, context: &str) {
             p.eat_whitespace();
             pipeline_stage(p);
         }
-        p.wrap(c, SyntaxKind::Pipeline)
+        p.wrap(c, SyntaxKind::Pipeline);
     }
 }
 
@@ -208,7 +208,7 @@ fn var(p: &mut Parser) {
     } else {
         // neither followed by `:=` nor by `=`, so treat as normal variable
         // access
-        p.wrap(c, SyntaxKind::VarAccess)
+        p.wrap(c, SyntaxKind::VarAccess);
     }
 }
 

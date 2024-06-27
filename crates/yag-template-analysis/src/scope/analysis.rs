@@ -149,7 +149,7 @@ impl ScopeAnalyzer {
                 range_clause
                     .iteration_vars()
                     .map(|ast_var| Var::new(ast_var.name(), ast_var.syntax().text_range().end(), None)),
-            )
+            );
         }
         self.push_var_decls_in(|| range_clause.range_expr());
         self.exit_scope();
@@ -256,5 +256,5 @@ impl ScopeAnalyzer {
 fn var_decls_in(node: &SyntaxNode) -> impl Iterator<Item = Var> {
     node.descendants()
         .filter_map(|child| child.try_to::<ast::VarDecl>())
-        .filter_map(|decl| Var::try_from_decl(decl))
+        .filter_map(Var::try_from_decl)
 }

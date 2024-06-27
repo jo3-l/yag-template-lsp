@@ -66,11 +66,11 @@ impl<'s> Lexer<'s> {
 
 impl Lexer<'_> {
     fn error(&mut self, message: impl Into<String>, range: TextRange) {
-        self.errors.push(SyntaxError::new(message.into(), range))
+        self.errors.push(SyntaxError::new(message.into(), range));
     }
 
     fn error_at(&mut self, pos: TextSize, message: impl Into<String>) {
-        self.error(message, TextRange::empty(pos))
+        self.error(message, TextRange::empty(pos));
     }
 
     fn error_from(&mut self, pos: TextSize, message: impl Into<String>) {
@@ -85,7 +85,7 @@ impl Lexer<'_> {
         } else if self.s.eat_if("{{") {
             self.mode = LexMode::Action;
             if self.s.eat_if("- ") {
-                // space is required: just '{{-' might be a negative number
+                // space is required: just '{{-' is a negative number
                 SyntaxKind::TrimmedLeftDelim
             } else {
                 SyntaxKind::LeftDelim
@@ -185,7 +185,7 @@ impl Lexer<'_> {
         if self.done() {
             self.error_from(start, "unclosed string");
         } else if self.s.at('\n') {
-            self.error_at(self.cursor(), "unexpected newline in string")
+            self.error_at(self.cursor(), "unexpected newline in string");
         } else if self.s.eat_if('"') {
             // validate escape sequences
             self.errors.extend(
@@ -236,7 +236,6 @@ impl Lexer<'_> {
         let start = self.cursor();
         self.s.eat_if(['+', '-']);
 
-        // scan prefix
         let base = go_lit_syntax::scan_numeric_base_prefix(&mut self.s).unwrap_or(10);
 
         // scan integer part
@@ -289,19 +288,13 @@ impl Lexer<'_> {
 mod upstream_compat {
     use unic_ucd_category::GeneralCategory;
 
-    /// Whether c is a space character, according to the original text/template
-    /// parser in Go.
-    ///
-    /// Refer to the `isSpace` function below:
+    /// See the `isSpace` function below:
     /// https://github.com/golang/go/blob/master/src/text/template/parse/lex.go#L671
     pub(super) fn is_space(c: char) -> bool {
         matches!(c, ' ' | '\t' | '\r' | '\n')
     }
 
-    /// Whether c is alphanumeric according to the original text/template parser
-    /// in Go.
-    ///
-    /// Refer to the `isAlphaNumeric` function below:
+    /// See the `isAlphaNumeric` function below:
     /// https://github.com/golang/go/blob/master/src/text/template/parse/lex.go#L676
     pub(super) fn is_alphanumeric(c: char) -> bool {
         match c {

@@ -168,7 +168,7 @@ impl<'s> Parser<'s> {
 
     fn eat_trivia(&mut self) {
         while self.cur.is_trivia() {
-            self.only_eat_cur_token()
+            self.only_eat_cur_token();
         }
     }
 
@@ -278,7 +278,7 @@ impl Parser<'_> {
 
     /// Call [Parser::error] at the range of the current token.
     pub(crate) fn error_here(&mut self, message: impl Into<String>) {
-        self.error(message, self.cur_range())
+        self.error(message, self.cur_range());
     }
 }
 
