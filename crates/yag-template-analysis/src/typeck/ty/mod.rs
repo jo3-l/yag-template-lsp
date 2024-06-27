@@ -34,9 +34,10 @@ where
 }
 
 /// An immutable, cheaply cloneable type.
-#[derive(Debug, Clone, PartialEq, PartialOrd, Ord, Eq, Hash)]
+#[derive(Debug, Default, Clone, PartialEq, PartialOrd, Ord, Eq, Hash)]
 pub enum Ty {
     Any,
+    #[default]
     Never,
     Union(UnionTy),
     Pointer(Box<Ty>),
