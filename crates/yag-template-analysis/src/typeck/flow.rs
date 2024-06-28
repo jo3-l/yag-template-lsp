@@ -21,8 +21,8 @@ bitflags! {
     pub(crate) struct FlowFacts: u8 {
         /// Whether a return action occurs along at least one control flow paths through the block.
         /// The analysis is necessarily conservative by Rice's theorem — that is, there may be some
-        /// programs that never return from a given block yet do have this flag set — as is the case
-        /// for all subsequent flags.
+        /// programs that never return from a given block yet have this fact set — as is the case
+        /// for all subsequent facts.
         const HAS_POTENTIAL_RETURN = 1 << 0;
         /// Whether a return action occurs along all control flow paths through the block.
         const HAS_DEFINITE_RETURN = 1 << 1;
@@ -90,7 +90,7 @@ impl Block {
         self.flow_facts |= child.propagate_facts();
         self.return_ty = union(&self.return_ty, &child.return_ty);
         self.throw_ty = union(&self.throw_ty, child.propagate_throw_ty());
-        self.commit_inner_assignments(child.propagate_var_assigns());
+        self.commit_var_assigns(child.propagate_var_assigns());
     }
 
     /// Merge two child blocks, of which one and only one is executed in a given program execution,
@@ -131,13 +131,10 @@ impl Block {
                     is_definite: false,
                 });
         }
-        self.commit_inner_assignments(merged_var_assigns)
+        self.commit_var_assigns(merged_var_assigns)
     }
 
-    pub(crate) fn commit_inner_assignments(
-        &mut self,
-        var_assigns: impl IntoIterator<Item = (EcoString, VarAssignInfo)>,
-    ) {
+    fn commit_var_assigns(&mut self, var_assigns: impl IntoIterator<Item = (EcoString, VarAssignInfo)>) {
         for (var, assign) in var_assigns {
             self.var_assigns
                 .entry(var.clone())

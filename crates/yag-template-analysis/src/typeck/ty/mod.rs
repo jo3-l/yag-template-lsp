@@ -1,5 +1,4 @@
 use std::fmt;
-use std::ops::{BitOr, BitOrAssign};
 
 mod display;
 pub mod foreign;
