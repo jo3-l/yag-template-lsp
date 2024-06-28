@@ -87,4 +87,54 @@ for var in inner_var_assigns
         union parent assignment type with new type
 ```
 
-- TODO this doesnt handle return statements quite right
+known issues with this design
+
+```
+{{$x := "test"}}
+{{range ...}}
+  {{if ...}}
+    {{$x = false}}
+    {{break}}
+  {{end}}
+  {{$x}} {{/* boolean|string instead of string }}
+{{end}}
+```
+
+issue is that if we need to propagate the `= false` assignment to the root block so that outside the
+loop, the type of $x is boolean|string. but our current design does not permit us to do that while
+also having the type of $x inside the loop be just string. we would need to build a full control flow graph
+to be able to perform this sort of analysis
+
+things to be careful about
+- loops in general
+    {{$x := "abc"}}
+    {{range $x = cslice 1 2 3}}
+      {{$x = 'c'}}
+    {{end}}
+    {{$x}} should have type rune|string, no int
+
+    but
+    {{range $x = cslice 1 2 3}}
+      {{if ...}}
+        {{$x = 'c'}}
+      {{end}}
+    {{end}}
+    {{$x}} should have type rune|int|string
+
+    {{$x := 'a'}}
+    {{while $x = /* some expr returning type int */}}
+      {{$x = "test"}}
+    {{end}}
+    {{$x}} should have type rune|int, not rune|int|string
+
+    but
+
+    {{while $x = /* some expr returning type int */}}
+      {{if ...}}
+        {{$x = "test"}}
+        break
+      {{end}}
+    {{end}}
+    {{$x}} should have type rune|int|string; break means loop cond isnt evaluated
+
+    (this one might be a little hard to get right without the full cfg... might need to pessimistically assume the latter case)

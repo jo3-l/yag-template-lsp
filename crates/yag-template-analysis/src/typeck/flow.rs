@@ -154,14 +154,20 @@ impl Block {
 
     /// Extract the variable assignments that propagate into the parent block, consuming
     /// `self.var_assigns`.
-    pub(crate) fn propagate_var_assigns(&mut self) -> FxHashMap<EcoString, VarAssignInfo> {
+    fn propagate_var_assigns(&mut self) -> FxHashMap<EcoString, VarAssignInfo> {
         let mut var_assigns = mem::take(&mut self.var_assigns);
-        var_assigns.retain(|var, _| !self.declared_vars.contains(var));
-        var_assigns
+        if self.flow_facts.contains(FlowFacts::HAS_DEFINITE_RETURN) {
+            // If a `return` definitely occurs along all control flow paths in this
+            // block, the parent block does not observe any variable assignments.
+            FxHashMap::default()
+        } else {
+            var_assigns.retain(|var, _| !self.declared_vars.contains(var));
+            var_assigns
+        }
     }
 
     /// Extract the throw type that propagates into the parent block.
-    pub(crate) fn propagate_throw_ty(&self) -> &Ty {
+    fn propagate_throw_ty(&self) -> &Ty {
         if self.kind == BlockKind::TryBody {
             &Ty::Never
         } else {
@@ -170,7 +176,7 @@ impl Block {
     }
 
     /// Extract the flow facts that propagate into the parent block.
-    pub(crate) fn propagate_facts(&self) -> FlowFacts {
+    fn propagate_facts(&self) -> FlowFacts {
         match self.kind {
             BlockKind::LoopBody => self.flow_facts.difference(
                 FlowFacts::HAS_POTENTIAL_LOOP_BREAK
@@ -181,24 +187,5 @@ impl Block {
             BlockKind::TryBody => self.flow_facts.difference(FlowFacts::HAS_FALLIBLE_FN_CALL),
             BlockKind::Other => self.flow_facts,
         }
-    }
-
-    /// Could a `return`, fallible function call, `break`, or `continue` potentially have occurred
-    /// before this point in the block?
-    pub(crate) fn has_potential_jmp(&self) -> bool {
-        self.flow_facts.intersects(
-            FlowFacts::HAS_POTENTIAL_RETURN
-                | FlowFacts::HAS_FALLIBLE_FN_CALL
-                | FlowFacts::HAS_POTENTIAL_LOOP_BREAK
-                | FlowFacts::HAS_POTENTIAL_LOOP_CONTINUE,
-        )
-    }
-
-    /// Has a `return`, `break`, or `continue` definitely occurred before this point in the block?
-    /// (If so, any code in the block past this point is unreachable.)
-    pub(crate) fn has_definite_jmp(&self) -> bool {
-        self.flow_facts.intersects(
-            FlowFacts::HAS_DEFINITE_RETURN | FlowFacts::HAS_DEFINITE_LOOP_BREAK | FlowFacts::HAS_DEFINITE_LOOP_CONTINUE,
-        )
     }
 }
