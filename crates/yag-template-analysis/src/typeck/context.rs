@@ -2,7 +2,7 @@ use ecow::EcoString;
 use rustc_hash::FxHashMap;
 use yag_template_syntax::ast;
 
-use super::block::Block;
+use super::flow::Block;
 use super::output::TypeckOutput;
 use super::ty::foreign::TypeDefinitions;
 use super::ty::Ty;
@@ -20,6 +20,6 @@ pub(crate) struct TypeckContext<'e> {
 #[derive(Debug)]
 pub(crate) struct AssocTemplate {
     pub(crate) actions: ast::ActionList,
-    pub(crate) exceeded_max_instantiations: bool,
+    pub(crate) overflowed_instantiations: bool,
     pub(crate) instantiations: FxHashMap<Ty, Ty>,
 }
