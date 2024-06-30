@@ -82,9 +82,9 @@ pub(crate) struct Block {
 
     pub(crate) declared_vars: FxHashSet<EcoString>,
     pub(crate) var_assigns: FxHashMap<EcoString, VarAssignInfo>,
-    /// Types of variables that are declared or potentially assigned to within the block. When
-    /// looking up variable types, it is still necessary to scan parent blocks for inherited
-    /// variables.
+    /// A table storing the live types for variables assigned or declared in the current block. Note
+    /// that when looking up types for variable accesses, it is also necessary to scan parent blocks
+    /// for inherited variables.
     pub(crate) scoped_var_types: FxHashMap<EcoString, Ty>,
 }
 
@@ -122,7 +122,7 @@ impl Block {
         self.flow_facts |= child.propagate_facts();
         self.return_ty = union(&self.return_ty, &child.return_ty);
         self.throw_ty = union(&self.throw_ty, child.propagate_throw_ty());
-        self.merge_child_var_assigns(child.propagate_var_assigns());
+        self.commit_var_assigns(child.propagate_var_assigns());
     }
 
     pub(crate) fn merge_divergent_child_branches(&mut self, mut left: Block, mut right: Block) {
@@ -158,10 +158,10 @@ impl Block {
                 });
         }
 
-        self.merge_child_var_assigns(merged_var_assigns)
+        self.commit_var_assigns(merged_var_assigns)
     }
 
-    fn merge_child_var_assigns(&mut self, var_assigns: impl IntoIterator<Item = (EcoString, VarAssignInfo)>) {
+    fn commit_var_assigns(&mut self, var_assigns: impl IntoIterator<Item = (EcoString, VarAssignInfo)>) {
         for (var, assign) in var_assigns {
             if assign.is_definite {
                 self.var_assigns.insert(var.clone(), assign.clone());

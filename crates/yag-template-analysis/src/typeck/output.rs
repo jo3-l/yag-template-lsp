@@ -25,5 +25,5 @@ pub struct FieldMethodAccessInfo {
 pub struct AssocTemplateInfo {
     pub name: EcoString,
     pub context_ty: Ty,
-    pub ret_ty: Ty,
+    pub return_ty: Ty,
 }

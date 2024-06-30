@@ -49,6 +49,8 @@ impl TypeckContext<'_> {
             self.cur_block
                 .var_assigns
                 .entry(var.into())
+                // The previous variable assignment might be along a different control flow path; we
+                // mustn't overwrite it.
                 .and_modify(|existing_assign| existing_assign.ty = union(&existing_assign.ty, &ty))
                 .or_insert_with(|| VarAssignInfo {
                     ty: ty.clone(),
@@ -63,6 +65,12 @@ impl TypeckContext<'_> {
                 },
             );
         }
+
+        // `scoped_var_types` stores live variable types at the current point of analysis, so we can
+        // unconditionally overwrite the type regardless of previous assignments to the same
+        // variable along different control flow paths. (In contrast, the type stored in
+        // `var_assigns` reflects the union of types observable by an observer outside the block, so
+        // more care is necessary there.)
         self.cur_block.scoped_var_types.insert(var.into(), ty);
     }
 
