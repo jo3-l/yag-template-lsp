@@ -11,7 +11,7 @@ pub use foreign::{
     StaticStrMapTy, StructHandle, StructTy,
 };
 pub use relation::loosely_assignable;
-pub use union::{union, UnionTy};
+pub use union::{union, union_all, UnionTy};
 
 pub fn indirect(mut ty: &Ty) -> &Ty {
     while let Ty::Pointer(derefs_to_ty) = ty {

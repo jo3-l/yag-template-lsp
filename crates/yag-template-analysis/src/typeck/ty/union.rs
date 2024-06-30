@@ -6,23 +6,9 @@ use itertools::Itertools;
 
 use super::Ty;
 
-/// A union of multiple types in sorted order.
-///
-/// By construction, union types always have two or more constituents. All operations that produce
-/// or modify union types maintain this invariant.
-///
-/// ## Implementation detail
-///
-/// Union types are internally modelled as an immutable, sorted vector. Although modifying existing
-/// union type requires cloning under this representation, data structures that would be more
-/// efficient in theory — namely, persistent data structures — are not worth considering since most
-/// union types are small. (For similar reasons, we do not represent union types as a set.)
-///
-/// Additionally, since it is important that types are cheaply cloneable, we use an `EcoVec` instead
-/// of a plain `Vec` so that clones reuse the same memory location.
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
-#[repr(transparent)]
-pub struct UnionTy(EcoVec<Ty>);
+pub fn union_all<'a>(types: impl IntoIterator<Item = &'a Ty>) -> Ty {
+    types.into_iter().fold(Ty::Never, |acc, ty| union(&acc, ty))
+}
 
 pub fn union(x: &Ty, y: &Ty) -> Ty {
     match (x, y) {
@@ -46,6 +32,24 @@ pub fn union(x: &Ty, y: &Ty) -> Ty {
         }
     }
 }
+
+/// A union of multiple types in sorted order.
+///
+/// By construction, union types always have two or more constituents. All operations that produce
+/// or modify union types maintain this invariant.
+///
+/// ## Implementation detail
+///
+/// Union types are internally modelled as an immutable, sorted vector. Although modifying existing
+/// union type requires cloning under this representation, data structures that would be more
+/// efficient in theory — namely, persistent data structures — are not worth considering since most
+/// union types are small. (For similar reasons, we do not represent union types as a set.)
+///
+/// Additionally, since it is important that types are cheaply cloneable, we use an `EcoVec` instead
+/// of a plain `Vec` so that clones reuse the same memory location.
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[repr(transparent)]
+pub struct UnionTy(EcoVec<Ty>);
 
 impl UnionTy {
     pub fn iter(&self) -> slice::Iter<'_, Ty> {

@@ -256,18 +256,12 @@ impl IfConditional {
         self.syntax.find_first_child()
     }
 
-    pub fn if_action_list(&self) -> Option<ActionList> {
+    pub fn then_list(&self) -> Option<ActionList> {
         self.syntax.find_first_child()
     }
 
     pub fn else_branches(&self) -> AstChildren<ElseBranch> {
         self.syntax.cast_children()
-    }
-
-    pub fn has_unconditional_else(&self) -> bool {
-        self.syntax
-            .find_last_child::<ElseBranch>()
-            .is_some_and(|branch| branch.else_clause().is_some_and(|clause| clause.cond_expr().is_none()))
     }
 
     pub fn end_clause(&self) -> Option<EndClause> {
@@ -295,7 +289,7 @@ impl WithConditional {
         self.syntax.find_first_child()
     }
 
-    pub fn with_action_list(&self) -> Option<ActionList> {
+    pub fn then_list(&self) -> Option<ActionList> {
         self.syntax.find_first_child()
     }
 
@@ -324,6 +318,14 @@ define_node! {
 }
 
 impl ElseBranch {
+    pub fn is_unconditional(&self) -> bool {
+        let has_if_token = self
+            .syntax
+            .children_with_tokens()
+            .any(|el| el.into_token().is_some_and(|token| token.kind() == SyntaxKind::If));
+        !has_if_token
+    }
+
     pub fn else_clause(&self) -> Option<ElseClause> {
         self.syntax.find_first_child()
     }
@@ -445,7 +447,7 @@ impl TryCatchAction {
         self.syntax.find_first_child()
     }
 
-    pub fn try_action_list(&self) -> Option<ActionList> {
+    pub fn try_list(&self) -> Option<ActionList> {
         self.syntax.find_first_child()
     }
 
@@ -453,7 +455,7 @@ impl TryCatchAction {
         self.syntax.find_first_child()
     }
 
-    pub fn catch_action_list(&self) -> Option<ActionList> {
+    pub fn catch_list(&self) -> Option<ActionList> {
         self.syntax.cast_children().nth(1)
     }
 }

@@ -95,7 +95,7 @@ impl ScopeAnalyzer {
         let if_clause_scope = self.enter_inner_scope(if_clause.syntax().text_range());
         self.push_var_decls_in(|| if_clause.if_expr());
         self.exit_scope();
-        if let Some(if_list) = if_conditional.if_action_list() {
+        if let Some(if_list) = if_conditional.then_list() {
             self.enter_scope_with_parent(if_list.syntax().text_range(), if_clause_scope);
             self.analyze_all(if_list.actions());
             self.exit_scope();
@@ -110,7 +110,7 @@ impl ScopeAnalyzer {
         let with_clause_scope = self.enter_inner_scope(with_clause.syntax().text_range());
         self.push_var_decls_in(|| with_clause.with_expr());
         self.exit_scope();
-        if let Some(with_list) = with_conditional.with_action_list() {
+        if let Some(with_list) = with_conditional.then_list() {
             self.enter_scope_with_parent(with_list.syntax().text_range(), with_clause_scope);
             self.analyze_all(with_list.actions());
             self.exit_scope();
@@ -189,13 +189,13 @@ impl ScopeAnalyzer {
     }
 
     fn analyze_try_catch_action(&mut self, try_catch_action: ast::TryCatchAction) {
-        if let Some(try_list) = try_catch_action.try_action_list() {
+        if let Some(try_list) = try_catch_action.try_list() {
             self.enter_inner_scope(try_list.syntax().text_range());
             self.analyze_all(try_list.actions());
             self.exit_scope();
         }
 
-        if let Some(catch_list) = try_catch_action.catch_action_list() {
+        if let Some(catch_list) = try_catch_action.catch_list() {
             self.enter_inner_scope(catch_list.syntax().text_range());
             self.analyze_all(catch_list.actions());
             self.exit_scope();
