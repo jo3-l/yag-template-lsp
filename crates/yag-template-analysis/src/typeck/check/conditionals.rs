@@ -45,12 +45,17 @@ fn check_if_or_with(
         ConditionalKind::If => ctx.inherit_context_ty(),
         ConditionalKind::With => cond_ty,
     };
-    let then_block = check_action_list(BlockKind::default(), context_ty, then_list);
+    let then_block = check_action_list(ctx, BlockKind::default(), context_ty, then_list);
 
     let else_block = match else_branches.next() {
         Some(branch) => {
             if branch.is_unconditional() {
-                check_action_list(BlockKind::default(), ctx.inherit_context_ty(), branch.action_list())
+                check_action_list(
+                    ctx,
+                    BlockKind::default(),
+                    ctx.inherit_context_ty(),
+                    branch.action_list(),
+                )
             } else {
                 // Process
                 //   {{else if x}}
@@ -70,10 +75,10 @@ fn check_if_or_with(
                 check_if_or_with(ctx, ConditionalKind::If, cond_expr, branch.action_list(), else_branches)
             }
         }
-        None => Block::empty(),
+        None => Block::never(),
     };
 
     let mut if_block = ctx.exit_block();
-    if_block.merge_divergent_child_branches(then_block, else_block);
+    if_block.merge_divergent_branches(then_block, else_block);
     if_block
 }

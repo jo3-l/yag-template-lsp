@@ -1,4 +1,4 @@
-use std::fmt;
+use std::{fmt, mem};
 
 mod display;
 pub mod foreign;
@@ -56,6 +56,10 @@ pub enum Ty {
 }
 
 impl Ty {
+    pub fn take(&mut self) -> Ty {
+        mem::replace(self, Ty::Never)
+    }
+
     pub fn is_any(&self) -> bool {
         self == &Ty::Any
     }

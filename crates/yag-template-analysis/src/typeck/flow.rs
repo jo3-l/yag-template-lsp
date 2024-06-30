@@ -89,7 +89,7 @@ pub(crate) struct Block {
 }
 
 impl Block {
-    pub(crate) fn empty() -> Self {
+    pub(crate) fn never() -> Self {
         Self::new_impl(None, BlockKind::Other, Ty::Never)
     }
 
@@ -106,9 +106,7 @@ impl Block {
             kind,
             in_loop_body: parent.is_some_and(|p| p.in_loop_body) || kind == BlockKind::LoopBody,
             in_try_body: parent.is_some_and(|p| p.in_try_body) || kind == BlockKind::TryBody,
-
             flow_facts: FlowFacts::empty(),
-
             context_ty,
             return_ty: Ty::Never,
             throw_ty: Ty::Never,
@@ -118,14 +116,14 @@ impl Block {
         }
     }
 
-    pub(crate) fn merge_child(&mut self, mut child: Block) {
+    pub(crate) fn merge(&mut self, mut child: Block) {
         self.flow_facts |= child.propagate_facts();
         self.return_ty = union(&self.return_ty, &child.return_ty);
         self.throw_ty = union(&self.throw_ty, child.propagate_throw_ty());
         self.commit_var_assigns(child.propagate_var_assigns());
     }
 
-    pub(crate) fn merge_divergent_child_branches(&mut self, mut left: Block, mut right: Block) {
+    pub(crate) fn merge_divergent_branches(&mut self, mut left: Block, mut right: Block) {
         let left_facts = left.propagate_facts();
         let right_facts = right.propagate_facts();
         // Definite facts (e.g., HAS_DEFINITE_RETURN) that assert properties about all control flow
