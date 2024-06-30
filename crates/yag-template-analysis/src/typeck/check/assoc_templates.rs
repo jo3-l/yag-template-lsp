@@ -121,8 +121,8 @@ pub(crate) fn instantiate_template(ctx: &mut TypeckContext, assoc_template: &mut
     return_ty
 }
 
-fn check_in_child_context<'e, F, R>(
-    parent_ctx: &'e mut TypeckContext,
+fn check_in_child_context<F, R>(
+    parent_ctx: &mut TypeckContext,
     template_name: EcoString,
     context_ty: Ty,
     opts: TypeckOptions,

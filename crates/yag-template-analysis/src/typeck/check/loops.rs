@@ -1,4 +1,4 @@
-use yag_template_syntax::ast;
+use yag_template_syntax::ast::{self, AstNode, SyntaxNodeExt};
 
 use super::check_action_list;
 use super::expr::check_expr;
@@ -9,13 +9,10 @@ use crate::typeck::ty::{base_ty, union_all, PrimitiveClass, PrimitiveTy, Ty};
 pub(crate) fn check_while_loop(ctx: &mut TypeckContext, while_loop: ast::WhileLoop) -> Block {
     ctx.enter_block(BlockKind::default(), ctx.inherit_context_ty());
 
-    check_expr(ctx, while_loop.while_clause().and_then(|clause| clause.cond_expr()));
-    let while_body_block = check_action_list(
-        ctx,
-        BlockKind::LoopBody,
-        ctx.inherit_context_ty(),
-        while_loop.action_list(),
-    );
+    let cond_expr = while_loop.while_clause().and_then(|clause| clause.cond_expr());
+    check_expr(ctx, cond_expr.clone());
+
+    let while_body_block = check_while_loop_body(ctx, cond_expr, while_loop.action_list());
     let while_else_block = check_action_list(
         ctx,
         BlockKind::default(),
@@ -26,6 +23,51 @@ pub(crate) fn check_while_loop(ctx: &mut TypeckContext, while_loop: ast::WhileLo
     let mut while_block = ctx.exit_block();
     while_block.merge_divergent_branches(while_body_block, while_else_block);
     while_block
+}
+
+fn check_while_loop_body(
+    ctx: &mut TypeckContext,
+    cond_expr: Option<ast::Expr>,
+    body: Option<ast::ActionList>,
+) -> Block {
+    let mut while_body_block = check_action_list(ctx, BlockKind::LoopBody, ctx.inherit_context_ty(), body);
+    // Pessimistically mark all variable assignments in the loop body that are also assigned in the
+    // loop condition as indefinite. Otherwise, the type of variable $x following the loop in the
+    // program:
+    //
+    //   {{while $x = funcReturningInt}}
+    //     {{$x = "str"}}
+    //   {{end}}
+    //   {{$x}}
+    //
+    // would be `string` (whereas it is always `int` in reality.) Note that with the assumption
+    // below, the actual type reported is not `int` but rather `int | string` to account for the
+    // possibility of an immediate `break` following the assignment in the loop body:
+    //
+    //   {{while $x = funcReturningInt}}
+    //     {{if cond}}
+    //       {{$x = "str"}}
+    //       {{break}}
+    //     {{end}}
+    //   {{end}}
+    //   {{$x}}
+    //
+    // While it is probably possible to further refine the analysis in this case, assignments in
+    // loop conditions are uncommon enough and a fix would likely require building a complete CFG,
+    // so it is not worth the effort for now.
+    for assigned_var in cond_expr.into_iter().flat_map(var_assigns_in) {
+        while_body_block
+            .var_assigns
+            .entry(assigned_var.name().into())
+            .and_modify(|assign| assign.is_definite = false);
+    }
+    while_body_block
+}
+
+fn var_assigns_in(expr: ast::Expr) -> impl Iterator<Item = ast::Var> {
+    expr.syntax()
+        .descendants()
+        .filter_map(|node| node.try_to::<ast::VarAssign>()?.var())
 }
 
 pub(crate) fn check_range_loop(ctx: &mut TypeckContext, range: ast::RangeLoop) -> Block {
