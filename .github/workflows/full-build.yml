@@ -55,19 +55,15 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: pnpm/action-setup@v4
-        with:
-          package_json_file: ./editors/vscode/package.json
-
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-          cache: pnpm
-          cache-dependency-path: ./editors/vscode/pnpm-lock.yaml
+          cache: npm
+          cache-dependency-path: ./editors/vscode/package-lock.json
 
       - uses: Swatinem/rust-cache@v2
 
-      - run: pnpm install --frozen-lockfile
+      - run: npm install
         working-directory: ./editors/vscode
 
       - name: Install musl-tools
@@ -91,7 +87,7 @@ jobs:
 
       - name: Package VSCode extension
         shell: bash
-        run: pnpm package -- --target ${{ matrix.vscode-target }} -o yag-template-lsp-${{ matrix.vscode-target }}.vsix
+        run: npm run package -- --target ${{ matrix.vscode-target }} -o yag-template-lsp-${{ matrix.vscode-target }}.vsix
         working-directory: ./editors/vscode
 
       - name: Upload VSCode extension

@@ -3,7 +3,7 @@
 !dist/yag-template-lsp
 !dist/yag-template-lsp.exe
 !package.json
-!pnpm-lock.yaml
+!package-lock.json
 !icon.png
 !README.md
 !LICENSE.md
