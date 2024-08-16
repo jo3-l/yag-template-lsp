@@ -63,6 +63,7 @@ jobs:
         with:
           node-version: 22
           cache: pnpm
+          cache-dependency-path: ./editors/vscode/pnpm-lock.yaml
 
       - uses: Swatinem/rust-cache@v2
 
