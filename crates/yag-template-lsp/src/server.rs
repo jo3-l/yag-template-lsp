@@ -22,7 +22,7 @@ impl YagTemplateLanguageServer {
 #[async_trait]
 impl LanguageServer for YagTemplateLanguageServer {
     async fn initialize(&self, _: InitializeParams) -> Result<InitializeResult> {
-        let extra_completion_trigger_chars = vec!['.'];
+        let extra_completion_trigger_chars = vec!['$'];
         let completion_trigger_chars: Vec<String> = ('a'..='z')
             .chain('A'..='Z')
             .chain(extra_completion_trigger_chars)
