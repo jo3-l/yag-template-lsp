@@ -1,0 +1,105 @@
+# Modelled on the corresponding typst-lsp workflow in
+# https://github.com/nvarner/typst-lsp/blob/master/.github/workflows/full_build.yml.
+#
+# typst-lsp is released under the MIT license, copyright Nathan Varner.
+
+name: Full build
+
+on:
+  workflow_call:
+  workflow_dispatch:
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            rust-target: x86_64-pc-windows-msvc
+            vscode-target: win32-x64
+
+          - os: windows-latest
+            rust-target: aarch64-pc-windows-msvc
+            vscode-target: win32-arm64
+
+          - os: ubuntu-20.04
+            rust-target: x86_64-unknown-linux-gnu
+            vscode-target: linux-x64
+
+          - os: ubuntu-20.04
+            rust-target: aarch64-unknown-linux-gnu
+            vscode-target: linux-arm64
+
+          - os: ubuntu-20.04
+            rust-target: x86_64-unknown-linux-musl
+            vscode-target: alpine-x64
+
+          - os: ubuntu-20.04
+            rust-target: arm-unknown-linux-gnueabihf
+            vscode-target: linux-armhf
+
+          - os: macos-latest
+            rust-target: x86_64-apple-darwin
+            vscode-target: darwin-x64
+
+          - os: macos-latest
+            rust-target: aarch64-apple-darwin
+            vscode-target: darwin-arm64
+
+    name: ${{ matrix.rust-target }}
+    runs-on: ${{ matrix.os }}
+    env:
+      BIN_EXT: ${{ matrix.os == 'windows-latest' && '.exe' || '' }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        working-directory: ./editors/vscode
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - uses: Swatinem/rust-cache@v2
+
+      - run: pnpm install --frozen-lockfile
+        working-directory: ./editors/vscode
+
+      - name: Install musl-tools
+        if: ${{ matrix.rust-target == 'x86_64-unknown-linux-musl' }}
+        run: |
+          sudo apt-get update
+          sudo apt-get install musl-tools
+
+      - name: Build Rust
+        uses: houseabsolute/actions-rust-cross@v0
+        with:
+          command: build
+          target: ${{ matrix.rust-target }}
+          args: '--release --locked'
+
+      - name: Move binaries
+        run: |
+          mkdir -p editors/vscode/dist
+          cp "target/${{ matrix.rust-target }}/release/yag-template-lsp${{ env.BIN_EXT }}" editors/vscode/dist/
+          cp "target/${{ matrix.rust-target }}/release/yag-template-lsp${{ env.BIN_EXT }}" "yag-template-lsp-${{ matrix.rust-target }}${{ env.BIN_EXT }}"
+
+      - name: Package VSCode extension
+        shell: bash
+        run: pnpm package -- --target ${{ matrix.vscode-target }} -o typst-lsp-${{ matrix.vscode-target }}.vsix
+        working-directory: ./editors/vscode
+
+      - name: Upload VSCode extension
+        uses: actions/upload-artifact@v3
+        with:
+          name: yag-template-lsp-${{ matrix.vscode-target }}.vsix
+          path: editors/vscode/yag-template-lsp-${{ matrix.vscode-target }}.vsix
+
+      - name: Upload binary
+        uses: actions/upload-artifact@v3
+        with:
+          name: yag-template-lsp-${{ matrix.vscode-target }}
+          path: yag-template-lsp-${{ matrix.rust-target }}${{ env.BIN_EXT }}
