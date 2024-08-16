@@ -1,18 +1,23 @@
 # YAGPDB Template LSP
 
+![Visual Studio Marketplace Version](https://img.shields.io/visual-studio-marketplace/v/jo3-l.yag-template-lsp?style=for-the-badge&label=VSCode)
+![Open VSX Version](https://img.shields.io/open-vsx/v/jo3-l/yag-template-lsp?style=for-the-badge&color=blue)
+
 A language server for the [YAGPDB](https://yagpdb.xyz) templating language, with accompanying
 extensions published on the VSCode marketplace and Open VSX.
 
 ## Features
 
-This project is in the MVP stage and so only implements the most basic of LSP features, namely,
+This project is in the MVP stage and so only implements the most basic of LSP features at present,
+namely,
 
 - [x] error reporting;
 - [x] basic code completion for variable and function names.
 
-However, while the current set of features is minimal, the sound technical foundation means many
-features should be trivial to add—for instance, inlay hints for function parameter names, code
-folding, and semantic highlighting should all be straightforward to add.
+However, while the current set of features is minimal, the [sound technical
+foundation](#technical-overview) of this project means many features should be trivial to
+support—for instance, inlay hints for function parameter names, code folding, and semantic
+highlighting should all be straightforward additions.
 
 ## Roadmap
 
@@ -28,8 +33,8 @@ In the long term, we would also like to implement:
 
 - [ ] Lints for common code issues
 - [ ] Type-aware code completion
-  - Type-checking is almost fully implemented in the [`feat/typechecking`][typeck-branch],
-    save function overload resolution and integration into the language server.
+  - A partial type-checker implementation is in the [`feat/typechecking`][typeck-branch] branch,
+    save function overload resolution and language server integration.
 
 [typeck-branch]: https://github.com/jo3-l/yag-template-lsp/tree/feat/typechecking
 
@@ -60,6 +65,18 @@ We stand on the shoulders of giants here; the structure of this project is heavi
 [typst-lsp](https://github.com/nvarner/typst-lsp), and [rhai's LSP](https://github.com/rhaiscript/lsp).
 This project would not be possible without this exceptional prior work—thank you to everyone who
 contributed to the above projects!
+
+## Contributing
+
+Contributions are very welcome, though familiarity with Rust, error-tolerant parsers, and the
+language server protocol will likely be needed for any significant additions. If you are interested,
+please feel free to ping me in the `#programming-discussion` channel of the YAGPDB community server
+for guidance.
+
+We highly recommend VSCode for development, as debugging changes to the language server is extremely
+difficult otherwise. When using VSCode, use the `Run Extension` debug configuration to compile both
+the Rust and TypeScript components and open a VSCode window with the modified language server
+installed.
 
 ## License
 
