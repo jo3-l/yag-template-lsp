@@ -1,5 +1,4 @@
 pub mod ast;
-mod demo;
 mod error;
 mod go_lit_syntax;
 mod kind;
