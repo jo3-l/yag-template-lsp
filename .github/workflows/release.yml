@@ -49,7 +49,7 @@ jobs:
       - name: Deploy to VSCode Marketplace
         env:
           VSCE_PAT: ${{ secrets.VSCODE_MARKETPLACE_TOKEN }}
-        run: npx vsce publish --packagePath $(find . -type f -iname '*.vsix')
+        run: npx @vscode/vsce publish --packagePath $(find . -type f -iname '*.vsix')
 
       - name: Deploy to OpenVSX
         env:

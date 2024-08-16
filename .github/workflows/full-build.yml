@@ -91,7 +91,7 @@ jobs:
 
       - name: Package VSCode extension
         shell: bash
-        run: pnpm package -- --target ${{ matrix.vscode-target }} -o typst-lsp-${{ matrix.vscode-target }}.vsix
+        run: pnpm package -- --target ${{ matrix.vscode-target }} -o yag-template-lsp-${{ matrix.vscode-target }}.vsix
         working-directory: ./editors/vscode
 
       - name: Upload VSCode extension
