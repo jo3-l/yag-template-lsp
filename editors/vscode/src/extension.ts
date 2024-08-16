@@ -20,7 +20,7 @@ export function deactivate() {
 
 async function startClient() {
 	const run = {
-		command: locateLanguageServerExecutable(),
+		command: langServerExecutablePath(),
 		options: { env: { ...process.env, RUST_BACKTRACE: '1' } },
 	};
 
@@ -37,6 +37,7 @@ async function startClient() {
 	return client.start();
 }
 
-function locateLanguageServerExecutable(): string {
+function langServerExecutablePath(): string {
+	if (process.platform === 'win32') return resolve(__dirname, 'yag-template-lsp.exe');
 	return resolve(__dirname, 'yag-template-lsp');
 }
