@@ -8,8 +8,9 @@ A VSCode extension for YAGPDB's templating language.
 
 ## Features
 
-- Error reporting
+- Syntax highlighting
+- Automatic indentation
+- Live error reporting as you type
 - Basic code completion for variable and function names
 
-Syntax highlighting is planned for an imminent release. More sophisticated code completion is also
-on the roadmap, but do not expect it anytime soon.
+More sophisticated type-aware code completion is on the roadmap, but do not expect it anytime soon.

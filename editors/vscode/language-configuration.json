@@ -1,0 +1,30 @@
+{
+	"comments": {
+		"blockComment": ["{{/*", "*/}}"]
+	},
+	"brackets": [
+		["(", ")"],
+		["{{-", "-}}"],
+		["{{", "}}"]
+	],
+	"autoClosingPairs": [
+		{ "open": "(", "close": ")" },
+		{ "open": "{{", "close": "}}", "notIn": ["string", "comment"] },
+		{ "open": "\"", "close": "\"", "notIn": ["string", "comment"] },
+		{ "open": "'", "close": "'", "notIn": ["string", "comment"] },
+		{ "open": "`", "close": "`", "notIn": ["string", "comment"] },
+		{ "open": "/*", "close": "*/", "notIn": ["string", "comment"] }
+	],
+	"autoCloseBefore": "}) \n\t",
+	"surroundingPairs": [
+		["{{", "}}"],
+		["(", ")"],
+		["'", "'"],
+		["\"", "\""],
+		["`", "`"]
+	],
+	"indentationRules": {
+		"increaseIndentPattern": "^\\s*\\{\\{(\\-\\s)?\\s*(if|with|range|while|try|define|block)(?!.*\\{\\{(\\-\\s)?).*(\\s\\-)?\\}\\}\\s*$",
+		"decreaseIndentPattern": "^\\s*\\{\\{(\\-\\s)?\\s*(else|end|catch)"
+	}
+}

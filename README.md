@@ -11,7 +11,9 @@ extensions published on the VSCode marketplace and Open VSX.
 This project is in the MVP stage and so only implements the most basic of LSP features at present,
 namely,
 
-- [x] Error reporting;
+- [x] Syntax highlighting;
+- [x] Automatic indentation;
+- [x] Error reporting as you type;
 - [x] Basic code completion for variable and function names.
 
 However, while the current set of features is minimal, the [sound technical
@@ -23,7 +25,6 @@ highlighting should all be straightforward additions.
 
 The following are relatively straightforward changes that are planned in the near future:
 
-- [ ] TextMate syntax highlighting
 - [ ] Documentation for all template functions
 - [ ] Semantic tokens (i.e., more accurate syntax highlighting)
 - [ ] Inlay hints for function parameter names

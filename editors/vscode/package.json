@@ -20,7 +20,15 @@
 				"id": "yagtemplate",
 				"extensions": [
 					".yag"
-				]
+				],
+				"configuration": "./language-configuration.json"
+			}
+		],
+		"grammars": [
+			{
+				"language": "yagtemplate",
+				"scopeName": "source.yag",
+				"path": "./yagtemplate.tmLanguage.json"
 			}
 		]
 	},
