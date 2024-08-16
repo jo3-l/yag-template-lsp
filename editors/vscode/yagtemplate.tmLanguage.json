@@ -4,8 +4,8 @@
 	"scopeName": "source.yag",
 	"patterns": [
 		{
-			"begin": "\\{\\{(\\-\\s)?/\\*",
-			"end": "\\*/(\\s\\-)?\\}\\}",
+			"begin": "\\{\\{(\\-\\s)?(?=/\\*)",
+			"end": "(?<=\\*/)(\\s\\-)?\\}\\}",
 			"name": "punctuation.section.embedded.yag",
 			"contentName": "comment.block.yag"
 		},

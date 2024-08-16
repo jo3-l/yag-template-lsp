@@ -4,9 +4,9 @@
 	},
 	"brackets": [
 		["(", ")"],
-		["{{-", "-}}"],
 		["{{", "}}"]
 	],
+	"colorizedBracketPairs": [["(", ")"]],
 	"autoClosingPairs": [
 		{ "open": "(", "close": ")" },
 		{ "open": "{{", "close": "}}", "notIn": ["string", "comment"] },
@@ -24,7 +24,15 @@
 		["`", "`"]
 	],
 	"indentationRules": {
-		"increaseIndentPattern": "^\\s*\\{\\{(\\-\\s)?\\s*(if|with|range|while|try|define|block)(?!.*\\{\\{(\\-\\s)?).*(\\s\\-)?\\}\\}\\s*$",
+		"increaseIndentPattern": "^\\s*\\{\\{(\\-\\s)?\\s*(if|else|with|range|while|try|catch|define|block)(?!.*\\{\\{(\\-\\s)?).*(\\s\\-)?\\}\\}\\s*$",
 		"decreaseIndentPattern": "^\\s*\\{\\{(\\-\\s)?\\s*(else|end|catch)"
-	}
+	},
+	"onEnterRules": [
+		{
+			"beforeText": "(\\(|\\{\\{(\\-\\s)?)\\s*\\w+$",
+			"action": {
+				"indent": "indentOutdent"
+			}
+		}
+	]
 }
