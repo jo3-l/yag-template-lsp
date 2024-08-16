@@ -1,7 +1,7 @@
 # YAGPDB Template LSP
 
-![Visual Studio Marketplace Version](https://img.shields.io/visual-studio-marketplace/v/jo3-l.yag-template-lsp?style=for-the-badge&label=VSCode)
-![Open VSX Version](https://img.shields.io/open-vsx/v/jo3-l/yag-template-lsp?style=for-the-badge&color=blue)
+<a href="https://marketplace.visualstudio.com/items?itemName=jo3-l.yag-template-lsp"><img src="https://img.shields.io/visual-studio-marketplace/v/jo3-l.yag-template-lsp?style=for-the-badge&label=VSCode" alt="Visual Studio Marketplace Version"></a>
+<a href="https://open-vsx.org/extension/jo3-l/yag-template-lsp"><img src="https://img.shields.io/open-vsx/v/jo3-l/yag-template-lsp?style=for-the-badge&color=blue" alt="Open VSX Version"></a>
 
 A language server for the [YAGPDB](https://yagpdb.xyz) templating language, with accompanying
 extensions published on the VSCode marketplace and Open VSX.
@@ -11,8 +11,8 @@ extensions published on the VSCode marketplace and Open VSX.
 This project is in the MVP stage and so only implements the most basic of LSP features at present,
 namely,
 
-- [x] error reporting;
-- [x] basic code completion for variable and function names.
+- [x] Error reporting;
+- [x] Basic code completion for variable and function names.
 
 However, while the current set of features is minimal, the [sound technical
 foundation](#technical-overview) of this project means many features should be trivial to
@@ -29,12 +29,15 @@ The following are relatively straightforward changes that are planned in the nea
 - [ ] Inlay hints for function parameter names
 - [ ] Code folding
 
-In the long term, we would also like to implement:
+In the medium term, we would also like to implement:
 
-- [ ] Lints for common code issues
+- [ ] Lints for common code issues, e.g., checking `printf` format verbs
 - [ ] Type-aware code completion
   - A partial type-checker implementation is in the [`feat/typechecking`][typeck-branch] branch,
     save function overload resolution and language server integration.
+
+As a low-priority, long-term goal, we hope to better modularize and test the language server driver
+code (and indeed the project as a whole.)
 
 [typeck-branch]: https://github.com/jo3-l/yag-template-lsp/tree/feat/typechecking
 
@@ -62,9 +65,9 @@ Contributions for other editors are welcome.
 
 We stand on the shoulders of giants here; the structure of this project is heavily informed by
 [rust-analyzer](https://github.com/rust-lang/rust-analyzer) (and matklad's excellent blog posts),
-[typst-lsp](https://github.com/nvarner/typst-lsp), and [rhai's LSP](https://github.com/rhaiscript/lsp).
-This project would not be possible without this exceptional prior work—thank you to everyone who
-contributed to the above projects!
+[typst-lsp](https://github.com/nvarner/typst-lsp), [rhai's LSP](https://github.com/rhaiscript/lsp),
+and [RSLint](https://github.com/rslint/rslint). This project would not be possible without the
+exceptional prior work in this area.
 
 ## Contributing
 
