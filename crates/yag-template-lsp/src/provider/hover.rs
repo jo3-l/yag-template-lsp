@@ -22,7 +22,7 @@ pub(crate) async fn hover(sess: &Session, params: HoverParams) -> anyhow::Result
 
 fn hover_for_func(env: &EnvDefs, doc: &Document, func_ident: ast::Ident) -> Option<Hover> {
     let func = env.funcs.get(func_ident.get())?;
-    let mut hover_info = format!("```go\n{}\n```", func.signature());
+    let mut hover_info = format!("```ydef\n{}\n```", func.signature());
     if !func.doc.is_empty() {
         hover_info.push_str("\n\n");
         hover_info.push_str(&func.doc);
