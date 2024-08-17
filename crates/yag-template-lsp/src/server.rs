@@ -19,6 +19,12 @@ impl YagTemplateLanguageServer {
     }
 }
 
+macro_rules! try_handle {
+    ($ret:expr) => {
+        $ret.await.map_err(|_| jsonrpc::Error::internal_error())
+    };
+}
+
 #[async_trait]
 impl LanguageServer for YagTemplateLanguageServer {
     async fn initialize(&self, _: InitializeParams) -> Result<InitializeResult> {
@@ -64,20 +70,14 @@ impl LanguageServer for YagTemplateLanguageServer {
     }
 
     async fn completion(&self, params: CompletionParams) -> Result<Option<CompletionResponse>> {
-        provider::completion::complete(&self.session, params)
-            .await
-            .map_err(|_| jsonrpc::Error::internal_error())
+        try_handle!(provider::completion::complete(&self.session, params))
     }
 
     async fn hover(&self, params: HoverParams) -> Result<Option<Hover>> {
-        provider::hover::hover(&self.session, params)
-            .await
-            .map_err(|_| jsonrpc::Error::internal_error())
+        try_handle!(provider::hover::hover(&self.session, params))
     }
 
     async fn inlay_hint(&self, params: InlayHintParams) -> Result<Option<Vec<InlayHint>>> {
-        provider::inlay_hint::inlay_hint(&self.session, params)
-            .await
-            .map_err(|_| jsonrpc::Error::internal_error())
+        try_handle!(provider::inlay_hint::inlay_hint(&self.session, params))
     }
 }
