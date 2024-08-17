@@ -10,22 +10,32 @@ mod tokens;
 pub use nodes::*;
 pub use tokens::*;
 
-pub trait AstNode: Sized {
-    fn cast(syntax: SyntaxNode) -> Option<Self>;
+pub trait AstNode {
+    fn cast(syntax: SyntaxNode) -> Option<Self>
+    where
+        Self: Sized;
     fn syntax(&self) -> &SyntaxNode;
 }
 
-pub trait AstToken: Sized {
-    fn cast(syntax: SyntaxToken) -> Option<Self>;
+pub trait AstToken {
+    fn cast(syntax: SyntaxToken) -> Option<Self>
+    where
+        Self: Sized;
     fn syntax(&self) -> &SyntaxToken;
 }
 
-pub trait SyntaxNodeExt: Sized + Clone {
-    fn is<N: AstNode>(&self) -> bool {
+pub trait SyntaxNodeExt {
+    fn is<N: AstNode>(&self) -> bool
+    where
+        Self: Clone,
+    {
         self.clone().try_to::<N>().is_some()
     }
 
-    fn to<N: AstNode>(self) -> N {
+    fn to<N: AstNode>(self) -> N
+    where
+        Self: Clone,
+    {
         self.try_to().unwrap_or_else(|| {
             panic!("failed to cast node as `{:?}`", stringify!(T));
         })

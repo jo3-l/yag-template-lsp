@@ -43,6 +43,7 @@ impl LanguageServer for YagTemplateLanguageServer {
                     ..Default::default()
                 }),
                 inlay_hint_provider: Some(OneOf::Left(true)),
+                folding_range_provider: Some(FoldingRangeProviderCapability::Simple(true)),
                 hover_provider: Some(HoverProviderCapability::Simple(true)),
                 ..Default::default()
             },
@@ -79,5 +80,9 @@ impl LanguageServer for YagTemplateLanguageServer {
 
     async fn inlay_hint(&self, params: InlayHintParams) -> Result<Option<Vec<InlayHint>>> {
         try_handle!(provider::inlay_hint::inlay_hint(&self.session, params))
+    }
+
+    async fn folding_range(&self, params: FoldingRangeParams) -> Result<Option<Vec<FoldingRange>>> {
+        try_handle!(provider::folding_range::folding_range(&self.session, params))
     }
 }

@@ -16,7 +16,8 @@ namely,
 - [x] Error reporting as you type;
 - [x] Basic code completion for variable and function names.
 - [x] Automatic indentation;
-- [x] Inlay hints for function parameter names.
+- [x] Inlay hints for function parameter names;
+- [x] Folding ranges.
 
 However, while the current set of features is minimal, the [sound technical
 foundation](#technical-overview) of this project means many features should be trivial to
@@ -27,9 +28,9 @@ highlighting should all be straightforward additions.
 
 The following are relatively straightforward changes that are planned in the near future:
 
+- [ ] Errors for undefined variables and functions
 - [ ] Documentation for all template functions
 - [ ] Semantic tokens (i.e., more accurate syntax highlighting)
-- [ ] Code folding
 
 In the medium term, we would also like to implement:
 

@@ -1,10 +1,8 @@
 use std::iter::Skip;
 
-use rowan::SyntaxElementChildren;
-
 use super::AstTokenChildren;
-use crate::ast::{tokens, AstChildren, AstNode, AstToken, SyntaxNodeExt};
-use crate::{SyntaxElement, SyntaxKind, SyntaxNode, YagTemplateLanguage};
+use crate::ast::{tokens, AstChildren, AstNode, AstToken, SyntaxElementChildren, SyntaxNodeExt};
+use crate::{SyntaxElement, SyntaxKind, SyntaxNode, TextSize, YagTemplateLanguage};
 
 macro_rules! define_node {
     ($(#[$attr:meta])* $name:ident) => {
@@ -152,6 +150,16 @@ impl ActionList {
 
     pub fn actions_with_text(&self) -> ActionsWithText {
         ActionsWithText::new(&self.syntax)
+    }
+
+    pub fn trimmed_end_pos(&self) -> TextSize {
+        let mut pos = self.syntax.text_range().end();
+        if let Some(ActionOrText::Text(trailing_text)) = self.actions_with_text().last() {
+            let trailing_text = trailing_text.get();
+            let trailing_spaces = trailing_text.len() - trailing_text.trim_end().len();
+            pos -= TextSize::from(trailing_spaces as u32);
+        }
+        pos
     }
 }
 

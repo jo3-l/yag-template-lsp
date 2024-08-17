@@ -13,5 +13,6 @@ A VSCode extension for YAGPDB's templating language.
 - Basic code completion for variable and function names
 - Automatic indentation
 - Inlay hints for function parameter names
+- Folding ranges
 
 More sophisticated type-aware code completion is on the roadmap as a long-term goal.
