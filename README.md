@@ -2,7 +2,7 @@
 
 <a href="https://marketplace.visualstudio.com/items?itemName=jo3-l.yag-template-lsp"><img src="https://img.shields.io/visual-studio-marketplace/v/jo3-l.yag-template-lsp?style=for-the-badge&label=VSCode" alt="Visual Studio Marketplace Version"></a>
 <a href="https://open-vsx.org/extension/jo3-l/yag-template-lsp"><img src="https://img.shields.io/open-vsx/v/jo3-l/yag-template-lsp?style=for-the-badge&color=blue" alt="Open VSX Version"></a>
-<a href="https://github.com/jo3-l/yag-template-lsp/actions?query=branch%3Amain"><img src="https://img.shields.io/github/check-runs/jo3-l/yag-template-lsp/main?style=for-the-badge" alt="GitHub branch check runs"></a>
+<a href="https://github.com/jo3-l/yag-template-lsp/actions"><img src="https://img.shields.io/github/actions/workflow/status/jo3-l/yag-template-lsp/ci.yml?style=for-the-badge" alt="GitHub build status"></a>
 
 A language server for the [YAGPDB](https://yagpdb.xyz) templating language, with accompanying
 extensions published on the VSCode marketplace and Open VSX.
