@@ -12,7 +12,7 @@ use crate::session::{Document, Session};
 pub(crate) async fn complete(sess: &Session, params: CompletionParams) -> anyhow::Result<Option<CompletionResponse>> {
     let uri = params.text_document_position.text_document.uri;
     let doc = sess.document(&uri)?;
-    let pos = doc.mapper.offset(params.text_document_position.position).unwrap();
+    let pos = doc.mapper.offset(params.text_document_position.position);
 
     let query = Query::at(&doc.syntax(), pos).unwrap();
     if query.is_var_access() {
@@ -48,7 +48,7 @@ fn var_completion(doc: &Document, query: Query, existing_var: ast::Var, scope_in
                     kind: Some(CompletionItemKind::VARIABLE),
                     text_edit: Some(CompletionTextEdit::Edit(TextEdit {
                         new_text: var.name.to_string(),
-                        range: doc.mapper.range(existing_var.syntax().text_range()).unwrap(),
+                        range: doc.mapper.range(existing_var.syntax().text_range()),
                     })),
                     ..Default::default()
                 }),
@@ -66,7 +66,7 @@ fn func_completion(env: &EnvDefs, doc: &Document, existing_ident: ast::Ident) ->
             kind: Some(CompletionItemKind::FUNCTION),
             text_edit: Some(CompletionTextEdit::Edit(TextEdit {
                 new_text: func.name.to_string(),
-                range: doc.mapper.range(existing_ident.syntax().text_range()).unwrap(),
+                range: doc.mapper.range(existing_ident.syntax().text_range()),
             })),
             ..Default::default()
         })

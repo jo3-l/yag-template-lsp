@@ -5,7 +5,7 @@ use tower_lsp::lsp_types::{Position, Range};
 use yag_template_analysis::{self, Analysis};
 use yag_template_syntax::ast::{self, SyntaxNodeExt};
 use yag_template_syntax::parser::{self, Parse};
-use yag_template_syntax::{SyntaxNode, TextRange, TextSize, YagTemplateLanguage};
+use yag_template_syntax::{SyntaxNode, TextRange, TextSize};
 
 pub(crate) struct Document {
     pub(crate) parse: Parse,
@@ -33,37 +33,31 @@ impl Document {
 }
 
 /// A mapper that translates offset:length bytes to 0-based line:row characters.
-/// Extracted from the `lsp-async-stub` crate (MIT license, Ferenc Tamás).
+/// Modified from the `lsp-async-stub` crate (MIT license, Ferenc Tamás).
 pub(crate) struct Mapper {
-    offset_to_position: BTreeMap<TextSize, Position>,
-    position_to_offset: BTreeMap<Position, TextSize>,
-    lines: usize,
-    end: Position,
+    byte_offset_to_pos: BTreeMap<TextSize, Position>,
+    pos_to_byte_offset: BTreeMap<Position, TextSize>,
 }
 
 impl Mapper {
-    pub(crate) fn new_utf16(source: &str) -> Self {
-        let mut offset_to_position = BTreeMap::new();
-        let mut position_to_offset = BTreeMap::new();
+    pub(crate) fn new_utf16(src: &str) -> Self {
+        let mut byte_offset_to_pos = BTreeMap::new();
+        let mut pos_to_byte_offset = BTreeMap::new();
 
         let mut line = 0u32;
-        let mut character = 0u32;
-        let mut last_offset = 0;
+        let mut character = 0u32; // UTF-16 line length
 
-        for c in source.chars() {
-            let new_offset = last_offset + c.len_utf8();
+        let mut cur_utf8_offset = 0u32;
+        for c in src.chars() {
+            let len_utf8 = c.len_utf8() as u32;
+            byte_offset_to_pos.extend(
+                (cur_utf8_offset..cur_utf8_offset + len_utf8)
+                    .map(|b| (TextSize::from(b), Position { line, character })),
+            );
+            pos_to_byte_offset.insert(Position { line, character }, TextSize::from(cur_utf8_offset));
 
-            let character_size = c.len_utf16();
-
-            offset_to_position
-                .extend((last_offset..new_offset).map(|b| (TextSize::from(b as u32), Position { line, character })));
-
-            position_to_offset
-                .extend((last_offset..new_offset).map(|b| (Position { line, character }, TextSize::new(b as u32))));
-
-            last_offset = new_offset;
-
-            character += character_size as u32;
+            cur_utf8_offset += len_utf8;
+            character += c.len_utf16() as u32;
             if c == '\n' {
                 // LF is at the start of each line.
                 line += 1;
@@ -71,48 +65,38 @@ impl Mapper {
             }
         }
 
-        // Last imaginary character.
-        offset_to_position.insert(TextSize::from(last_offset as u32), Position { line, character });
-        position_to_offset.insert(Position { line, character }, TextSize::from(last_offset as u32));
+        // Imaginary EOF character.
+        byte_offset_to_pos.insert(TextSize::from(cur_utf8_offset), Position { line, character });
+        pos_to_byte_offset.insert(Position { line, character }, TextSize::from(cur_utf8_offset));
 
         Self {
-            offset_to_position,
-            position_to_offset,
-            lines: line as usize,
-            end: Position { line, character },
+            byte_offset_to_pos,
+            pos_to_byte_offset,
         }
     }
 
-    pub(crate) fn offset(&self, position: Position) -> Option<TextSize> {
-        self.position_to_offset.get(&position).copied()
+    pub(crate) fn offset(&self, position: Position) -> TextSize {
+        self.pos_to_byte_offset
+            .get(&position)
+            .copied()
+            .expect("position should be valid")
     }
 
-    pub(crate) fn text_range(&self, range: Range) -> Option<TextRange> {
-        self.offset(range.start)
-            .and_then(|start| self.offset(range.end).map(|end| TextRange::new(start, end)))
+    pub(crate) fn text_range(&self, range: Range) -> TextRange {
+        TextRange::new(self.offset(range.start), self.offset(range.end))
     }
 
-    pub(crate) fn position(&self, offset: TextSize) -> Option<Position> {
-        self.offset_to_position.get(&offset).copied()
+    pub(crate) fn position(&self, offset: TextSize) -> Position {
+        self.byte_offset_to_pos
+            .get(&offset)
+            .copied()
+            .expect("offset should be valid")
     }
 
-    pub(crate) fn range(&self, range: TextRange) -> Option<Range> {
-        self.position(range.start())
-            .and_then(|start| self.position(range.end()).map(|end| Range { start, end }))
-    }
-
-    pub(crate) fn mappings(&self) -> (&BTreeMap<TextSize, Position>, &BTreeMap<Position, TextSize>) {
-        (&self.offset_to_position, &self.position_to_offset)
-    }
-
-    pub(crate) fn line_count(&self) -> usize {
-        self.lines
-    }
-
-    pub(crate) fn all_range(&self) -> Range {
+    pub(crate) fn range(&self, range: TextRange) -> Range {
         Range {
-            start: Position { line: 0, character: 0 },
-            end: self.end,
+            start: self.position(range.start()),
+            end: self.position(range.end()),
         }
     }
 }

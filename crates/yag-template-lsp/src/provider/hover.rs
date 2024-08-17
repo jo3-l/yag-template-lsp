@@ -9,10 +9,7 @@ use crate::session::{Document, Session};
 pub(crate) async fn hover(sess: &Session, params: HoverParams) -> anyhow::Result<Option<Hover>> {
     let uri = params.text_document_position_params.text_document.uri;
     let doc = sess.document(&uri)?;
-    let pos = doc
-        .mapper
-        .offset(params.text_document_position_params.position)
-        .unwrap();
+    let pos = doc.mapper.offset(params.text_document_position_params.position);
 
     let query = Query::at(&doc.syntax(), pos).unwrap();
     if query.in_func_name() {
@@ -35,6 +32,6 @@ fn hover_for_func(env: &EnvDefs, doc: &Document, func_ident: ast::Ident) -> Opti
             kind: MarkupKind::Markdown,
             value: hover_info,
         }),
-        range: doc.mapper.range(func_ident.syntax().text_range()),
+        range: Some(doc.mapper.range(func_ident.syntax().text_range())),
     })
 }

@@ -10,7 +10,7 @@ const INLAY_HINT_PARAM_THRESHOLD: usize = 3;
 
 pub(crate) async fn inlay_hint(sess: &Session, params: InlayHintParams) -> anyhow::Result<Option<Vec<InlayHint>>> {
     let doc = sess.document(&params.text_document.uri)?;
-    let range = doc.mapper.text_range(params.range).unwrap();
+    let range = doc.mapper.text_range(params.range);
     Ok(Some(
         doc.syntax()
             .descendants()
@@ -39,7 +39,7 @@ where
         call.call_args()
             .zip(func.params.iter())
             .map(|(call_expr, param)| InlayHint {
-                position: doc.mapper.position(call_expr.syntax().text_range().start()).unwrap(),
+                position: doc.mapper.position(call_expr.syntax().text_range().start()),
                 label: InlayHintLabel::String(format!("{param}:")),
                 kind: Some(InlayHintKind::PARAMETER),
                 text_edits: None,

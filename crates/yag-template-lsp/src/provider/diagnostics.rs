@@ -8,10 +8,7 @@ pub(crate) async fn publish_diagnostics(session: &Session, uri: &Url) -> anyhow:
         .parse
         .errors
         .iter()
-        .map(|e| {
-            let range = doc.mapper.range(e.range).unwrap_or_default();
-            Diagnostic::new_simple(range, e.message.clone())
-        })
+        .map(|e| Diagnostic::new_simple(doc.mapper.range(e.range), e.message.clone()))
         .collect();
 
     let version = Default::default();
