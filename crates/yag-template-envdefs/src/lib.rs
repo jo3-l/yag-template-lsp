@@ -107,7 +107,7 @@ fn process_source(defs: &mut EnvDefs, src: &EnvDefSource) -> Result<(), ParseErr
                 f.doc.push('\n');
             }
         } else if line.starts_with("func") {
-            match parse_func_sig(line) {
+            match parse_func_signature(line) {
                 Ok(f) => funcs.push(f),
                 Err(msg) => return Err(ParseError::new(src.name.into(), lineno, msg)),
             }
@@ -146,7 +146,7 @@ macro_rules! ensure {
     };
 }
 
-fn parse_func_sig(line: &str) -> Result<Func, String> {
+fn parse_func_signature(line: &str) -> Result<Func, String> {
     let mut s = Scanner::new(line);
 
     // Parse the function name.
