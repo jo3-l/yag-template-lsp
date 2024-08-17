@@ -21,7 +21,7 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@nightly
+      - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
 
       - name: Tests
@@ -30,6 +30,7 @@ jobs:
       - name: Clippy
         run: cargo clippy --all-targets -- -Dwarnings
 
+      - run: rustup component add rustfmt --toolchain nightly
       - name: Formatting
         run: cargo +nightly fmt --all --check
 
@@ -48,6 +49,7 @@ jobs:
         with:
           node-version: 22
           cache: npm
+          cache-dependency-path: ./editors/vscode/package-lock.json
 
       - run: npm install
 
