@@ -37,24 +37,6 @@ impl Func {
     }
 }
 
-impl fmt::Display for Func {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.write_str("func ")?;
-        f.write_str(&self.name)?;
-
-        f.write_str("(")?;
-        let mut params = self.params.iter();
-        if let Some(first_param) = params.next() {
-            first_param.fmt(f)?;
-            for param in params {
-                f.write_str(", ")?;
-                param.fmt(f)?;
-            }
-        }
-        f.write_str(")")
-    }
-}
-
 #[derive(Debug, Clone)]
 pub struct Param {
     pub name: String,
