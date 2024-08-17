@@ -83,6 +83,8 @@ for guidance.
 
 ### Development tips
 
+**Development requirements:** recent version of Node.js, stable Rust toolchain, and nightly rustfmt.
+
 The most straightforward way to run a modified version of the language server is to open this
 project in VSCode and use the provided `Run Extension` debug configuration. This will compile both
 the Rust and TypeScript components and open a new VSCode window with the modified language server
