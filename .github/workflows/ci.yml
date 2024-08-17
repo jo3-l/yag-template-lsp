@@ -1,0 +1,66 @@
+# Modelled on the corresponding typst-lsp workflow in
+# https://github.com/nvarner/typst-lsp/blob/master/.github/workflows/checks.yml.
+#
+# typst-lsp is released under the MIT license, copyright Nathan Varner.
+
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  language-server:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+
+    name: Language Server ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@nightly
+      - uses: Swatinem/rust-cache@v2
+
+      - name: Tests
+        run: cargo test --no-fail-fast
+
+      - name: Clippy
+        run: cargo clippy --all-targets -- -Dwarnings
+
+      - name: Formatting
+        run: cargo +nightly fmt --all --check
+
+  vscode-extension:
+    name: VSCode Extension
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: ./editors/vscode
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm install
+
+      - name: Compilation
+        run: npm run compile
+
+      - name: Type Checking
+        run: npm run check
+
+      - name: Linting and Formatting
+        run: npm run lint
+
+      - name: Packaging
+        # raises an error for packaging issues, e.g., `@types/vscode` out of sync with
+        # `engines.vscode`
+        run: npx vsce ls
