@@ -5,6 +5,8 @@ use std::fmt::Write;
 use ahash::AHashMap;
 use unscanny::Scanner;
 
+pub mod bundled_envdefs;
+
 #[derive(Debug)]
 pub struct EnvDefs {
     pub funcs: AHashMap<String, Func>,
@@ -184,6 +186,7 @@ fn parse_func_signature(line: &str) -> Result<Func, String> {
     }
     ensure!(s.eat_if(')'), "expected ')' concluding parameter list");
 
+    s.eat_whitespace();
     ensure!(s.done(), "expected line to end after parameter list");
     Ok(Func {
         name: name.into(),

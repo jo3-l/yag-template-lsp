@@ -1,139 +1,305 @@
-func editMessage()
+func editMessage(channel, messageID, newContent)
+	Edits the given message, escaping any mentions.
 
-func editMessageNoEscape()
+	- `newMessageContent`: the new content for the message. May also be the result from a complexMessageEdit call.
 
-func pinMessage()
+func editMessageNoEscape(channel, messageID, newContent)
+	Edits the given message without escaping mentions.
 
-func publishMessage()
+	- `newMessageContent`: the new content for the message. May also be the result from a complexMessageEdit call.
+
+func pinMessage(channel, messageID)
+	Pins the specified message.
+
+func publishMessage(channel, messageID)
+	Publishes the specified message.
 
 func publishResponse()
+	Publishes the response message.
 
-func sendDM()
+	For this to work, the custom command must be running in an announcement channel.
 
-func sendMessage()
+func sendDM(message)
+	Sends a direct message to the triggering user.
 
-func sendMessageNoEscape()
+	- `message`: the messaget o send. May also be the result from a `complexMessage` call.
 
-func sendMessageNoEscapeRetID()
+func sendMessage(channel, message)
+	Sends a message to the specified channel.
 
-func sendMessageRetID()
+	- `message`: the message to send. May also be the result from a `complexMessage` call.
 
-func sendTemplate()
+func sendMessageNoEscape(channel, message)
+	Same as `sendMessage`, but does not escape mentions.
 
-func sendTemplateDM()
+func sendMessageNoEscapeRetID(channel, message)
+	Same as `sendMessageNoEscape`, but also returns the message ID.
 
-func unpinMessage()
+func sendMessageRetID(channel, message)
+	Same as `sendMessage`, but also returns the message ID.
+
+func sendTemplate(channel, template, data)
+	Executes an associated template with optional `data` and sends its response to `channel`, returning the ID of the
+	response message.
+
+func sendTemplateDM(template, data?)
+	Same as `sendTemplate`, but sends the response to the triggering user's direct messages instead and returns the ID
+	of the response message.
+
+func unpinMessage(channel, messageID)
+	Unpins the specified message.
 
 func mentionEveryone()
+	Mentions `@everyone` without escaping it.
 
 func mentionHere()
+	Mentions `@here` without escaping it.
 
-func mentionRoleID()
+func mentionRoleID(roleID)
+	Mentions the given role without escaping it.
 
-func mentionRoleName()
+func mentionRoleName(roleName)
+	Mentions the role with the given name without escaping it. Searches for first case-insensitive match.
 
-func hasRoleID()
+	Prefer using the `mentionRoleID` function, as IDs are guaranteed to be unique and do not change with role edits.
 
-func hasRoleName()
+func hasRoleID(roleID)
+	Reports whether the triggering member has the specified role ID.
 
-func addRoleID()
+func hasRoleName(roleName)
+	Reports whether the triggering member has the specified role name (case-insensitive).
 
-func removeRoleID()
+func addRoleID(roleID)
+	Adds the specified role ID to the triggering member.
 
-func setRoles()
+func removeRoleID(roleID, delay?)
+	Removes the role with the specified ID from the triggering member with an optional delay in seconds.
 
-func addRoleName()
+func setRoles(target, newRoles)
+	Sets the roles of the specified user to the provided list of role IDs. The roles are overwritten, so any existing
+	roles are removed if not included in the new list. `newRoles` must be a slice. `target` may be a user ID, mention,
+	or user object, but must be a member of the server.
 
-func removeRoleName()
+func addRoleName(roleName)
+	Adds the first case-insensitive matching role name to the triggering member.
 
-func giveRoleID()
+func removeRoleName(roleName, delay?)
+	Removes the first case-insensitive matching role name from the triggering member with an optional delay in seconds.
 
-func giveRoleName()
+func giveRoleID(member, roleID)
+	Gives the role specified by its ID to the target member.
 
-func takeRoleID()
+	- `member`: the member to target. Either an ID, mention, or user object, but must be part of the server.
 
-func takeRoleName()
+func giveRoleName(member, roleName)
+	Gives the first case-insensitive matching role name to the target member.
 
-func targetHasRoleID()
+func takeRoleID(target, roleID)
+	Removes the specified role from `target`. `target` may be a user ID, mention, or user object, but must be a member
+	of the server.
 
-func targetHasRoleName()
+func takeRoleName(target, roleName, delay?)
+	Removes the first case-insensitive matching role name from `target` with an optional delay in seconds. `target` may
+	be a user ID, mention, or user object, but must be a member of the server.
 
-func hasPermissions()
+func targetHasRoleID(target, roleID)
+	Reports whether the specified target has the specified role ID. `target` may be a user ID, mention, or user object,
+	but must be a member of the server.
 
-func targetHasPermissions()
+func targetHasRoleName(target, roleName)
+	Reports whether the specified target has the specified role name (case-insensitive). `target` may be a user ID,
+	mention, or user object, but must be a member of the server.
 
-func getTargetPermissionsIn()
+func hasPermissions(permission)
+	Returns whether the member who triggered the command has the specified permission bit.
 
-func addMessageReactions()
+func targetHasPermissions(memberID, permissions)
+	Returns whether the specified member has the specified permission bit.
 
-func addReactions()
+func getTargetPermissionsIn(memberID, channelID)
+	Returns the permissions of the specified member in the given channel as a [permissions bitfield][perms].
 
-func addResponseReactions()
+	[perms]: https://discord.com/developers/docs/topics/permissions#permissions
 
-func deleteAllMessageReactions()
+func addMessageReactions(channel, messageID, emojis...)
+	Adds reactions to a message with the given ID.
 
-func deleteMessage()
+	- `emojis...`: a list of emojis to add as reactions. May also be a slice of emojis.
 
-func deleteMessageReaction()
+	Default emojis are best used in the Unicode format for these purposes. Custom emojis follow a specific format in
+	these functions. Please see the example below.
 
-func deleteResponse()
+	### Example
 
-func deleteTrigger()
+	```yag
+	{{ addMessageReactions nil .Message.ID "👍" "👎" "yagpdb:505114640032858114" }}
+	```
 
-func getChannel()
+func addReactions(emojis...)
+	Adds reactions to the message that triggered the command.
 
-func getChannelPins()
+	- `emojis...`: a list of emojis to add as reactions. May also be a slice of emojis.
 
-func getChannelOrThread()
+func addResponseReactions(emojis...)
+	Adds reactions to the response message.
 
-func getMember()
+	- `emojis...`: a list of emojis to add as reactions. May also be a slice of emojis.
 
-func getMessage()
+func deleteAllMessageReactions(channel, messageID, userID, emojis...)
+	Deletes all reactions from a message, optionally constrained to specific emojis.
 
-func getPinCount()
+	- `emojis`: the emojis to delete. May be a slice. Not providing this argument will delete all reactions.
 
-func getRole()
+func deleteMessage(channel, messageID, delay?)
+	Deletes the specified message.
 
-func getThread()
+	- `delay`: an optional delay in seconds to delete the message after. Defaults to 10 seconds. Max 86400 seconds (1 day).
 
-func createThread()
+func deleteMessageReaction(channel, messageID, userID, emojis...)
+	Deletes a specific user's reaction from a message.
 
-func deleteThread()
+	- `userID`: the ID of the user whose reaction to delete.
+	- `emojis...`: the emojis to delete. May be a slice.
 
-func addThreadMember()
+func deleteResponse(delay?)
+	Deletes the response message.
 
-func removeThreadMember()
+	- `delay`: an optional delay in seconds to delete after. Defaults to 10 seconds. Max 86400 seconds (1 day).
 
-func createForumPost()
+func deleteTrigger(delay?)
+	Deletes the triggering message.
 
-func deleteForumPost()
+	- `delay`: an optional delay in seconds to delete after. Defaults to 10 seconds. Max 86400 seconds (1 day).
+
+func getChannel(channel)
+	Returns the full channel object for the given channel. Will not work for threads.
+
+func getChannelPins(channel)
+	Returns a slice of message objects pinned to the given channel or thread.
+
+	Rate-limited to 2 (premium: 4) calls per custom command execution.
+
+func getChannelOrThread(channel)
+	Returns the full channel or thread object for the given channel. 
+
+func getMember(mentionOrID)
+	Returns the member object corresponding to the given mention or user ID.
+
+func getMessage(channel, messageID)
+	Returns the message object for the given message ID in the specified channel.
+
+func getPinCount(channel)
+	Returns the number of pinned messages in the given channel.
+
+func getRole(role)
+	Returns a role object. `role` may either be an ID or a name to match against (ignoring case).
+
+func getThread(thread)
+	Returns the full thread object for the given thread. Will not work for channels.
+
+func createThread(channel, messageID, name, private?, autoArchiveDuration?, invitable?)
+	Creates a new thread in the specified channel. Returns a channel object on success.
+
+	- `channel`: the parent channel to create the thread in.
+	- `message`: either `nil` to create a channel thread, or a message ID to create a message thread.
+	- `private`: whether the thread is private. Default `false`.
+	- `auto_archive_duration`: how long the thread will show in the channel list after inactivity.<br>
+	Valid values are 60, 1440, 4320, and 10080 minutes. Defaults to 10080 (7 days).
+	- `invitable`: whether non-moderators can add other members to the thread. (true/false)
+
+	Note: There is no functional difference between a channel thread and a message thread.
+
+	Because the optional arguments are positional, you must provide the preceding ones if you wish to override a later
+	option. Consider the following example to create a public thread in the current channel with no message reference
+	that is archived after an hour and allows non-moderators to add others:
+
+	```yag
+	{{ createThread nil nil "new thread" false 60 true }}
+	```
+
+func deleteThread(thread)
+	Deletes the given thread.
+
+func addThreadMember(thread, member)
+	Adds a member to an existing thread. Does nothing if either argument is invalid.
+
+func removeThreadMember(thread, member)
+	Removes the member from the thread.
+
+func createForumPost(channel, name, content, opts...)
+	Creates a new forum post. Returns a channel object on success.
+
+	- `channel`: the forum channel to post to.
+	- `name`: The post title. May not be empty. Must be a string.
+	- `content`: the initial message's content; may be a string, an embed, or a complex message. May not be empty.
+	- `opts` (optional): Additional options for the post. May include:
+	- `"slowmode"`: The thread's slowmode in seconds.
+	- `"tags"`: One or more forum tag name or ID. Duplicate and invalid tags are ignored.
+
+func deleteForumPost(post)
+	Deletes the given post.
+
+	This function does the same thing as `deleteThread`. Use whichever function is more semantically meaningful in the
+	context of your custom command.
 
 func currentUserAgeHuman()
+	The account age of the current user in a human-readable format.
 
 func currentUserAgeMinutes()
+	The account age of the current user in minutes.
 
 func currentUserCreated()
+	Returns a `time.Time` object corresponding to when the current user was created.
 
-func reFind()
+func reFind(regex, text)
+	Returns the first match of the regular expression in the text, or `""` if the pattern did not match.
 
-func reFindAll()
+func reFindAll(regex, text, count?)
+	Returns a slice of successive matches of the regular expression in the text. If `count` is provided, the number of
+	matches is limited to that amount; otherwise, all matches are returned.
 
-func reFindAllSubmatches()
+func reFindAllSubmatches(regex, text, count?)
+	Returns a slice of successive submatches of the regular expression in the text. Each submatch is itself a slice
+	containing the match of the whole expression, followed by any capturing group matches.
 
-func reReplace()
+func reReplace(regex, text, replacement)
 
-func reSplit()
+func reSplit(regex, text, count?)
 
-func sleep()
+func sleep(seconds)
+	Pauses the execution of the custom command for the specified number fo seconds. The maximum total duration that a
+	custom command can sleep for is 60 seconds.
 
-func editChannelName()
+func editChannelName(channel, newName)
+	Edits the name of the given channel.
 
-func editChannelTopic()
+	- `newName`: the new name for the channel. Must be a string.
 
-func editNickname()
+	This function is, together with `editChannelTopic`, limited to 10 calls per custom command execution. In addition,
+	Discord ratelimits the number of channel modifications to 2 per 10 minutes.
+
+func editChannelTopic(channel, newTopic)
+	Edits the topic of the given channel.
+
+	- `newTopic`: the channel's new topic. Must be a string. Discord markdown is supported.
+
+	This function is, together with `editChannelName`, limited to 10 calls per custom command execution. In addition,
+	Discord ratelimits the number of channel modifications to 2 per 10 minutes.
+
+func editNickname(newNick)
+	Edits the nickname of the member who triggered teh command. The bot must have the `MANAGE_NICKNAMES` permission and
+	be higher in role hierarchy than the member. The bot cannot change the nickname of the server owner.
 
 func onlineCount()
+	Returns the number of online members on the current server, including bots.
 
-func onlineCountBots()
+func sort(list, opts...)
+	Returns the given slice or array in sorted order, by default ascending. The list's items must all be of the same
+	type. Additional options may be provided, with the following keys:
 
-func sort()
+	- `key`: if sorting a list of maps, this option specifies the key to sort by. The key must be present in
+	all maps.
+	- `reverse`: whether to sort the list in descending order, so that larger elements appear first. By default,
+	the sort order is ascending.
+
+	Limited to 1 call on regular servers and 3 calls on premium servers.

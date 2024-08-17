@@ -1,6 +1,6 @@
-use yag_template_envdefs::{EnvDefSource, EnvDefs, ParseError};
+use super::{EnvDefSource, EnvDefs, ParseError};
 
-pub(crate) fn load() -> Result<EnvDefs, ParseError> {
+pub fn load() -> Result<EnvDefs, ParseError> {
     static BUNDLED_SOURCES: &[EnvDefSource<'static>] = &[
         EnvDefSource {
             name: "builtin_funcs.ydef",
@@ -20,7 +20,7 @@ pub(crate) fn load() -> Result<EnvDefs, ParseError> {
         },
     ];
 
-    yag_template_envdefs::parse(BUNDLED_SOURCES)
+    super::parse(BUNDLED_SOURCES)
 }
 
 #[test]

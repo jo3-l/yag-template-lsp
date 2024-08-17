@@ -7,7 +7,6 @@ use tracing_subscriber::layer::SubscriberExt;
 use tracing_subscriber::util::SubscriberInitExt;
 use tracing_subscriber::Registry;
 
-mod bundled_envdefs;
 mod provider;
 mod server;
 mod session;

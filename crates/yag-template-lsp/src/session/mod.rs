@@ -10,9 +10,7 @@ pub(crate) mod document;
 pub(crate) mod sync;
 
 pub(crate) use document::Document;
-use yag_template_envdefs::EnvDefs;
-
-use crate::bundled_envdefs;
+use yag_template_envdefs::{bundled_envdefs, EnvDefs};
 
 pub(crate) struct Session {
     pub(crate) client: Client,

@@ -1,5 +1,5 @@
 use tower_lsp::lsp_types::{InlayHint, InlayHintKind, InlayHintLabel, InlayHintParams};
-use yag_template_envdefs::EnvDefs;
+use yag_template_envdefs::{EnvDefs, Param};
 use yag_template_syntax::ast;
 use yag_template_syntax::ast::AstNode;
 
@@ -40,7 +40,7 @@ where
             .zip(func.params.iter())
             .map(|(call_expr, param)| InlayHint {
                 position: doc.mapper.position(call_expr.syntax().text_range().start()),
-                label: InlayHintLabel::String(format!("{param}:")),
+                label: InlayHintLabel::String(param_label(param)),
                 kind: Some(InlayHintKind::PARAMETER),
                 text_edits: None,
                 padding_right: Some(true),
@@ -49,4 +49,12 @@ where
                 data: None,
             }),
     )
+}
+
+fn param_label(param: &Param) -> String {
+    if param.is_variadic {
+        format!("{}...", param.name)
+    } else {
+        format!("{}:", param.name)
+    }
 }
