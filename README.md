@@ -75,14 +75,19 @@ and [RSLint](https://github.com/rslint/rslint).
 ## Contributing
 
 Contributions are very welcome, though familiarity with Rust, error-tolerant parsers, and the
-language server protocol will likely be needed for any significant additions. If you are interested,
+language server protocol is a prerequisite for any significant additions. If you are interested,
 please feel free to ping me in the `#programming-discussion` channel of the YAGPDB community server
 for guidance.
 
-We highly recommend VSCode for development, as debugging changes to the language server is extremely
-difficult otherwise. When using VSCode, use the `Run Extension` debug configuration to compile both
-the Rust and TypeScript components and open a VSCode window with the modified language server
+### Development tips
+
+The most straightforward way to run a modified version of the language server is to open this
+project in VSCode and use the provided `Run Extension` debug configuration. This will compile both
+the Rust and TypeScript components and open a new VSCode window with the modified language server
 installed.
+
+To debug changes, use the logging macros from the `tracing` crate; the resulting logs are visible in
+the VSCode output window under the `YAGPDB Template Language Server` channel.
 
 ## License
 
