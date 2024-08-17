@@ -256,5 +256,5 @@ impl ScopeAnalyzer {
 fn var_decls_in(node: &SyntaxNode) -> impl Iterator<Item = Var> {
     node.descendants()
         .filter_map(|child| child.try_to::<ast::VarDecl>())
-        .filter_map(|decl| Var::try_from_decl(decl))
+        .filter_map(Var::try_from_decl)
 }

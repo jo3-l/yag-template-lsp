@@ -10,9 +10,13 @@ pub(crate) mod document;
 pub(crate) mod sync;
 
 pub(crate) use document::Document;
+use yag_template_envdefs::EnvDefs;
+
+use crate::bundled_envdefs;
 
 pub(crate) struct Session {
     pub(crate) client: Client,
+    pub(crate) envdefs: EnvDefs,
     documents: DashMap<Url, Document>,
 }
 
@@ -20,6 +24,7 @@ impl Session {
     pub(crate) fn new(client: Client) -> Self {
         Self {
             client,
+            envdefs: bundled_envdefs::load().expect("bundled envdefs should be valid"),
             documents: DashMap::new(),
         }
     }
@@ -35,6 +40,6 @@ impl Session {
     }
 
     pub(crate) fn remove_document(&self, uri: &Url) {
-        self.documents.remove(&uri);
+        self.documents.remove(uri);
     }
 }

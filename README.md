@@ -45,12 +45,13 @@ code (and indeed the project as a whole.)
 ## Technical overview
 
 The primary contribution of this project is a language server implemented in Rust and split over
-three crates:
+several crates:
 
 - [`yag-template-syntax`][syntax-crate-dir], which provides an error-resilient parser for the YAGPDB
   templating language that outputs an untyped CST using the
   [Rowan](https://github.com/rust-analyzer/rowan) library and a typed AST view of the syntax tree;
-- [`yag-template-analysis`][analysis-crate-dir], which only provides basic symbol resolution at the moment;
+- [`yag-template-analysis`][analysis-crate-dir], which provides basic symbol resolution;
+- [`yag-template-envdefs`][envdefs-crate-dir], which provides a parser for template function definitions;
 - [`yag-template-lsp`][lsp-crate-dir], which implements the actual language server protocol using
   [tower-lsp](https://github.com/ebkalderon/tower-lsp).
 
@@ -59,16 +60,17 @@ Contributions for other editors are welcome.
 
 [syntax-crate-dir]: https://github.com/jo3-l/yag-template-lsp/tree/main/crates/yag-template-syntax
 [analysis-crate-dir]: https://github.com/jo3-l/yag-template-lsp/tree/main/crates/yag-template-analysis
+[envdefs-crate-dir]: https://github.com/jo3-l/yag-template-lsp/tree/main/crates/yag-template-envdefs
 [lsp-crate-dir]: https://github.com/jo3-l/yag-template-lsp/tree/main/crates/yag-template-lsp
 [editors-vscode-dir]: https://github.com/jo3-l/yag-template-lsp/tree/main/editors/vscode
 
 ### Inspiration
 
-We stand on the shoulders of giants here; the structure of this project is heavily informed by
+We stand on the shoulders of giants here. This project is heavily inspired by—and indeed, would not
+be possible without—the following projects:
 [rust-analyzer](https://github.com/rust-lang/rust-analyzer) (and matklad's excellent blog posts),
 [typst-lsp](https://github.com/nvarner/typst-lsp), [rhai's LSP](https://github.com/rhaiscript/lsp),
-and [RSLint](https://github.com/rslint/rslint). This project would not be possible without the
-exceptional prior work in this area.
+and [RSLint](https://github.com/rslint/rslint).
 
 ## Contributing
 

@@ -6,6 +6,7 @@ edition = "2021"
 [dependencies]
 yag-template-syntax = { path = "../yag-template-syntax" }
 yag-template-analysis = { path = "../yag-template-analysis" }
+yag-template-envdefs = { path = "../yag-template-envdefs" }
 anyhow = "1.0.86"
 dashmap = "5.5.3"
 tokio = { version = "1.17.0", features = ["full"] }

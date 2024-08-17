@@ -1,0 +1,139 @@
+func editMessage()
+
+func editMessageNoEscape()
+
+func pinMessage()
+
+func publishMessage()
+
+func publishResponse()
+
+func sendDM()
+
+func sendMessage()
+
+func sendMessageNoEscape()
+
+func sendMessageNoEscapeRetID()
+
+func sendMessageRetID()
+
+func sendTemplate()
+
+func sendTemplateDM()
+
+func unpinMessage()
+
+func mentionEveryone()
+
+func mentionHere()
+
+func mentionRoleID()
+
+func mentionRoleName()
+
+func hasRoleID()
+
+func hasRoleName()
+
+func addRoleID()
+
+func removeRoleID()
+
+func setRoles()
+
+func addRoleName()
+
+func removeRoleName()
+
+func giveRoleID()
+
+func giveRoleName()
+
+func takeRoleID()
+
+func takeRoleName()
+
+func targetHasRoleID()
+
+func targetHasRoleName()
+
+func hasPermissions()
+
+func targetHasPermissions()
+
+func getTargetPermissionsIn()
+
+func addMessageReactions()
+
+func addReactions()
+
+func addResponseReactions()
+
+func deleteAllMessageReactions()
+
+func deleteMessage()
+
+func deleteMessageReaction()
+
+func deleteResponse()
+
+func deleteTrigger()
+
+func getChannel()
+
+func getChannelPins()
+
+func getChannelOrThread()
+
+func getMember()
+
+func getMessage()
+
+func getPinCount()
+
+func getRole()
+
+func getThread()
+
+func createThread()
+
+func deleteThread()
+
+func addThreadMember()
+
+func removeThreadMember()
+
+func createForumPost()
+
+func deleteForumPost()
+
+func currentUserAgeHuman()
+
+func currentUserAgeMinutes()
+
+func currentUserCreated()
+
+func reFind()
+
+func reFindAll()
+
+func reFindAllSubmatches()
+
+func reReplace()
+
+func reSplit()
+
+func sleep()
+
+func editChannelName()
+
+func editChannelTopic()
+
+func editNickname()
+
+func onlineCount()
+
+func onlineCountBots()
+
+func sort()

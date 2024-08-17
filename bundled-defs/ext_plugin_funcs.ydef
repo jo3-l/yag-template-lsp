@@ -1,0 +1,53 @@
+// logs plugin
+func pastUsernames()
+
+func pastNicknames()
+
+// tickets plugin
+func createTicket()
+
+// commands plugin
+func exec()
+
+func execAdmin()
+
+func userArg()
+
+// customcommands plugin
+func parseArgs()
+
+func carg()
+
+func execCC()
+
+func scheduleUniqueCC()
+
+func cancelScheduledUniqueCC()
+
+func dbSet()
+
+func dbSetExpire()
+
+func dbIncr()
+
+func dbGet()
+
+func dbGetPattern()
+
+func dbGetPatternReverse()
+
+func dbDel()
+
+func dbDelById()
+
+func dbDelByID()
+
+func dbDelMultiple()
+
+func dbTopEntries()
+
+func dbBottomEntries()
+
+func dbCount()
+
+func dbRank()
