@@ -3,8 +3,8 @@ use std::borrow::Cow;
 use unscanny::Scanner;
 
 use crate::ast::AstToken;
-use crate::go_lit_syntax::EscapeContext;
-use crate::{go_lit_syntax, SyntaxKind, SyntaxToken};
+use crate::go_syntax::EscapeContext;
+use crate::{go_syntax, SyntaxKind, SyntaxToken};
 
 macro_rules! define_token {
     ($(#[$attr:meta])* $name:ident($pat:pat)) => {
@@ -107,7 +107,7 @@ define_token! {
 
 impl Int {
     pub fn get(&self) -> Option<i64> {
-        go_lit_syntax::parse_int(self.syntax.text()).ok()
+        go_syntax::parse_int(self.syntax.text()).ok()
     }
 }
 
@@ -117,7 +117,7 @@ define_token! {
 
 impl Float {
     pub fn get(&self) -> Option<f64> {
-        go_lit_syntax::parse_float(self.syntax.text()).ok()
+        go_syntax::parse_float(self.syntax.text()).ok()
     }
 }
 
@@ -131,8 +131,8 @@ impl Char {
         s.eat_if('\'');
         match s.eat() {
             Some('\\') => {
-                let Some(after_slash) = s.eat() else { return None };
-                go_lit_syntax::scan_escape_sequence(&mut s, after_slash, EscapeContext::CharacterLiteral).ok()
+                let after_slash = s.eat()?;
+                go_syntax::scan_escape_sequence(&mut s, after_slash, EscapeContext::CharacterLiteral).ok()
             }
             Some(c) => Some(c),
             None => None,
@@ -174,7 +174,7 @@ define_token! {
 impl<'a> InterpretedString {
     pub fn get(&'a self) -> Cow<'a, str> {
         let content = strip_quotes(self.syntax.text(), '"');
-        go_lit_syntax::interpret_string_content(content)
+        go_syntax::interpret_string_content(content)
     }
 }
 

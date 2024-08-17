@@ -221,8 +221,8 @@ impl SyntaxKind {
     }
 
     pub fn is_trivia(self) -> bool {
-        // NOTE: Whitespace can be significant in some parts of the grammar, so
-        // is not considered trivia.
+        // NOTE: Whitespace is significant in some parts of the grammar, so is not considered
+        // trivia.
         self == SyntaxKind::Comment
     }
 

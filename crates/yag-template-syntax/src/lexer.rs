@@ -3,8 +3,8 @@ use std::vec::Drain;
 use unscanny::Scanner;
 
 use crate::error::SyntaxError;
-use crate::go_lit_syntax::EscapeContext;
-use crate::{go_lit_syntax, SyntaxKind, TextRange, TextSize};
+use crate::go_syntax::EscapeContext;
+use crate::{go_syntax, SyntaxKind, TextRange, TextSize};
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 enum LexMode {
@@ -79,6 +79,7 @@ impl Lexer<'_> {
 }
 
 impl Lexer<'_> {
+    #[allow(clippy::should_implement_trait)]
     pub fn next(&mut self) -> SyntaxKind {
         if self.done() {
             SyntaxKind::Eof
@@ -189,11 +190,12 @@ impl Lexer<'_> {
         } else if self.s.eat_if('"') {
             // validate escape sequences
             self.errors.extend(
-                go_lit_syntax::iter_escape_sequences(self.s.from(start.into()), EscapeContext::StringLiteral)
-                    .filter_map(|(range, result)| match result {
+                go_syntax::iter_escape_sequences(self.s.from(start.into()), EscapeContext::StringLiteral).filter_map(
+                    |(range, result)| match result {
                         Ok(_) => None,
                         Err(err) => Some(SyntaxError::new(err.to_string(), range)),
-                    }),
+                    },
+                ),
             );
         }
 
@@ -217,7 +219,7 @@ impl Lexer<'_> {
         if c == '\\' {
             match self.s.eat() {
                 Some(c) => {
-                    let result = go_lit_syntax::scan_escape_sequence(&mut self.s, c, EscapeContext::CharacterLiteral);
+                    let result = go_syntax::scan_escape_sequence(&mut self.s, c, EscapeContext::CharacterLiteral);
                     if let Err(err) = result {
                         self.error_from(start, err.to_string());
                     }
@@ -237,7 +239,7 @@ impl Lexer<'_> {
         self.s.eat_if(['+', '-']);
 
         // scan prefix
-        let base = go_lit_syntax::scan_numeric_base_prefix(&mut self.s).unwrap_or(10);
+        let base = go_syntax::scan_numeric_base_prefix(&mut self.s).unwrap_or(10);
 
         // scan integer part
         self.scan_digits(if base == 16 {
@@ -266,12 +268,12 @@ impl Lexer<'_> {
         };
 
         if interpret_as_float {
-            if go_lit_syntax::parse_float(self.s.from(start.into())).is_err() {
+            if go_syntax::parse_float(self.s.from(start.into())).is_err() {
                 self.error_from(start, "invalid number syntax");
             }
             SyntaxKind::Float
         } else {
-            if go_lit_syntax::parse_int(self.s.from(start.into())).is_err() {
+            if go_syntax::parse_int(self.s.from(start.into())).is_err() {
                 self.error_from(start, "invalid number syntax");
             }
             SyntaxKind::Int
