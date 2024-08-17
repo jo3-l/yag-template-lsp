@@ -12,9 +12,10 @@ This project is in the MVP stage and so only implements the most basic of LSP fe
 namely,
 
 - [x] Syntax highlighting;
-- [x] Automatic indentation;
 - [x] Error reporting as you type;
 - [x] Basic code completion for variable and function names.
+- [x] Automatic indentation;
+- [x] Inlay hints for function parameter names.
 
 However, while the current set of features is minimal, the [sound technical
 foundation](#technical-overview) of this project means many features should be trivial to
@@ -27,7 +28,6 @@ The following are relatively straightforward changes that are planned in the nea
 
 - [ ] Documentation for all template functions
 - [ ] Semantic tokens (i.e., more accurate syntax highlighting)
-- [ ] Inlay hints for function parameter names
 - [ ] Code folding
 
 In the medium term, we would also like to implement:
@@ -66,11 +66,13 @@ Contributions for other editors are welcome.
 
 ### Inspiration
 
-We stand on the shoulders of giants here. This project is heavily inspired by—and indeed, would not
-be possible without—the following projects:
-[rust-analyzer](https://github.com/rust-lang/rust-analyzer) (and matklad's excellent blog posts),
-[typst-lsp](https://github.com/nvarner/typst-lsp), [rhai's LSP](https://github.com/rhaiscript/lsp),
-and [RSLint](https://github.com/rslint/rslint).
+We stand on the shoulders of giants. `yag-template-lsp` is heavily inspired by—and indeed, would not
+be possible without—the following excellent projects:
+
+- [rust-analyzer](https://github.com/rust-lang/rust-analyzer) (and matklad's excellent blog posts);
+- [typst](https://github.com/typst/typst) and [typst-lsp](https://github.com/nvarner/typst-lsp);
+- [rhai's LSP](https://github.com/rhaiscript/lsp);
+- and [RSLint](https://github.com/rslint/rslint).
 
 ## Contributing
 
