@@ -31,7 +31,8 @@ jobs:
         run: cargo clippy --all-targets -- -Dwarnings
 
       - uses: dtolnay/rust-toolchain@nightly
-        components: [rustfmt]
+        with:
+          components: [rustfmt]
       - name: Formatting
         run: cargo +nightly fmt --all --check
 
