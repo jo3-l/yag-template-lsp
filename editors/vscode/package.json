@@ -12,7 +12,7 @@
 	"license": "MIT",
 	"version": "0.0.4",
 	"engines": {
-		"vscode": "^1.66.0"
+		"vscode": "^1.76.0"
 	},
 	"contributes": {
 		"languages": [
@@ -22,19 +22,27 @@
 					".yag"
 				],
 				"configuration": "./language-configuration.json"
+			},
+			{
+				"id": "ydef",
+				"extensions": [
+					".ydef"
+				]
 			}
 		],
 		"grammars": [
 			{
 				"language": "yagtemplate",
 				"scopeName": "source.yag",
-				"path": "./yagtemplate.tmLanguage.json"
+				"path": "./syntaxes/yagtemplate.tmLanguage.json"
+			},
+			{
+				"language": "ydef",
+				"scopeName": "source.ydef",
+				"path": "./syntaxes/ydef.tmLanguage.json"
 			}
 		]
 	},
-	"activationEvents": [
-		"onLanguage:yagtemplate"
-	],
 	"main": "./dist/extension.js",
 	"scripts": {
 		"vscode:prepublish": "npm run check-types && npm run lint && node esbuild.js --production",
@@ -55,7 +63,7 @@
 	},
 	"devDependencies": {
 		"@types/node": "18.x",
-		"@types/vscode": "^1.66.0",
+		"@types/vscode": "^1.76.0",
 		"@typescript-eslint/eslint-plugin": "^7.11.0",
 		"@typescript-eslint/parser": "^7.11.0",
 		"@vscode/vsce": "^2.32.0",

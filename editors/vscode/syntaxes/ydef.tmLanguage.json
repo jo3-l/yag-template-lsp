@@ -1,0 +1,37 @@
+{
+	"$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+	"name": "YAGPDB Template Environment Definitions",
+	"scopeName": "source.ydef",
+	"patterns": [
+		{
+			"match": "^//[^\n]+",
+			"name": "comment.line.ydef"
+		},
+		{
+			"match": "\t[^\n]+",
+			"name": "comment.block.documentation.ydef"
+		},
+		{
+			"begin": "^(func)\\s+(\\w+)",
+			"beginCaptures": {
+				"1": {
+					"name": "keyword.control.ydef"
+				},
+				"2": {
+					"name": "Support.function.ydef"
+				}
+			},
+			"end": "\n",
+			"patterns": [
+				{
+					"match": "\\w=",
+					"name": "variable.parameter.ydef"
+				},
+				{
+					"match": "\\?|\\.\\.\\.",
+					"name": "keyword.operator.ydef"
+				}
+			]
+		}
+	]
+}
