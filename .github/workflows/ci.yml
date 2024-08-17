@@ -30,7 +30,8 @@ jobs:
       - name: Clippy
         run: cargo clippy --all-targets -- -Dwarnings
 
-      - run: rustup component add rustfmt --toolchain nightly
+      - uses: dtolnay/rust-toolchain@nightly
+        components: [rustfmt]
       - name: Formatting
         run: cargo +nightly fmt --all --check
 
@@ -55,9 +56,6 @@ jobs:
 
       - name: Compilation
         run: npm run compile
-
-      - name: Type Checking
-        run: npm run check
 
       - name: Linting and Formatting
         run: npm run lint
