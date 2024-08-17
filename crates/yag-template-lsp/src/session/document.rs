@@ -5,7 +5,7 @@ use tower_lsp::lsp_types::{Position, Range};
 use yag_template_analysis::{self, Analysis};
 use yag_template_syntax::ast::{self, SyntaxNodeExt};
 use yag_template_syntax::parser::{self, Parse};
-use yag_template_syntax::{SyntaxNode, TextRange, TextSize};
+use yag_template_syntax::{SyntaxNode, TextRange, TextSize, YagTemplateLanguage};
 
 pub(crate) struct Document {
     pub(crate) parse: Parse,
@@ -25,6 +25,10 @@ impl Document {
             analysis: yag_template_analysis::analyze(root),
         };
         Ok(document)
+    }
+
+    pub fn syntax(&self) -> SyntaxNode {
+        SyntaxNode::new_root(self.parse.root.clone())
     }
 }
 

@@ -36,6 +36,7 @@ impl LanguageServer for YagTemplateLanguageServer {
                     trigger_characters: Some(completion_trigger_chars),
                     ..Default::default()
                 }),
+                inlay_hint_provider: Some(OneOf::Left(true)),
                 hover_provider: Some(HoverProviderCapability::Simple(true)),
                 ..Default::default()
             },
@@ -70,6 +71,12 @@ impl LanguageServer for YagTemplateLanguageServer {
 
     async fn hover(&self, params: HoverParams) -> Result<Option<Hover>> {
         provider::hover::hover(&self.session, params)
+            .await
+            .map_err(|_| jsonrpc::Error::internal_error())
+    }
+
+    async fn inlay_hint(&self, params: InlayHintParams) -> Result<Option<Vec<InlayHint>>> {
+        provider::inlay_hint::inlay_hint(&self.session, params)
             .await
             .map_err(|_| jsonrpc::Error::internal_error())
     }

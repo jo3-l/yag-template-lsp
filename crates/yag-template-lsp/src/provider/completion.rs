@@ -3,9 +3,9 @@ use tower_lsp::lsp_types::{
 };
 use yag_template_analysis::scope::ScopeInfo;
 use yag_template_envdefs::EnvDefs;
+use yag_template_syntax::ast;
 use yag_template_syntax::ast::AstToken;
 use yag_template_syntax::query::Query;
-use yag_template_syntax::{ast, SyntaxNode};
 
 use crate::session::{Document, Session};
 
@@ -14,8 +14,7 @@ pub(crate) async fn complete(sess: &Session, params: CompletionParams) -> anyhow
     let doc = sess.document(&uri)?;
     let pos = doc.mapper.offset(params.text_document_position.position).unwrap();
 
-    let root = SyntaxNode::new_root(doc.parse.root.clone());
-    let query = Query::at(&root, pos).unwrap();
+    let query = Query::at(&doc.syntax(), pos).unwrap();
     if query.is_var_access() {
         let existing_var = query.var().unwrap();
         let scope_info = &doc.analysis.scope_info;

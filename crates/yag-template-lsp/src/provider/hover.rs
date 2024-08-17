@@ -1,8 +1,8 @@
 use tower_lsp::lsp_types::{Hover, HoverContents, HoverParams, MarkupContent, MarkupKind};
 use yag_template_envdefs::EnvDefs;
+use yag_template_syntax::ast;
 use yag_template_syntax::ast::AstToken;
 use yag_template_syntax::query::Query;
-use yag_template_syntax::{ast, SyntaxNode};
 
 use crate::session::{Document, Session};
 
@@ -14,8 +14,7 @@ pub(crate) async fn hover(sess: &Session, params: HoverParams) -> anyhow::Result
         .offset(params.text_document_position_params.position)
         .unwrap();
 
-    let root = SyntaxNode::new_root(doc.parse.root.clone());
-    let query = Query::at(&root, pos).unwrap();
+    let query = Query::at(&doc.syntax(), pos).unwrap();
     if query.in_func_name() {
         let func_ident = query.ident().unwrap();
         Ok(hover_for_func(&sess.envdefs, &doc, func_ident))
