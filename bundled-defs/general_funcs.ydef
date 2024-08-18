@@ -1,18 +1,18 @@
 func str(x)
-	Converts the argument to a string, returning the empty string on failure. This function is an alias of the
-	`toString` function.
+	Converts the argument to a string, returning the empty string for invalid inputs. This function
+	is an alias of the `toString` function.
 
 func toString(x)
 	Converts the argument to a string, returning the empty string on failure.
 
 func toInt(x)
-	Converts the argument to an integer, returning zero on failure.
+	Converts the argument to an integer, returning zero for invalid inputs.
 
 func toInt64(x)
-	Converts the argument to an `int64`, returning zero on failure.
+	Converts the argument to an `int64`, returning zero for invalid inputs.
 
 func toFloat(x)
-	Converts the argument to a `float64`, returning zero on failure.
+	Converts the argument to a `float64`, returning zero for invalid inputs.
 
 func toDuration(x)
 	Converts the argument, which may be a number (measured in nanoseconds) or a duration string such as `5m`, to a
@@ -31,13 +31,27 @@ func hasSuffix(str, suffix)
 	Tests whether the string ends with the given suffix.
 
 func joinStr(sep, args...)
+	Concatenates the arguments in order, inserting the separator between consecutive arguments. As a
+	special case, slices of strings are formatted as if each element was provided separately, so
+
+	```yag
+	{{ joinStr " " (cslice "cat" "dog") }} {{/* outputs "cat dog" */}}
+	```
+
+	See also the `print` function.
 
 func lower(str)
 	Converts the input to lowercase.
 
-func slice(v, from, to?)
+func slice(item, start, end?)
+	Returns a subslice of the input item (which may be an array, slice, or string) containing the
+	elements starting at index `start`, inclusive, and ending at index `end`, exclusive. If only one
+	index is provided, it is interpreted as the start index and the slice extends to the end of the
+	input.
 
 func split(str, sep)
+	Splits the string around each instance of the separator, returning a slice of delimited
+	substrings.
 
 func title(str)
 	Returns the string with the first letter of each word capitalized.
@@ -49,8 +63,12 @@ func upper(str)
 	Converts the string to uppercase.
 
 func urlescape(str)
+	Escapes the input so that it can be safely placed inside a URL path segment, replacing special
+	characters (including /) with %XX sequences as needed.
 
 func urlunescape(str)
+	Undos the transformation performed by `urlescape`, converting encoded substrings of the form
+	`%AB` to the byte 0xAB.
 
 func print(args...)
 	Concatenates the arguments in order, adding spaces between operands when neither is a string.
@@ -158,6 +176,7 @@ func sdict(keyvalues...)
 	Creates a string dictionary from the provided key-value pairs. The number of arguments must be even.
 
 func structToSdict(struct)
+	Returns a string dictionary containing the fields of the struct.
 
 func cembed(opts...)
 	Returns an embed object to send with `sendMessage`-related functions.
@@ -260,8 +279,12 @@ func inFold(haystack, needle)
 	Same as `in`, but case-insensitive.
 
 func json(v, indent?)
+	Encodes the argument as JSON. If the `indent` flag is provided, the output is pretty-printed
+	with appropriate indentation.
 
 func jsonToSdict(jsonStr)
+	Parses the JSON-encoded data into a string dictionary, returning an error if the input was
+	invalid JSON.
 
 func noun()
 	Returns a random noun.
@@ -301,14 +324,42 @@ func parseTime(value, layout, location?)
 func formatTime(time, layout?)
 
 func loadLocation(location)
+	Searches the IANA Time Zone database for the given location name, returning the corresponding
+	location object on success. (Given a time object `$time`, `$time.In $location` then returns a
+	copy of the time set in the given location for display purposes.)
+
+	As a special case, providing `UTC` or the empty string yields the UTC location. Providing
+	`Local` yields the local time zone of the hosting YAGPDB server.
 
 func newDate(year, month, day, hour, minute, second, location?)
+	Returns the time object corresponding to
+
+	```
+	yyyy-mm-dd hh:mm:ss + nsec nanoseconds
+	```
+
+	in the appropriate zone for that time in the given location.
+
+	The month, day, hour, min, sec, and nsec values may be outside their usual ranges and will be
+	normalized during the conversion. For example, October 32 converts to November 1.
+	
+	A daylight savings time transition skips or repeats times. For example, in the United States,
+	March 13, 2011 2:15am never occurred, while November 6, 2011 1:15am occurred twice. In such
+	cases, the choice of time zone, and therefore the time, is not well-defined. Date returns a time
+	that is correct in one of the two zones involved in the transition, but it does not guarantee
+	which. 
 
 func snowflakeToTime(snowflake)
+	Returns the UTC time at which the given Discord snowflake was created.
 
-func timestampToTime(unix)
+func timestampToTime(unixSecs)
+	Returns the UTC time corresponding to the given Unix time, measured in seconds since January 1,
+	1970.
 
 func weekNumber(time)
+	Returns the ISO 8601 week number in which the time occurs, ranging between 1 to 53. Jan 01 to
+	Jan 03 of year n might belong to week 52 or 53 of year n-1, and Dec 29 to Dec 31 might belong to
+	week 1 of year n+1. 
 
 func humanizeDurationHours(dur)
 
