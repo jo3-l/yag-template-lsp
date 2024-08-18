@@ -1,4 +1,4 @@
-name: New template functions
+name: Detect new functions
 
 on:
   schedule:
@@ -9,6 +9,8 @@ jobs:
   detect-missing-funcs:
     name: Check for new template functions
     runs-on: ubuntu-latest
+    permissions:
+      issues: write
     env:
       GH_TOKEN: ${{ github.token }}
       LYTFS_GITHUB_TOKEN: ${{ github.token }}
