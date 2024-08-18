@@ -24,14 +24,14 @@
 	"contributes": {
 		"languages": [
 			{
-				"id": "yagtemplate",
+				"id": "yag",
 				"extensions": [
 					".yag",
 					".yagcc",
 					".gotmpl",
 					".go.tmpl"
 				],
-				"configuration": "./yagtemplate-language-configuration.json",
+				"configuration": "./yag-language-configuration.json",
 				"icon": {
 					"dark": "./icon.png",
 					"light": "./icon.png"
@@ -51,9 +51,9 @@
 		],
 		"grammars": [
 			{
-				"language": "yagtemplate",
+				"language": "yag",
 				"scopeName": "source.yag",
-				"path": "./yagtemplate.tmLanguage.json"
+				"path": "./yag.tmLanguage.json"
 			},
 			{
 				"language": "ydef",

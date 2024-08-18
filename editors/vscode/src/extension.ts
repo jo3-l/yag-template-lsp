@@ -30,7 +30,7 @@ async function startClient() {
 	};
 
 	const clientOptions: LanguageClientOptions = {
-		documentSelector: [{ scheme: 'file', language: 'yagtemplate' }],
+		documentSelector: [{ scheme: 'file', language: 'yag' }],
 	};
 
 	client = new LanguageClient('yag-template-lsp', 'YAGPDB Template Language Server', serverOptions, clientOptions);

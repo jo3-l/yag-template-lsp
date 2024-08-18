@@ -1,4 +1,4 @@
-# `yagtemplate.tmLanguage.json`
+# `yag.tmLanguage.json`
 
 The TextMate language definition for YAGPDB templates is modified from
 [Ranger-4297/yagpdb-cc-ext](https://github.com/Ranger-4297/yagpdb-cc-ext).

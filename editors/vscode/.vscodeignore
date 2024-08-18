@@ -4,8 +4,8 @@
 !dist/yag-template-lsp.exe
 !package.json
 !package-lock.json
-!yagtemplate-language-configuration.json
-!yagtemplate.tmLanguage.json
+!yag-language-configuration.json
+!yag.tmLanguage.json
 !ydef-language-configuration.json
 !ydef.tmLanguage.json
 !icon.png
