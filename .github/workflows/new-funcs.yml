@@ -30,6 +30,8 @@ The following functions need to be added:
 \`\`\`diff
 $new_func_diff
 \`\`\`
+
+_Updated at: $(date -u +"%Y-%m-%d %H:%M:%S UTC")_
 EOF
 )
             if [ -n "$existing_issue" ]; then
