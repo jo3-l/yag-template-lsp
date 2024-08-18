@@ -52,7 +52,7 @@ fn var_completion(doc: &Document, query: Query, existing_var: ast::Var, scope_in
                     })),
                     ..Default::default()
                 }),
-        )
+        );
     }
     completions
 }

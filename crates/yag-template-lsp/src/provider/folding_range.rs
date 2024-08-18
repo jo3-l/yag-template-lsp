@@ -18,9 +18,9 @@ pub(crate) async fn folding_range(
 }
 
 fn folding_range_for_node(doc: &Document, node: SyntaxNode) -> Option<FoldingRange> {
-    let range = doc.mapper.range(node.text_range());
-
     use SyntaxKind::*;
+
+    let range = doc.mapper.range(node.text_range());
     match node.kind() {
         TemplateDefinition => fold(range, node.to::<ast::TemplateDefinition>().define_clause()),
         TemplateBlock => fold(range, node.to::<ast::TemplateBlock>().block_clause()),

@@ -1,5 +1,5 @@
-use crate::ast::{self, AstNode, AstToken, SyntaxNodeExt};
-use crate::{SyntaxKind, SyntaxNode, SyntaxToken, TextSize};
+use crate::ast::{AstNode, AstToken, SyntaxNodeExt};
+use crate::{ast, SyntaxKind, SyntaxNode, SyntaxToken, TextSize};
 
 pub struct Query {
     pub offset: TextSize,

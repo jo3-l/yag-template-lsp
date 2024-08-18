@@ -1,4 +1,4 @@
-use std::fmt;
+use core::fmt;
 
 #[allow(non_camel_case_types)]
 #[derive(PartialEq, Eq, PartialOrd, Ord, Debug, Clone, Copy, Hash)]
@@ -171,7 +171,7 @@ pub enum SyntaxKind {
     /// A single `.` that evaluates to the context data (not part of a field.)
     ContextAccess,
     /// A series of field accesses on the context data: `.Field1.Field2.Field3`.
-    /// The parser will produce a ContextFieldChain even in the case where there
+    /// The parser will produce a `ContextFieldChain` even in the case where there
     /// is only one field.
     ContextFieldChain,
     /// A series of field accesses on an expression: `(...).Field1.Field2.Field3`.

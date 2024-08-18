@@ -32,5 +32,5 @@ pub(crate) async fn clear_diagnostics(session: &Session, uri: &Url) {
     session
         .client
         .publish_diagnostics(uri.clone(), Vec::new(), Some(version))
-        .await
+        .await;
 }

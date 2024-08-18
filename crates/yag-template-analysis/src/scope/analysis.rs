@@ -346,7 +346,7 @@ impl ScopeAnalyzer {
         }
     }
 
-    fn lookup_var(&mut self, name: &str) -> Option<DeclaredVarId> {
+    fn lookup_var(&self, name: &str) -> Option<DeclaredVarId> {
         let mut cur_scope_id = Some(self.top_scope);
         while let Some(cur_scope) = cur_scope_id.and_then(|id| self.scopes.get(id)) {
             if let Some(id) = cur_scope.vars_by_name.get(name).copied() {

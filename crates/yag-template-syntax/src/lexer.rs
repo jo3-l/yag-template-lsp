@@ -66,11 +66,11 @@ impl<'s> Lexer<'s> {
 
 impl Lexer<'_> {
     fn error(&mut self, message: impl Into<String>, range: TextRange) {
-        self.errors.push(SyntaxError::new(message.into(), range))
+        self.errors.push(SyntaxError::new(message.into(), range));
     }
 
     fn error_at(&mut self, pos: TextSize, message: impl Into<String>) {
-        self.error(message, TextRange::empty(pos))
+        self.error(message, TextRange::empty(pos));
     }
 
     fn error_from(&mut self, pos: TextSize, message: impl Into<String>) {
@@ -186,7 +186,7 @@ impl Lexer<'_> {
         if self.done() {
             self.error_from(start, "unclosed string");
         } else if self.s.at('\n') {
-            self.error_at(self.cursor(), "unexpected newline in string")
+            self.error_at(self.cursor(), "unexpected newline in string");
         } else if self.s.eat_if('"') {
             // validate escape sequences
             self.errors.extend(

@@ -697,7 +697,7 @@ impl Literal {
         } else if let Some(t) = tokens::Nil::cast(token.clone()) {
             LiteralKind::Nil(t)
         } else {
-            panic!("unknown token in literal: {token}")
+            unreachable!("unknown token in literal: {token}")
         }
     }
 }

@@ -1,7 +1,7 @@
+use core::fmt;
+use core::fmt::Write;
 use std::collections::hash_map::Entry;
 use std::error::Error;
-use std::fmt;
-use std::fmt::Write;
 
 use ahash::AHashMap;
 use unscanny::Scanner;
@@ -114,7 +114,7 @@ fn process_source(defs: &mut EnvDefs, src: &EnvDefSource) -> Result<(), ParseErr
             // blank line, possibly separating paragraphs in function documentation
             if let Some((f, _)) = funcs.last_mut() {
                 if !f.doc.is_empty() {
-                    f.doc.push('\n')
+                    f.doc.push('\n');
                 }
             }
         } else if line.starts_with("func") {
@@ -189,7 +189,7 @@ fn parse_func_signature(line: &str) -> Result<Func, String> {
             name: param_name.into(),
             is_optional,
             is_variadic,
-        })
+        });
     }
     ensure!(s.eat_if(')'), "expected ')' concluding parameter list");
 

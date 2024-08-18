@@ -16,7 +16,7 @@ pub(crate) async fn inlay_hint(sess: &Session, params: InlayHintParams) -> anyho
         .descendants()
         .filter_map(ast::FuncCall::cast)
         .filter(|call| range.contains_range(call.syntax().text_range()))
-        .flat_map(|call| inlay_hints_for_fn_call(&sess.envdefs, &doc, call))
+        .filter_map(|call| inlay_hints_for_fn_call(&sess.envdefs, &doc, call))
         .flatten()
         .collect();
     Ok(Some(inlay_hints))

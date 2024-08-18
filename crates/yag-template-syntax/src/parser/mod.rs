@@ -168,7 +168,7 @@ impl<'s> Parser<'s> {
 
     fn eat_trivia(&mut self) {
         while self.cur.is_trivia() {
-            self.only_eat_cur_token()
+            self.only_eat_cur_token();
         }
     }
 
@@ -197,7 +197,7 @@ impl Parser<'_> {
     /// Eat leading whitespace and produce an error if none was found.
     pub(crate) fn expect_whitespace(&mut self, context: &str) {
         if !self.eat_whitespace() {
-            self.error_here(format!("expected space {context}; found {}", self.cur))
+            self.error_here(format!("expected space {context}; found {}", self.cur));
         }
     }
 
@@ -278,7 +278,7 @@ impl Parser<'_> {
 
     /// Call [Parser::error] at the range of the current token.
     pub(crate) fn error_here(&mut self, message: impl Into<String>) {
-        self.error(message, self.cur_range())
+        self.error(message, self.cur_range());
     }
 }
 

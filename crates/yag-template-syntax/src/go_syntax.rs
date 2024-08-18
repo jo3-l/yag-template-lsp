@@ -1,6 +1,7 @@
+use core::fmt;
 use std::borrow::Cow;
 use std::error::Error;
-use std::{fmt, iter};
+use std::iter;
 
 use rowan::{TextRange, TextSize};
 use unscanny::{Pattern, Scanner};

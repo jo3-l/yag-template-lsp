@@ -52,7 +52,7 @@ pub(crate) fn text_or_action(p: &mut Parser) {
             // the case that there's a comment in between:
             //    {{/* ... */}}
             // which is not an error -- we have to check.
-            empty_or_comment_action(p)
+            empty_or_comment_action(p);
         }
         _ => expr_action(p),
     }
@@ -122,7 +122,7 @@ fn else_branches(p: &mut Parser, parent_action_type: &str, permit_else_if: bool)
                 format!("{parent_action_type} does not support else-if branches"),
                 else_clause_range,
             );
-            p.wrap(c, SyntaxKind::Error)
+            p.wrap(c, SyntaxKind::Error);
         }
 
         saw_unconditional_else |= else_clause_type == ElseBranchType::Else;
@@ -418,7 +418,7 @@ fn template_invocation(p: &mut Parser) {
     match p.cur() {
         SyntaxKind::InterpretedString | SyntaxKind::RawString => p.eat(),
         SyntaxKind::RightDelim | SyntaxKind::TrimmedRightDelim => {
-            p.error_here("expected name of template to invoke after `template` keyword")
+            p.error_here("expected name of template to invoke after `template` keyword");
         }
         _ => {
             // Perhaps something like `{{template $x}}`; though this construct
@@ -526,7 +526,7 @@ fn right_delim_or_recover(p: &mut Parser, context: &str) {
         if p.eat_if(SyntaxKind::InvalidCharInAction) {
             // lexer should already have emitted an error; no need for another
         } else {
-            p.err_and_eat(format!("unexpected {} {context}", p.cur()))
+            p.err_and_eat(format!("unexpected {} {context}", p.cur()));
         }
     }
 

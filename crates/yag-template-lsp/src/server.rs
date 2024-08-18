@@ -1,7 +1,12 @@
 use std::sync::Arc;
 
 use tower_lsp::jsonrpc::{self, Result};
-use tower_lsp::lsp_types::*;
+use tower_lsp::lsp_types::{
+    CompletionOptions, CompletionParams, CompletionResponse, DidChangeTextDocumentParams, DidCloseTextDocumentParams,
+    DidOpenTextDocumentParams, FoldingRange, FoldingRangeParams, FoldingRangeProviderCapability, Hover, HoverParams,
+    HoverProviderCapability, InitializeParams, InitializeResult, InlayHint, InlayHintParams, OneOf, ServerCapabilities,
+    ServerInfo, TextDocumentSyncCapability, TextDocumentSyncKind,
+};
 use tower_lsp::{async_trait, Client, LanguageServer};
 
 use crate::provider;
@@ -59,11 +64,11 @@ impl LanguageServer for YagTemplateLanguageServer {
     }
 
     async fn did_open(&self, params: DidOpenTextDocumentParams) {
-        session::sync::on_document_open(&self.session, params).await.unwrap()
+        session::sync::on_document_open(&self.session, params).await.unwrap();
     }
 
     async fn did_change(&self, params: DidChangeTextDocumentParams) {
-        session::sync::on_document_change(&self.session, params).await.unwrap()
+        session::sync::on_document_change(&self.session, params).await.unwrap();
     }
 
     async fn did_close(&self, params: DidCloseTextDocumentParams) {

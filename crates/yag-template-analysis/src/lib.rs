@@ -1,5 +1,5 @@
+use core::fmt;
 use std::error::Error;
-use std::fmt;
 
 use scope::ScopeInfo;
 use yag_template_envdefs::EnvDefs;
