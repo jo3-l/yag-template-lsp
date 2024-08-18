@@ -1,0 +1,143 @@
+func sendModal(modal)
+	Sends a modal to the member who triggered the interaction.
+
+	- `modal`: an sdict with the following keys:
+	- `title`: the title of the modal.
+	- `custom_id`: a unique identifier for the modal.
+	- `fields`: a slice of sdicts with the following keys:
+		- `label`: the label for the field.
+		- `placeholder`: the placeholder text for the field.
+		- `value`: the default value for the field.
+		- `required`: whether the field is required.
+		- `style`: the style of the field (1 for short, 2 for long).
+		- `min_length`: the minimum length of the field.
+		- `max_length`: the maximum length of the field.
+
+	### Example
+
+	```yag
+	{{ $modal := sdict
+	"title" "My Custom Modal"
+	"custom_id" "modals-my_first_modal"
+	"fields" (cslice
+		(sdict "label" "Name" "placeholder" "Duck" "required" true)
+		(sdict "label" "Do you like ducks?" "value" "Heck no")
+		(sdict "label" "Duck hate essay" "min_length" 100 "style")) }}
+	{{ sendModal $modal }}
+	```
+func updateMessage(newMessage)
+	Edits the message that triggered the button, select menu, or modal.
+
+	- `newMessage`: the new message content. May be a string, an embed, or a complex message.
+
+	### Example
+
+	The following example must be triggered by a component or modal submission.
+
+	```yag
+	{{ $button := cbutton "label" "I won!" "custom_id" "i_won" }}
+	{{ $content := printf "Press this button when you win! The last person who won was %s! They wanted to say they are a %s %s." .User.Mention adjective noun }}
+
+	{{ $message := complexMessageEdit "content" $content "buttons" $button }}
+	{{ updateMessage $message }}
+	```
+
+func updateMessageNoEscape(newMsg)
+	Same as `updateMessage`, but does not escape mentions.
+
+func editResponse(interactionToken, messageID, newContent)
+	Edits a response to an interaction.
+
+	- `interactionToken`: the token of the interaction to edit. `nil` for the triggering interaction.
+	- `messageID`: the ID of a follow-up message. `nil` for the original interaction response.
+	- `newContent`: the new content for the message.
+
+	### Example
+
+	The following example must be triggered by a component trigger or modal submission.
+
+	```yag
+	{{ $token := .Interaction.Token }}
+
+	{{ sendResponse nil "Here's the first message!" }}
+	{{ $id := sendResponseRetID $token (complexMessage "content" "Here's a sneaky one!" "ephemeral" true) }}
+
+	{{ sleep 2 }}
+
+	{{ editResponse $token $id (print "I've edited this message to say " noun) }}
+	{{ $editedResponse := getResponse $token $id }}
+	{{ editResponse $token nil $editedResponse.Content }}
+	```
+func editResponseNoEscape(interactionToken, messageID, newContent)
+	Same as `editResponse`, but does not escape mentions.
+
+func sendResponse(interactionToken, message)
+	Sends a message in response to an interaction. Supports the `ephemeral` flag in `complexMessage`.
+
+func sendResponseNoEscape(interactionToken, message)
+	Same as `sendResponse`, but does not escape mentions.
+
+func sendResponseNoEscapeRetID(interactionToken, message)
+	Same as `sendResponseNoEscape`, but also returns the message ID.
+
+func sendResponseRetID(interactionToken, message)
+	Same as `sendResponseNoEscape`, but also returns the message ID.
+
+func cbutton(opts...)
+	Creates a [button object](https://discord.com/developers/docs/interactions/message-components#button-object) for use
+	in interactions.
+
+	A link style button *must* have a URL and may not have a Custom ID. All other styles *must* have a Custom ID and
+	cannot have a URL. All buttons must have either a label or an emoji.
+
+	### Example
+
+	```yag
+	{{ $button := cbutton "label" "Button" "custom_id" "buttons-duck" }}
+	{{ $message := complexMessage "buttons" $button }}
+	{{ sendMessage nil $message }}
+	```
+
+func cmenu(opts...)
+	Creates a [select menu object](https://discord.com/developers/docs/interactions/message-components#select-menu-object)
+	for use in interactions.
+
+	The type should be provided as a string: `"text"`, `"user"`, `"role"`, `"mentionable"`, or `"channel"`. Text type menus
+	*must* have `options`, while all other types cannot.
+
+	### Example
+
+	```yag
+	{{ $menu := cmenu
+		"type" "text"
+		"placeholder" "Choose a terrible thing"
+		"custom_id" "menus-duck"
+		"options" (cslice
+			(sdict "label" "Two Ducks" "value" "opt-1" "default" true)
+			(sdict "label" "A Duck" "value" "duck-option" "emoji" (sdict "name" "🦆"))
+			(sdict "label" "Half a Duck" "value" "third-option" "description" "Don't let the smaller amount fool you."))
+		"max_values" 3
+	}}
+
+	{{ sendMessage nil (complexMessage "menus" $menu) }}
+	```
+
+func cmodal(opts...)
+	Creates a [modal object](https://discord.com/developers/docs/interactions/receiving-and-responding#interaction-response-object-modal)
+	for use in interactions.
+
+func ephemeralResponse()
+	Tells the bot to send the response text as an ephemeral message. Only works when triggered by an interaction. Works
+	on responses and follow-ups.
+
+	### Example
+
+	```yag
+	{{ ephemeralResponse }}
+
+	This text is invisible to others!
+	```
+
+func getResponse(interactionToken, messageID)
+	Returns the response or follow-up with the specified message ID belonging to the given interaction as a message
+	object. Is also valid for ephemeral messages.
