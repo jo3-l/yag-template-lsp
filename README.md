@@ -9,28 +9,23 @@ extensions published on the VSCode marketplace and Open VSX.
 
 ## Features
 
-This project is in the MVP stage and so only implements the most basic of LSP features at present,
-namely,
+A range of basic LSP features are already implemented, namely,
 
-- [x] Syntax highlighting;
-- [x] Error reporting as you type;
-- [x] Basic code completion for variable and function names.
-- [x] Automatic indentation;
-- [x] Inlay hints for function parameter names;
-- [x] Folding ranges.
-
-However, while the current set of features is minimal, the [sound technical
-foundation](#technical-overview) of this project means many features should be trivial to
-support—for instance, inlay hints for function parameter names, code folding, and semantic
-highlighting should all be straightforward additions.
+- Syntax highlighting
+- Error reporting as you type
+- Basic code completion for variable and function names
+- Hover documentation for functions
+- Inlay hints for function parameter names
+- Automatic indentation
+- Folding ranges
 
 ## Roadmap
 
-The following are relatively straightforward changes that are planned in the near future:
+The following are relatively straightforward changes that are planned for the near future:
 
 - [ ] Errors for undefined variables and functions
-- [ ] Documentation for all template functions
-- [ ] Semantic tokens (i.e., more accurate syntax highlighting)
+- [ ] Go-to-definition for variables
+- [ ] Automated variable renaming
 
 In the medium term, we would also like to implement:
 
@@ -39,8 +34,8 @@ In the medium term, we would also like to implement:
   - A partial type-checker implementation is in the [`feat/typechecking`][typeck-branch] branch,
     save function overload resolution and language server integration.
 
-As a low-priority, long-term goal, we hope to better modularize and test the language server driver
-code (and indeed the project as a whole.)
+Finally, as a low-priority, long-term goal, we hope to better modularize and test the language
+server driver code (and indeed the project as a whole.)
 
 [typeck-branch]: https://github.com/jo3-l/yag-template-lsp/tree/feat/typechecking
 
