@@ -23,7 +23,7 @@ impl Document {
             .ok_or_else(|| anyhow!("root node of parse tree should be an ast::Root"))?;
         let document = Self {
             parse: parse.clone(),
-            mapper: Mapper::new_utf16(src),
+            mapper: Mapper::new(src),
             analysis: yag_template_analysis::analyze(&sess.envdefs, root),
         };
         Ok(document)
@@ -42,7 +42,7 @@ pub(crate) struct Mapper {
 }
 
 impl Mapper {
-    pub(crate) fn new_utf16(src: &str) -> Self {
+    pub(crate) fn new(src: &str) -> Self {
         let mut byte_offset_to_pos = BTreeMap::new();
         let mut pos_to_byte_offset = BTreeMap::new();
 

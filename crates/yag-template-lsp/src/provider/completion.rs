@@ -15,28 +15,22 @@ pub(crate) async fn complete(sess: &Session, params: CompletionParams) -> anyhow
     let pos = doc.mapper.offset(params.text_document_position.position);
 
     let query = Query::at(&doc.syntax(), pos).unwrap();
-    if query.is_var_access() {
+    let resp = if query.is_var_access() {
         let existing_var = query.var().unwrap();
         let scope_info = &doc.analysis.scope_info;
-        Ok(Some(CompletionResponse::Array(var_completion(
-            &doc,
-            query,
-            existing_var,
-            scope_info,
-        ))))
+        let completions = complete_var(&doc, query, existing_var, scope_info);
+        Some(CompletionResponse::Array(completions))
     } else if query.in_func_name() {
         let existing_ident = query.ident().unwrap();
-        Ok(Some(CompletionResponse::Array(func_completion(
-            &sess.envdefs,
-            &doc,
-            existing_ident,
-        ))))
+        let completions = complete_func(&sess.envdefs, &doc, existing_ident);
+        Some(CompletionResponse::Array(completions))
     } else {
-        Ok(None)
-    }
+        None
+    };
+    Ok(resp)
 }
 
-fn var_completion(doc: &Document, query: Query, existing_var: ast::Var, scope_info: &ScopeInfo) -> Vec<CompletionItem> {
+fn complete_var(doc: &Document, query: Query, existing_var: ast::Var, scope_info: &ScopeInfo) -> Vec<CompletionItem> {
     let mut completions = Vec::new();
     for scope in scope_info.scopes_containing(query.offset) {
         completions.extend(
@@ -57,7 +51,7 @@ fn var_completion(doc: &Document, query: Query, existing_var: ast::Var, scope_in
     completions
 }
 
-fn func_completion(env: &EnvDefs, doc: &Document, existing_ident: ast::Ident) -> Vec<CompletionItem> {
+fn complete_func(env: &EnvDefs, doc: &Document, existing_ident: ast::Ident) -> Vec<CompletionItem> {
     env.funcs
         .values()
         .filter(|func| func.name.starts_with(existing_ident.get()))

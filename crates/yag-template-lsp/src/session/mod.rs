@@ -1,6 +1,6 @@
 use std::hash::RandomState;
 
-use anyhow::anyhow;
+use anyhow::Context;
 use dashmap::mapref::one::Ref;
 use dashmap::DashMap;
 use tower_lsp::lsp_types::Url;
@@ -30,7 +30,7 @@ impl Session {
     pub(crate) fn document(&self, uri: &Url) -> anyhow::Result<Ref<'_, Url, Document, RandomState>> {
         self.documents
             .get(uri)
-            .ok_or_else(|| anyhow!("could not find document {uri}"))
+            .with_context(|| format!("could not find document {uri}"))
     }
 
     pub(crate) fn upsert_document(&self, uri: &Url, document: Document) {

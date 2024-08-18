@@ -25,8 +25,8 @@ impl YagTemplateLanguageServer {
 }
 
 macro_rules! try_handle {
-    ($ret:expr) => {
-        $ret.await.map_err(|_| jsonrpc::Error::internal_error())
+    ($resp:expr) => {
+        $resp.await.map_err(|_| jsonrpc::Error::internal_error())
     };
 }
 
@@ -34,7 +34,7 @@ macro_rules! try_handle {
 impl LanguageServer for YagTemplateLanguageServer {
     async fn initialize(&self, _: InitializeParams) -> Result<InitializeResult> {
         let extra_completion_trigger_chars = vec!['$'];
-        let completion_trigger_chars: Vec<String> = ('a'..='z')
+        let completion_trigger_chars: Vec<_> = ('a'..='z')
             .chain('A'..='Z')
             .chain(extra_completion_trigger_chars)
             .map(|c| c.to_string())

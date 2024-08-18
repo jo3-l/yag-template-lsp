@@ -12,12 +12,13 @@ pub(crate) async fn hover(sess: &Session, params: HoverParams) -> anyhow::Result
     let pos = doc.mapper.offset(params.text_document_position_params.position);
 
     let query = Query::at(&doc.syntax(), pos).unwrap();
-    if query.in_func_name() {
+    let resp = if query.in_func_name() {
         let func_ident = query.ident().unwrap();
-        Ok(hover_for_func(&sess.envdefs, &doc, func_ident))
+        hover_for_func(&sess.envdefs, &doc, func_ident)
     } else {
-        Ok(None)
-    }
+        None
+    };
+    Ok(resp)
 }
 
 fn hover_for_func(env: &EnvDefs, doc: &Document, func_ident: ast::Ident) -> Option<Hover> {
