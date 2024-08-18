@@ -17,7 +17,7 @@ impl Query {
 }
 
 impl Query {
-    pub fn is_var_access(&self) -> bool {
+    pub fn in_var_access(&self) -> bool {
         self.token.kind() == SyntaxKind::Var && self.token.parent().is_some_and(|parent| parent.is::<ast::VarAccess>())
     }
 

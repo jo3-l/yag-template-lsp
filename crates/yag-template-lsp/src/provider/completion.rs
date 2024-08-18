@@ -15,7 +15,7 @@ pub(crate) async fn complete(sess: &Session, params: CompletionParams) -> anyhow
     let pos = doc.mapper.offset(params.text_document_position.position);
 
     let query = Query::at(&doc.syntax(), pos).unwrap();
-    let resp = if query.is_var_access() {
+    let resp = if query.in_var_access() {
         let existing_var = query.var().unwrap();
         let scope_info = &doc.analysis.scope_info;
         let completions = complete_var(&doc, query, existing_var, scope_info);
