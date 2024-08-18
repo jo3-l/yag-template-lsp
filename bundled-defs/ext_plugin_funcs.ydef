@@ -137,8 +137,11 @@ func dbGetPatternReverse(userID, pattern, limit, numSkip)
 func dbDel(userID, key)
 	Deletes the specified entry from the database.
 
-func dbDelById(userID, entryID)
+func dbDelByID(userID, entryID)
 	Deletes the database entry by ID.
+
+func dbDelById(userID, entryID)
+	An alias of dbDelByID.
 
 func dbDelMultiple(query, limit, numSkip)
 	Deletes up to `limit` entries from the database matching the given criteria. Returns the number of deleted entries.

@@ -293,6 +293,9 @@ func editNickname(newNick)
 func onlineCount()
 	Returns the number of online members on the current server, including bots.
 
+func onlineCountBots()
+	**Deprecated.** This function no longer works and will always return `0`.
+
 func sort(list, opts...)
 	Returns the given slice or array in sorted order, by default ascending. The list's items must all be of the same
 	type. Additional options may be provided, with the following keys:

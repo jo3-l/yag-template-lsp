@@ -1,0 +1,42 @@
+name: New template functions
+
+on:
+  cron: 0 0 * * *
+  workflow_dispatch:
+
+jobs:
+  detect-missing-funcs:
+    name: Check for new template functions
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v3
+        with:
+          go-version: 1.22
+
+      - run: go install github.com/jo3-l/yagfuncdata/cmd/lytfs@latest
+
+      - name: Generate diff against lytfs and create issue if needed
+        run: |
+          new_func_diff=$(python3 scripts/gen-lytfs-diff.py)
+          if [ -n "$new_func_diff" ]; then
+            existing_issue=$(gh issue list --label new-funcs --state open --json number -q '.[0].number')
+
+            issue_body=$(cat <<EOF
+## ⚠️ Bundled function definitions are outdated
+
+The following functions need to be added:
+
+\`\`\`diff
+$new_func_diff
+\`\`\`
+EOF
+)
+            if [ -n "$existing_issue" ]; then
+              gh issue edit "$existing_issue" --body "$issue_body"
+            else
+              gh issue create --title "Function definitions are outdated" --body "$issue_body" --label new-funcs
+            fi
+          else
+            echo "no new functions"
+          fi
