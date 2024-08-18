@@ -37,9 +37,9 @@ func parseArgs(numRequired, errorMsg, cargs...)
 	{{ $args := parseArgs 1 "" (carg "int" "coolness level" 0 100) (carg "member" "target member") }}
 	Coolness: {{ $args.Get 0 }}
 	{{- if $args.IsSet 1 }}
-	Target: {{ ($args.Get 1).User }}
+		Target: {{ ($args.Get 1).User }}
 	{{- else }}
-	Target: {{ .User }}
+		Target: {{ .User }}
 	{{ end }}
 	```
 
