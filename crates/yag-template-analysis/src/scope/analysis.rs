@@ -2,11 +2,10 @@ use std::mem;
 
 use ahash::AHashMap;
 use slotmap::SlotMap;
-use yag_template_syntax::ast::{self, Action, AstNode, AstToken};
-use yag_template_syntax::{TextRange, TextSize};
+use yag_template_syntax::ast::{Action, AstNode, AstToken};
+use yag_template_syntax::{ast, TextRange, TextSize};
 
-use super::info::DeclaredVarId;
-use crate::scope::info::{DeclaredVar, Scope, ScopeId, ScopeInfo};
+use super::{DeclaredVar, DeclaredVarId, Scope, ScopeId, ScopeInfo};
 use crate::AnalysisError;
 
 pub fn analyze(root: ast::Root) -> (ScopeInfo, Vec<AnalysisError>) {

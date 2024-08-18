@@ -5,7 +5,7 @@ use scope::ScopeInfo;
 use yag_template_envdefs::EnvDefs;
 use yag_template_syntax::{ast, TextRange};
 
-mod checks;
+pub mod checks;
 pub mod scope;
 
 pub struct Analysis {
@@ -13,11 +13,9 @@ pub struct Analysis {
     pub errors: Vec<AnalysisError>,
 }
 
-use checks::undefined_funcs;
-
 pub fn analyze(env: &EnvDefs, root: ast::Root) -> Analysis {
     let (scope_info, mut errors) = scope::analyze(root.clone());
-    errors.extend(undefined_funcs::check(env, root));
+    errors.extend(checks::run_all(env, root));
     Analysis { scope_info, errors }
 }
 

@@ -3,7 +3,7 @@ use yag_template_syntax::ast::{self, AstNode, AstToken};
 
 use crate::AnalysisError;
 
-pub(crate) fn check(env: &EnvDefs, root: ast::Root) -> Vec<AnalysisError> {
+pub fn check(env: &EnvDefs, root: ast::Root) -> Vec<AnalysisError> {
     root.syntax()
         .descendants()
         .filter_map(ast::FuncCall::cast)
