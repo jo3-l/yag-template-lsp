@@ -91,13 +91,13 @@ jobs:
         working-directory: ./editors/vscode
 
       - name: Upload VSCode extension
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: yag-template-lsp-${{ matrix.vscode-target }}.vsix
           path: editors/vscode/yag-template-lsp-${{ matrix.vscode-target }}.vsix
 
       - name: Upload binary
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: yag-template-lsp-${{ matrix.vscode-target }}
           path: yag-template-lsp-${{ matrix.rust-target }}${{ env.BIN_EXT }}
