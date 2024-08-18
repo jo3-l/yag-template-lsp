@@ -9,6 +9,9 @@ jobs:
   detect-missing-funcs:
     name: Check for new template functions
     runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
+      LYTFS_GITHUB_TOKEN: ${{ github.token }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v3
