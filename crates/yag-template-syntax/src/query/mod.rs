@@ -1,5 +1,7 @@
+use rowan::TextSize;
+
 use crate::ast::{AstNode, AstToken, SyntaxNodeExt};
-use crate::{ast, SyntaxKind, SyntaxNode, SyntaxToken, TextSize};
+use crate::{ast, SyntaxKind, SyntaxNode, SyntaxToken};
 
 pub struct Query {
     pub offset: TextSize,

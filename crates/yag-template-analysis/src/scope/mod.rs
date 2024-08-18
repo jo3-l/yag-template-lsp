@@ -2,10 +2,11 @@ mod analysis;
 
 use ahash::AHashMap;
 pub use analysis::analyze;
+use rowan::{TextRange, TextSize};
 use slotmap::{new_key_type, SlotMap};
 use smol_str::SmolStr;
+use yag_template_syntax::ast;
 use yag_template_syntax::ast::AstToken;
-use yag_template_syntax::{ast, TextRange, TextSize};
 
 new_key_type! { pub struct ScopeId; }
 new_key_type! { pub struct DeclaredVarId; }

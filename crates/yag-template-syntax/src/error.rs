@@ -1,7 +1,7 @@
 use core::fmt;
 use std::error::Error;
 
-use crate::TextRange;
+use rowan::TextRange;
 
 #[derive(Debug, Clone)]
 pub struct SyntaxError {

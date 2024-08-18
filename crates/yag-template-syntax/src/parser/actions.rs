@@ -1,7 +1,9 @@
-use crate::parser::expr::{arg, expr_pipeline};
-use crate::parser::token_set::{TokenSet, ACTION_DELIMS, LEFT_DELIMS, RIGHT_DELIMS, STRING_LITERALS};
-use crate::parser::{Parser, TokenPattern};
-use crate::{SyntaxKind, TextRange};
+use rowan::TextRange;
+
+use super::expr::{arg, expr_pipeline};
+use super::token_set::{TokenSet, ACTION_DELIMS, LEFT_DELIMS, RIGHT_DELIMS, STRING_LITERALS};
+use super::{Parser, TokenPattern};
+use crate::SyntaxKind;
 
 impl Parser<'_> {
     fn at_left_delim_and(&mut self, pat: impl TokenPattern) -> bool {

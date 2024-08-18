@@ -7,8 +7,6 @@ pub mod parser;
 pub mod query;
 mod rowan_boundary;
 
-pub use rowan::{TextRange, TextSize};
-
 pub use crate::error::SyntaxError;
 pub use crate::kind::SyntaxKind;
 pub use crate::rowan_boundary::{SyntaxElement, SyntaxNode, SyntaxToken, YagTemplateLanguage};

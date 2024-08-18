@@ -1,10 +1,11 @@
 use std::vec::Drain;
 
+use rowan::{TextRange, TextSize};
 use unscanny::Scanner;
 
 use crate::error::SyntaxError;
 use crate::go_syntax::EscapeContext;
-use crate::{go_syntax, SyntaxKind, TextRange, TextSize};
+use crate::{go_syntax, SyntaxKind};
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 enum LexMode {

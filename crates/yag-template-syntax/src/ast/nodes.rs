@@ -1,8 +1,10 @@
 use std::iter::Skip;
 
+use rowan::TextSize;
+
 use super::AstTokenChildren;
 use crate::ast::{tokens, AstChildren, AstNode, AstToken, SyntaxElementChildren, SyntaxNodeExt};
-use crate::{SyntaxElement, SyntaxKind, SyntaxNode, TextSize, YagTemplateLanguage};
+use crate::{SyntaxElement, SyntaxKind, SyntaxNode, YagTemplateLanguage};
 
 macro_rules! define_node {
     ($(#[$attr:meta])* $name:ident) => {

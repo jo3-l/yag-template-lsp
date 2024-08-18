@@ -4,13 +4,12 @@ mod token_set;
 
 use actions::text_or_action;
 use drop_bomb::DropBomb;
-pub(crate) use rowan::Checkpoint;
-use rowan::{GreenNode, GreenNodeBuilder};
+use rowan::{Checkpoint, GreenNode, GreenNodeBuilder, TextRange, TextSize};
 
 use crate::error::SyntaxError;
 use crate::lexer::Lexer;
 use crate::parser::token_set::TokenSet;
-use crate::{SyntaxKind, TextRange, TextSize};
+use crate::SyntaxKind;
 
 pub fn parse(input: &str) -> Parse {
     let mut p = Parser::new(input);

@@ -1089,6 +1089,7 @@ name = "yag-template-analysis"
 version = "0.1.0"
 dependencies = [
  "ahash",
+ "rowan",
  "slotmap",
  "smol_str",
  "yag-template-envdefs",
@@ -1109,6 +1110,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "dashmap",
+ "rowan",
  "tokio",
  "tower-lsp",
  "tracing",

@@ -1,5 +1,6 @@
 use yag_template_envdefs::EnvDefs;
-use yag_template_syntax::ast::{self, AstNode, AstToken};
+use yag_template_syntax::ast;
+use yag_template_syntax::ast::{AstNode, AstToken};
 
 use crate::AnalysisError;
 

@@ -1,9 +1,10 @@
 use core::fmt;
 use std::error::Error;
 
+use rowan::TextRange;
 use scope::ScopeInfo;
 use yag_template_envdefs::EnvDefs;
-use yag_template_syntax::{ast, TextRange};
+use yag_template_syntax::ast;
 
 pub mod checks;
 pub mod scope;

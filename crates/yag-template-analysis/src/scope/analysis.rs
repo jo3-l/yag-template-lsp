@@ -1,9 +1,10 @@
 use std::mem;
 
 use ahash::AHashMap;
+use rowan::{TextRange, TextSize};
 use slotmap::SlotMap;
+use yag_template_syntax::ast;
 use yag_template_syntax::ast::{Action, AstNode, AstToken};
-use yag_template_syntax::{ast, TextRange, TextSize};
 
 use super::{DeclaredVar, DeclaredVarId, Scope, ScopeId, ScopeInfo};
 use crate::AnalysisError;
