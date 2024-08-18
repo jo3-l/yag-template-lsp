@@ -48,7 +48,7 @@ jobs:
             if [ -n "$existing_issue" ]; then
               gh issue edit "$existing_issue" --body "$issue_body"
             else
-              gh issue create --title "Bundled function definitions are outdated" --body "$issue_body" --label new-funcs
+              gh issue create --title "Bundled function definitions are outdated" --body "$issue_body" --label new-funcs --assignee jo3-l
             fi
           else
             echo "no new functions"
