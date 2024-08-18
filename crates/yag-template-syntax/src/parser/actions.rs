@@ -242,7 +242,7 @@ fn range_clause(p: &mut Parser) {
 
             // {{range $x = expr}}: similar to above.
             SyntaxKind::Eq => {
-                saw_decl_or_assign_op = false;
+                saw_decl_or_assign_op = true;
 
                 p.assert(SyntaxKind::Var);
                 num_vars += 1;
