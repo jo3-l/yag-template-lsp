@@ -75,15 +75,15 @@ func execCC(ccID, channel, delay, data)
 
 	```yag
 	{{ if .ExecData }}
-	{{ sendMessage nil (print "Executing custom command... Got data: " .ExecData) }}
-	{{ return }}
+		{{ sendMessage nil (print "Executing custom command... Got data: " .ExecData) }}
+		{{ return }}
 	{{ end }}
 
 	{{ sendMessage nil "Starting up..." }}
 	{{ execCC .CCID nil 5 "Hello, world!" }}
 	```
 
-func scheduleUniqueCC(ccID, cahnnel, delay, key, data)
+func scheduleUniqueCC(ccID, channel, delay, key, data)
 	Schedules a custom command execution to occur in the future, identified by `key`.
 
 	- `ccID`: the ID of the custom command to execute.
