@@ -55,6 +55,9 @@ func mentionEveryone()
 func mentionHere()
 	Mentions `@here` without escaping it.
 
+func mentionRole(role)
+	Mentions the given role, which may be an ID, mention, name, or role object, without escaping.
+
 func mentionRoleID(roleID)
 	Mentions the given role without escaping it.
 
@@ -63,28 +66,41 @@ func mentionRoleName(roleName)
 
 	Prefer using the `mentionRoleID` function, as IDs are guaranteed to be unique and do not change with role edits.
 
+func hasRole(role)
+	Reports whether the triggering member has the specified role, which can be an ID, mention, name,
+	or role object.
+
 func hasRoleID(roleID)
 	Reports whether the triggering member has the specified role ID.
 
 func hasRoleName(roleName)
 	Reports whether the triggering member has the specified role name (case-insensitive).
 
+func addRole(role)
+	Adds the specified role, which can be an ID, mention, name, or role object, to the triggering
+	member.
+
 func addRoleID(roleID)
 	Adds the specified role ID to the triggering member.
-
-func removeRoleID(roleID, delay?)
-	Removes the role with the specified ID from the triggering member with an optional delay in seconds.
-
-func setRoles(target, newRoles)
-	Sets the roles of the specified user to the provided list of role IDs. The roles are overwritten, so any existing
-	roles are removed if not included in the new list. `newRoles` must be a slice. `target` may be a user ID, mention,
-	or user object, but must be a member of the server.
 
 func addRoleName(roleName)
 	Adds the first case-insensitive matching role name to the triggering member.
 
+func removeRole(role, delay?)
+	Removes the role, which may be an ID, mention, name or role object, from the triggering member
+	with an optional delay in seconds.
+
+func removeRoleID(roleID, delay?)
+	Removes the role with the specified ID from the triggering member with an optional delay in seconds.
+
 func removeRoleName(roleName, delay?)
 	Removes the first case-insensitive matching role name from the triggering member with an optional delay in seconds.
+
+func giveRole(member, role)
+	Gives the role to the target member.
+
+	- `member`: the member to target. Either an ID, mention, or user object, but must be part of the server.
+	- `role`: the role to give. Can be an ID, mention, name, or role object.
 
 func giveRoleID(member, roleID)
 	Gives the role specified by its ID to the target member.
@@ -94,6 +110,12 @@ func giveRoleID(member, roleID)
 func giveRoleName(member, roleName)
 	Gives the first case-insensitive matching role name to the target member.
 
+func takeRole(member, role)
+	Removes the role from the target member.
+
+	- `member`: the member to target. Either an ID, mention, or user object, but must be part of the server.
+	- `role`: the role to give. Can be an ID, mention, name, or role object.
+
 func takeRoleID(target, roleID)
 	Removes the specified role from `target`. `target` may be a user ID, mention, or user object, but must be a member
 	of the server.
@@ -101,6 +123,15 @@ func takeRoleID(target, roleID)
 func takeRoleName(target, roleName, delay?)
 	Removes the first case-insensitive matching role name from `target` with an optional delay in seconds. `target` may
 	be a user ID, mention, or user object, but must be a member of the server.
+
+func setRoles(target, newRoles)
+	Sets the roles of the specified user to the provided list of role IDs. The roles are overwritten, so any existing
+	roles are removed if not included in the new list. `newRoles` must be a slice. `target` may be a user ID, mention,
+	or user object, but must be a member of the server.
+
+func targetHasRole(target, role)
+	Reports whether the specified target has the specified role ID. `target` may be a user ID, mention, or user object,
+	but must be a member of the server. `role` may be an ID, mention, name, or role object.
 
 func targetHasRoleID(target, roleID)
 	Reports whether the specified target has the specified role ID. `target` may be a user ID, mention, or user object,
@@ -192,7 +223,14 @@ func getPinCount(channel)
 	Returns the number of pinned messages in the given channel.
 
 func getRole(role)
-	Returns a role object. `role` may either be an ID or a name to match against (ignoring case).
+	Returns the role object corresponding to the argument, which may be an ID or a case-insensitive
+	name to match against.
+
+func getRoleID(roleID)
+	Returns the role object with the given ID.
+
+func getRoleName(name)
+	Returns the role object with the given name.
 
 func getThread(thread)
 	Returns the full thread object for the given thread. Will not work for channels.
@@ -217,8 +255,23 @@ func createThread(channel, messageID, name, private?, autoArchiveDuration?, invi
 	{{ createThread nil nil "new thread" false 60 true }}
 	```
 
+func editThread(channel, opts...)
+	Edits the thread using the given `opts` sdict, which may contain the following keys:
+
+	- `slowmode`: The thread's slowmode in seconds.
+	- `tags`: One or more forum tag name or ID. Duplicate and invalid tags are ignored.
+	- `auto_archive_duration`: how long the thread will show in the channel list after inactivity.
+	Valid values are 60, 1440, 4320, and 10080 minutes. Defaults to 10080 (7 days).
+	- `invitable`: whether non-moderators can add other members to the thread. (true/false)
+
+func openThread(thread)
+	Reopens the given thread.
+
 func deleteThread(thread)
 	Deletes the given thread.
+
+func closeThread(thread, lock?)
+	Closes the given thread, optionally locking it as well.
 
 func addThreadMember(thread, member)
 	Adds a member to an existing thread. Does nothing if either argument is invalid.
@@ -241,6 +294,12 @@ func deleteForumPost(post)
 
 	This function does the same thing as `deleteThread`. Use whichever function is more semantically meaningful in the
 	context of your custom command.
+
+func pinForumPost(post)
+	Pins the given post.
+
+func unpinForumPost(post)
+	Unpins the given post.
 
 func currentUserAgeHuman()
 	The account age of the current user in a human-readable format.

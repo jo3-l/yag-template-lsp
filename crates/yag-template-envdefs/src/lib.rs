@@ -1,3 +1,4 @@
+use std::collections::hash_map::Entry;
 use std::error::Error;
 use std::fmt;
 use std::fmt::Write;
@@ -99,44 +100,50 @@ pub fn parse(sources: &[EnvDefSource]) -> Result<EnvDefs, ParseError> {
 }
 
 fn process_source(defs: &mut EnvDefs, src: &EnvDefSource) -> Result<(), ParseError> {
-    let mut funcs: Vec<Func> = vec![];
+    macro_rules! bail {
+        ($msg:expr, $lineno:expr) => {
+            return Err(ParseError::new(src.name.into(), $lineno, $msg))
+        };
+    }
+
+    let mut funcs: Vec<(Func, usize)> = vec![];
     for (lineno, line) in src.data.lines().enumerate() {
         if line.starts_with("//") {
             // comment; ignore
         } else if line.chars().all(char::is_whitespace) {
             // blank line, possibly separating paragraphs in function documentation
-            if let Some(f) = funcs.last_mut().filter(|f| !f.doc.is_empty()) {
-                f.doc.push('\n');
+            if let Some((f, _)) = funcs.last_mut() {
+                if !f.doc.is_empty() {
+                    f.doc.push('\n')
+                }
             }
         } else if line.starts_with("func") {
             match parse_func_signature(line) {
-                Ok(f) => funcs.push(f),
-                Err(msg) => return Err(ParseError::new(src.name.into(), lineno, msg)),
+                Ok(f) => funcs.push((f, lineno)),
+                Err(msg) => bail!(msg, lineno),
             }
         } else if let Some(doc_line) = line.strip_prefix('\t') {
             match funcs.last_mut() {
-                Some(f) => {
+                Some((f, _)) => {
                     f.doc.push_str(doc_line);
                     f.doc.push('\n');
                 }
-                None => {
-                    return Err(ParseError::new(
-                        src.name.into(),
-                        lineno,
-                        "unexpected indented line not part of function documentation",
-                    ))
-                }
+                None => bail!("unexpected indented line not part of function documentation", lineno),
             }
         } else {
-            return Err(ParseError::new(
-                src.name.into(),
-                lineno,
+            bail!(
                 "could not interpret line as comment, function signature, or indented documentation",
-            ));
+                lineno
+            )
         }
     }
 
-    defs.funcs.extend(funcs.into_iter().map(|f| (f.name.clone(), f)));
+    for (f, lineno) in funcs {
+        match defs.funcs.entry(f.name.clone()) {
+            Entry::Occupied(_) => bail!(format!("duplicate definition for function {}", f.name), lineno),
+            Entry::Vacant(e) => e.insert(f),
+        };
+    }
     Ok(())
 }
 

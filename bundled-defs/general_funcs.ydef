@@ -284,6 +284,15 @@ func shuffle(list)
 func verb()
 	Returns a randmo verb.
 
+func hash(str)
+	Generates a SHA256 hash of the input string.
+
+func encodeBase64(str)
+	Encodes the argument in base-64.
+
+func decodeBase64(data)
+	Decodes the provided base-64 data.
+
 func currentTime()
 	Returns the current time in UTC.
 
