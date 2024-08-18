@@ -14,12 +14,22 @@
 	"engines": {
 		"vscode": "^1.76.0"
 	},
+	"keywords": [
+		"yag",
+		"yagpdb",
+		"yagpdb cc",
+		"yagpdb custom commands",
+		"custom commands"
+	],
 	"contributes": {
 		"languages": [
 			{
 				"id": "yagtemplate",
 				"extensions": [
-					".yag"
+					".yag",
+					".yagcc",
+					".gotmpl",
+					".go.tmpl"
 				],
 				"configuration": "./yagtemplate-language-configuration.json"
 			},
