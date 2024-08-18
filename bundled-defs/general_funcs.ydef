@@ -97,7 +97,7 @@ func min(x, y)
 	Returns the smaller number between `x` and `y`.
 
 func mod(x, y)
-	Returns the floating-point remainder fo the division of x by y.
+	Returns the floating-point remainder of the division of x by y.
 
 	Takes the sign of X, so `mod -5 3` results in `-2`, not `1`. To ensure a non-negative result, use `mod` twice:
 	`{{ mod (add (mod x y) y) y }}`.
@@ -160,9 +160,9 @@ func sdict(keyvalues...)
 func structToSdict(struct)
 
 func cembed(opts...)
-	Returns an embed object to send with [sendMessage](#sendmessage)-related functions.
+	Returns an embed object to send with `sendMessage`-related functions.
 
-	All keys are optional, but the Discord API will reject completey empty embeds, so *some* content is required.
+	All keys are optional, but the Discord API will reject completely empty embeds, so *some* content is required.
 
 	- `title`: the title of the embed
 	- `url`: the URL to hyperlink the title with
@@ -178,9 +178,9 @@ func cembed(opts...)
 		- `icon_url`: the author's icon
 	- `thumbnail`: a small image in the top-right corner. Is an sdict with the following keys:
 		- `url`: the image's URL
-	- `image`: an image to display at full width at the bottom of the embed. Is an sdict with the following keys:
+	- `image`: an image to display at full width at the bottom of the embed. Is a sdict with the following keys:
 		- `url`: the image's URL
-	- `footer`: Shows some details at the very bottom of the embed. Is an sdict with the following keys:
+	- `footer`: Shows some details at the very bottom of the embed. Is a sdict with the following keys:
 		- `text`: the footer's text
 		- `icon_url`: a small icon to display to the left of the footer's text
 	- `timestamp`: a (static) timestamp to display to the right of the footer's text
@@ -191,7 +191,7 @@ func cslice(els...)
 func complexMessage(opts...)
 	Creates a complex message object for use in `sendMessage` functions.
 
-	- `allowed_mentions`: an sdict with the following keys:
+	- `allowed_mentions`: a sdict with the following keys:
 		- `parse`: a slice of accepted values for mentions. May include `users`, `roles`, and `everyone`.
 		- `users`: a slice of user IDs to mention.
 		- `roles`: a slice of role IDs to mention.
@@ -232,7 +232,7 @@ func complexMessage(opts...)
 func complexMessageEdit(opts...)
 	Creates a complex message object for use in `editMessage` functions.
 
-	- `allowed_mentions`: an sdict with the following keys:
+	- `allowed_mentions`: a sdict with the following keys:
 		- `parse`: a slice of accepted values for mentions. May include `users`, `roles`, and `everyone`.
 		- `users`: a slice of user IDs to mention.
 		- `roles`: a slice of role IDs to mention.
@@ -267,7 +267,7 @@ func noun()
 	Returns a random noun.
 
 func randInt(min?, max)
-	Returns a uniformally distributed random integer in the half-open inteval `[min, max)`. That is, `min` is included;
+	Returns a uniformly distributed random integer in the half-open interval `[min, max)`. That is, `min` is included;
 	`max` is excluded. If only one argument is given, it is interpreted as a maximum bound and a random integer in `[0,
 	max)` is returned.
 

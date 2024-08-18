@@ -27,13 +27,11 @@ func html(v)
 	arguments.
 
 func index(v, keys...)
-	Return the result of indexing its first argument by the following arguments.
-	Thus `index x 1 2 3` is, in Go syntax, `x[1][2][3]`. Each indexed item must
-	be a map, slice, or array.
+	Return the result of indexing its first argument by the following arguments. Thus `index x 1 2 3` is, in Go syntax,
+	`x[1][2][3]`. Each indexed item must be a map, slice, or array.
 
 func js(v)
-	Returns the escaped JavaScript equivalent of the textual representation of
-	its arguments.
+	Returns the escaped JavaScript equivalent of the textual representation of its arguments.
 
 func len(v)
 	Returns the integer length of its argument.
@@ -42,26 +40,24 @@ func not(v)
 	Returns the boolean negation of its argument.
 
 func or(args...)
-	Returns the boolean OR of its arguments by returning the first non-empty
-	argument or the last argument, that is, `or x y` behaves as `if x then x
-	else y`. All the arguments are evaluated.
+	Returns the boolean OR of its arguments by returning the first non-empty argument or the last argument, that is, `or
+	x y` behaves as `if x then x else y`. All the arguments are evaluated.
 
 func urlquery(v)
-	Returns the escaped value of the textual representation of its arguments in
-	a form suitable for embedding in a URL query.
+	Returns the escaped value of the textual representation of its arguments in a form suitable for embedding in a URL
+	query.
 
 func eq(x, y...)
 	Return the boolean truth of `x == y`.
 
-	For simpler multi-way equality tests, eq accepts two or more arguments and
-	compares the second and subsequent to the first, returning in effect
+	For simpler multi-way equality tests, eq accepts two or more arguments and compares the second and subsequent
+	arguments to the first, returning in effect
 
 	```
 	arg1==arg2 || arg1==arg3 || arg1==arg4 ...
 	```
 
-	(Unlike with || in Go, however, eq is a function call and all the arguments
-	will be evaluated.)
+	(Unlike with || in Go, however, eq is a function call and all the arguments will be evaluated.)
 
 func ge(x, y)
 	Returns the boolean truth of `x >= y`.

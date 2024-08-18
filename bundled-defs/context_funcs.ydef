@@ -22,7 +22,7 @@ func publishResponse()
 func sendDM(message)
 	Sends a direct message to the triggering user.
 
-	- `message`: the messaget o send. May also be the result from a `complexMessage` call.
+	- `message`: the message to send. May also be the result from a `complexMessage` call.
 
 func sendMessage(channel, message)
 	Sends a message to the specified channel.
@@ -203,7 +203,7 @@ func createThread(channel, messageID, name, private?, autoArchiveDuration?, invi
 	- `channel`: the parent channel to create the thread in.
 	- `message`: either `nil` to create a channel thread, or a message ID to create a message thread.
 	- `private`: whether the thread is private. Default `false`.
-	- `auto_archive_duration`: how long the thread will show in the channel list after inactivity.<br>
+	- `auto_archive_duration`: how long the thread will show in the channel list after inactivity.
 	Valid values are 60, 1440, 4320, and 10080 minutes. Defaults to 10080 (7 days).
 	- `invitable`: whether non-moderators can add other members to the thread. (true/false)
 
@@ -233,8 +233,8 @@ func createForumPost(channel, name, content, opts...)
 	- `name`: The post title. May not be empty. Must be a string.
 	- `content`: the initial message's content; may be a string, an embed, or a complex message. May not be empty.
 	- `opts` (optional): Additional options for the post. May include:
-	- `"slowmode"`: The thread's slowmode in seconds.
-	- `"tags"`: One or more forum tag name or ID. Duplicate and invalid tags are ignored.
+		- `slowmode`: The thread's slowmode in seconds.
+		- `tags`: One or more forum tag name or ID. Duplicate and invalid tags are ignored.
 
 func deleteForumPost(post)
 	Deletes the given post.
