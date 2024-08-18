@@ -7,6 +7,8 @@ use yag_template_syntax::ast::{self, SyntaxNodeExt};
 use yag_template_syntax::parser::{self, Parse};
 use yag_template_syntax::{SyntaxNode, TextRange, TextSize};
 
+use super::Session;
+
 pub(crate) struct Document {
     pub(crate) parse: Parse,
     pub(crate) mapper: Mapper,
@@ -14,7 +16,7 @@ pub(crate) struct Document {
 }
 
 impl Document {
-    pub fn new(src: &str) -> anyhow::Result<Self> {
+    pub fn new(sess: &Session, src: &str) -> anyhow::Result<Self> {
         let parse = parser::parse(src);
         let root = SyntaxNode::new_root(parse.root.clone())
             .try_to::<ast::Root>()
@@ -22,7 +24,7 @@ impl Document {
         let document = Self {
             parse: parse.clone(),
             mapper: Mapper::new_utf16(src),
-            analysis: yag_template_analysis::analyze(root),
+            analysis: yag_template_analysis::analyze(&sess.envdefs, root),
         };
         Ok(document)
     }

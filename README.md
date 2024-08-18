@@ -23,7 +23,6 @@ A range of basic LSP features are already implemented, namely,
 
 The following are relatively straightforward changes that are planned for the near future:
 
-- [ ] Errors for undefined functions
 - [ ] Go-to-definition for variables
 - [ ] Automated variable renaming
 

@@ -2,8 +2,10 @@ use std::error::Error;
 use std::fmt;
 
 use scope::ScopeInfo;
+use yag_template_envdefs::EnvDefs;
 use yag_template_syntax::{ast, TextRange};
 
+mod checks;
 pub mod scope;
 
 pub struct Analysis {
@@ -11,8 +13,11 @@ pub struct Analysis {
     pub errors: Vec<AnalysisError>,
 }
 
-pub fn analyze(root: ast::Root) -> Analysis {
-    let (scope_info, errors) = scope::analyze(root);
+use checks::undefined_funcs;
+
+pub fn analyze(env: &EnvDefs, root: ast::Root) -> Analysis {
+    let (scope_info, mut errors) = scope::analyze(root.clone());
+    errors.extend(undefined_funcs::check(env, root));
     Analysis { scope_info, errors }
 }
 

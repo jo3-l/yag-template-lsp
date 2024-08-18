@@ -4,7 +4,8 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
+yag-template-syntax = { path = "../yag-template-syntax" }
+yag-template-envdefs = { path = "../yag-template-envdefs" }
 ahash = "0.8.11"
 slotmap = "1.0.7"
-yag-template-syntax = { path = "../yag-template-syntax" }
 smol_str = "0.2.2"

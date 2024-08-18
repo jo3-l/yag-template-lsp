@@ -1091,6 +1091,7 @@ dependencies = [
  "ahash",
  "slotmap",
  "smol_str",
+ "yag-template-envdefs",
  "yag-template-syntax",
 ]
 
