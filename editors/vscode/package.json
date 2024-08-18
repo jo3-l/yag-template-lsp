@@ -31,14 +31,22 @@
 					".gotmpl",
 					".go.tmpl"
 				],
-				"configuration": "./yagtemplate-language-configuration.json"
+				"configuration": "./yagtemplate-language-configuration.json",
+				"icon": {
+					"dark": "./icon.png",
+					"light": "./icon.png"
+				}
 			},
 			{
 				"id": "ydef",
 				"extensions": [
 					".ydef"
 				],
-				"configuration": "./ydef-language-configuration.json"
+				"configuration": "./ydef-language-configuration.json",
+				"icon": {
+					"dark": "./icon.png",
+					"light": "./icon.png"
+				}
 			}
 		],
 		"grammars": [
