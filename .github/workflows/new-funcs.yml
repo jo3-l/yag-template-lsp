@@ -37,9 +37,9 @@ jobs:
           $new_func_diff
           \`\`\`
 
-          This check is run automatically every day at 00:00 UTC.
-          Go to the [Actions tab](https://github.com/jo3-l/yag-template-lsp/actions/workflows/new-funcs.yml)
-          to manually trigger an update.
+          This check is run automatically every day at 00:00 UTC. Go to the [Actions tab][new-funcs-workflow] to manually trigger an update.
+
+          [new-funcs-workflow]: https://github.com/jo3-l/yag-template-lsp/actions/workflows/new-funcs.yml
 
           _Last updated at: $(date -u +"%Y-%m-%d %H:%M:%S UTC")_
           EOF
