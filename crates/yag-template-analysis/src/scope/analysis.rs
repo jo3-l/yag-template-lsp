@@ -1,41 +1,109 @@
+use std::mem;
+
+use ahash::AHashMap;
 use slotmap::SlotMap;
-use smol_str::SmolStr;
-use yag_template_syntax::ast::{self, Action, AstNode, AstToken, SyntaxNodeExt};
-use yag_template_syntax::{SyntaxNode, TextRange, TextSize};
+use yag_template_syntax::ast::{self, Action, AstNode, AstToken};
+use yag_template_syntax::{TextRange, TextSize};
 
-use crate::scope::info::{Scope, ScopeId, ScopeInfo, Var};
+use super::info::DeclaredVarId;
+use crate::scope::info::{DeclaredVar, Scope, ScopeId, ScopeInfo};
+use crate::AnalysisError;
 
-pub fn analyze(root: ast::Root) -> ScopeInfo {
-    let mut s = ScopeAnalyzer::new();
-    s.enter_inner_scope(root.syntax().text_range());
+pub fn analyze(root: ast::Root) -> (ScopeInfo, Vec<AnalysisError>) {
+    let mut s = ScopeAnalyzer::new(root.syntax().text_range());
     // The variable $ is predefined as the initial context data.
-    s.push_synthetic_var("$", 0.into());
+    s.declare_synthetic_var("$", 0.into());
     s.analyze_all(root.actions());
-    s.exit_scope();
     s.finish()
 }
 
 struct ScopeAnalyzer {
     scopes: SlotMap<ScopeId, Scope>,
-    stack: Vec<ScopeId>,
-    pending_vars: Vec<Var>,
+    top_scope: ScopeId,
+    scope_stack: Vec<ScopeId>, // parents of top_scope, unless top_scope is detached
+
+    all_declared_vars: SlotMap<DeclaredVarId, DeclaredVar>,
+    var_uses: AHashMap<TextRange, DeclaredVarId>,
+    errors: Vec<AnalysisError>,
 }
 
 impl ScopeAnalyzer {
-    fn new() -> Self {
+    fn new(root_range: TextRange) -> Self {
+        let mut scopes = SlotMap::with_key();
+        let top_scope = scopes.insert(Scope::new(root_range, None));
         Self {
-            scopes: SlotMap::with_key(),
-            stack: Vec::new(),
-            pending_vars: Vec::new(),
+            scopes,
+            top_scope,
+            scope_stack: Vec::new(),
+
+            all_declared_vars: SlotMap::with_key(),
+            var_uses: AHashMap::new(),
+            errors: Vec::new(),
         }
     }
 
-    fn finish(self) -> ScopeInfo {
-        debug_assert!(self.pending_vars.is_empty());
-        debug_assert!(self.stack.is_empty());
-        ScopeInfo::new(self.scopes)
+    fn finish(self) -> (ScopeInfo, Vec<AnalysisError>) {
+        debug_assert!(self.scope_stack.is_empty());
+        (
+            ScopeInfo::new(self.all_declared_vars, self.var_uses, self.scopes),
+            self.errors,
+        )
     }
 
+    fn error(&mut self, message: impl Into<String>, range: TextRange) {
+        self.errors.push(AnalysisError::new(message, range));
+    }
+
+    fn enter_inner_scope(&mut self, range: TextRange) -> ScopeId {
+        self.enter_scope(range, Some(self.top_scope))
+    }
+
+    fn enter_detached_scope(&mut self, range: TextRange) -> ScopeId {
+        self.enter_scope(range, None)
+    }
+
+    fn enter_scope_with_parent(&mut self, range: TextRange, parent: ScopeId) -> ScopeId {
+        self.enter_scope(range, Some(parent))
+    }
+
+    fn enter_scope(&mut self, range: TextRange, parent: Option<ScopeId>) -> ScopeId {
+        let new_scope = self.scopes.insert(Scope::new(range, parent));
+        self.scope_stack.push(mem::replace(&mut self.top_scope, new_scope));
+        new_scope
+    }
+
+    fn exit_scope(&mut self) {
+        self.top_scope = self
+            .scope_stack
+            .pop()
+            .expect("call to exit_scope() should correspond to an earlier enter_scope()");
+    }
+
+    fn declare_synthetic_var(&mut self, name: &str, visible_from: TextSize) -> DeclaredVarId {
+        self.declare_var(DeclaredVar {
+            name: name.into(),
+            visible_from,
+            decl_range: None,
+        })
+    }
+
+    fn declare_var(&mut self, var: DeclaredVar) -> DeclaredVarId {
+        let id = self.all_declared_vars.insert(var.clone());
+        let top_scope = &mut self.scopes[self.top_scope];
+        top_scope.declared_vars.push(var.clone());
+        top_scope.vars_by_name.insert(var.name, id);
+        id
+    }
+}
+
+macro_rules! access {
+    ($e:expr) => {
+        || -> Option<_> { $e }()
+    };
+}
+
+// Action analysis.
+impl ScopeAnalyzer {
     fn analyze_all(&mut self, actions: impl Iterator<Item = Action>) {
         for action in actions {
             self.analyze_action(action);
@@ -63,29 +131,29 @@ impl ScopeAnalyzer {
             self.enter_detached_scope(list.syntax().text_range());
             // All associated template executions have the variable $ predefined
             // as the initial context data.
-            self.push_synthetic_var("$", list.syntax().text_range().start());
+            self.declare_synthetic_var("$", list.syntax().text_range().start());
             self.analyze_all(list.actions());
             self.exit_scope();
         }
     }
 
     fn analyze_template_block(&mut self, block: ast::TemplateBlock) {
-        self.push_var_decls_in(|| block.block_clause()?.context_expr());
+        self.try_analyze_expr(access!(block.block_clause()?.context_expr()));
 
         if let Some(list) = block.action_list() {
             self.enter_detached_scope(list.syntax().text_range());
-            self.push_synthetic_var("$", list.syntax().text_range().start());
+            self.declare_synthetic_var("$", list.syntax().text_range().start());
             self.analyze_all(list.actions());
             self.exit_scope();
         }
     }
 
     fn analyze_template_invocation(&mut self, invocation: ast::TemplateInvocation) {
-        self.push_var_decls_in(|| invocation.context_expr());
+        self.try_analyze_expr(invocation.context_expr());
     }
 
     fn analyze_return_action(&mut self, return_action: ast::ReturnAction) {
-        self.push_var_decls_in(|| return_action.return_expr());
+        self.try_analyze_expr(return_action.return_expr());
     }
 
     fn analyze_if_conditional(&mut self, if_conditional: ast::IfConditional) {
@@ -93,7 +161,7 @@ impl ScopeAnalyzer {
             return;
         };
         let if_clause_scope = self.enter_inner_scope(if_clause.syntax().text_range());
-        self.push_var_decls_in(|| if_clause.if_expr());
+        self.try_analyze_expr(if_clause.if_expr());
         self.exit_scope();
         if let Some(if_list) = if_conditional.if_action_list() {
             self.enter_scope_with_parent(if_list.syntax().text_range(), if_clause_scope);
@@ -108,7 +176,7 @@ impl ScopeAnalyzer {
             return;
         };
         let with_clause_scope = self.enter_inner_scope(with_clause.syntax().text_range());
-        self.push_var_decls_in(|| with_clause.with_expr());
+        self.try_analyze_expr(with_clause.with_expr());
         self.exit_scope();
         if let Some(with_list) = with_conditional.with_action_list() {
             self.enter_scope_with_parent(with_list.syntax().text_range(), with_clause_scope);
@@ -127,7 +195,7 @@ impl ScopeAnalyzer {
         for else_branch in else_branches {
             if let Some(else_clause) = else_branch.else_clause() {
                 parent_scope = self.enter_scope_with_parent(else_clause.syntax().text_range(), parent_scope);
-                self.push_var_decls_in(|| else_clause.cond_expr());
+                self.try_analyze_expr(else_clause.cond_expr());
                 self.exit_scope();
             }
 
@@ -143,16 +211,20 @@ impl ScopeAnalyzer {
         let Some(range_clause) = range_loop.range_clause() else {
             return;
         };
+
         let range_clause_scope = self.enter_inner_scope(range_clause.syntax().text_range());
         if range_clause.declares_vars() {
-            self.pending_vars.extend(
-                range_clause
-                    .iteration_vars()
-                    .map(|ast_var| Var::new(ast_var.name(), ast_var.syntax().text_range().end(), None)),
-            )
+            for var in range_clause.iteration_vars() {
+                self.declare_synthetic_var(var.name(), var.syntax().text_range().end());
+            }
+        } else if range_clause.assigns_vars() {
+            for var in range_clause.iteration_vars() {
+                self.check_var_use(var);
+            }
         }
-        self.push_var_decls_in(|| range_clause.range_expr());
+        self.try_analyze_expr(range_clause.range_expr());
         self.exit_scope();
+
         if let Some(range_list) = range_loop.action_list() {
             self.enter_scope_with_parent(range_list.syntax().text_range(), range_clause_scope);
             self.analyze_all(range_list.actions());
@@ -172,7 +244,7 @@ impl ScopeAnalyzer {
             return;
         };
         let while_clause_scope = self.enter_inner_scope(while_clause.syntax().text_range());
-        self.push_var_decls_in(|| while_clause.cond_expr());
+        self.try_analyze_expr(while_clause.cond_expr());
         self.exit_scope();
         if let Some(while_list) = while_loop.action_list() {
             self.enter_scope_with_parent(while_list.syntax().text_range(), while_clause_scope);
@@ -203,58 +275,86 @@ impl ScopeAnalyzer {
     }
 
     fn analyze_expr_action(&mut self, expr_action: ast::ExprAction) {
-        self.push_var_decls_in(|| expr_action.expr());
-    }
-
-    fn push_synthetic_var(&mut self, name: impl Into<SmolStr>, visible_from: TextSize) {
-        self.pending_vars.push(Var::new(name, visible_from, None));
-    }
-
-    fn push_var_decls_in<F>(&mut self, f: F)
-    where
-        F: FnOnce() -> Option<ast::Expr>,
-    {
-        if let Some(expr) = f() {
-            self.pending_vars.extend(var_decls_in(expr.syntax()));
-        }
-    }
-
-    fn enter_inner_scope(&mut self, text_range: TextRange) -> ScopeId {
-        self.enter_scope(text_range, self.stack.last().copied())
-    }
-
-    fn enter_detached_scope(&mut self, text_range: TextRange) -> ScopeId {
-        self.enter_scope(text_range, None)
-    }
-
-    fn enter_scope_with_parent(&mut self, text_range: TextRange, parent: ScopeId) -> ScopeId {
-        self.enter_scope(text_range, Some(parent))
-    }
-
-    fn enter_scope(&mut self, text_range: TextRange, parent: Option<ScopeId>) -> ScopeId {
-        if let Some(old_scope) = self.stack.last().copied() {
-            self.drain_pending_vars_to(old_scope);
-        }
-        let new_scope = self.scopes.insert(Scope::new(text_range, Vec::new(), parent));
-        self.stack.push(new_scope);
-        new_scope
-    }
-
-    fn exit_scope(&mut self) {
-        let scope_to_exit = self
-            .stack
-            .pop()
-            .expect("call to exit_scope() should correspond to an earlier enter_scope()");
-        self.drain_pending_vars_to(scope_to_exit);
-    }
-
-    fn drain_pending_vars_to(&mut self, to: ScopeId) {
-        self.scopes[to].vars.append(&mut self.pending_vars)
+        self.try_analyze_expr(expr_action.expr());
     }
 }
 
-fn var_decls_in(node: &SyntaxNode) -> impl Iterator<Item = Var> {
-    node.descendants()
-        .filter_map(|child| child.try_to::<ast::VarDecl>())
-        .filter_map(Var::try_from_decl)
+// Expression analysis.
+impl ScopeAnalyzer {
+    fn try_analyze_expr(&mut self, expr: Option<ast::Expr>) {
+        if let Some(expr) = expr {
+            self.analyze_expr(expr);
+        }
+    }
+
+    fn analyze_expr(&mut self, expr: ast::Expr) {
+        use ast::Expr::*;
+        match expr {
+            FuncCall(call) => call.call_args().for_each(|arg| self.analyze_expr(arg)),
+            ExprCall(call) => {
+                self.try_analyze_expr(call.callee());
+                call.call_args().for_each(|arg| self.analyze_expr(arg));
+            }
+            Parenthesized(p) => self.try_analyze_expr(p.inner_expr()),
+            Pipeline(p) => {
+                self.try_analyze_expr(p.init_expr());
+                p.stages().for_each(|stage| self.try_analyze_expr(stage.target_expr()));
+            }
+            ContextAccess(_) => {}
+            ContextFieldChain(_) => {}
+            ExprFieldChain(chain) => self.try_analyze_expr(chain.base_expr()),
+            VarAccess(access) => self.analyze_var_access(access),
+            VarDecl(decl) => self.analyze_var_decl(decl),
+            VarAssign(assign) => self.analyze_var_assign(assign),
+            Literal(_) => {}
+        }
+    }
+
+    fn analyze_var_access(&mut self, access: ast::VarAccess) {
+        if let Some(var) = access.var() {
+            self.check_var_use(var);
+        }
+    }
+
+    fn analyze_var_decl(&mut self, decl: ast::VarDecl) {
+        if let Some(var) = decl.var() {
+            let range = decl.syntax().text_range();
+            self.declare_var(DeclaredVar {
+                name: var.name().into(),
+                visible_from: range.end(),
+                decl_range: Some(range),
+            });
+        }
+        self.try_analyze_expr(decl.initializer());
+    }
+
+    fn analyze_var_assign(&mut self, assign: ast::VarAssign) {
+        if let Some(var) = assign.var() {
+            self.check_var_use(var)
+        }
+        self.try_analyze_expr(assign.assign_expr());
+    }
+
+    fn check_var_use(&mut self, var: ast::Var) {
+        let name = var.name();
+        let range = var.syntax().text_range();
+        match self.lookup_var(name) {
+            Some(decl_id) => {
+                self.var_uses.insert(range, decl_id);
+            }
+            None => self.error(format!("undefined variable {name}"), range),
+        }
+    }
+
+    fn lookup_var(&mut self, name: &str) -> Option<DeclaredVarId> {
+        let mut cur_scope_id = Some(self.top_scope);
+        while let Some(cur_scope) = cur_scope_id.and_then(|id| self.scopes.get(id)) {
+            if let Some(id) = cur_scope.vars_by_name.get(name).copied() {
+                return Some(id);
+            }
+
+            cur_scope_id = cur_scope.parent;
+        }
+        None
+    }
 }

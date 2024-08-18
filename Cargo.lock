@@ -1088,6 +1088,7 @@ checksum = "bec47e5bfd1bff0eeaf6d8b485cc1074891a197ab4225d504cb7a1ab88b02bf0"
 name = "yag-template-analysis"
 version = "0.1.0"
 dependencies = [
+ "ahash",
  "slotmap",
  "smol_str",
  "yag-template-syntax",

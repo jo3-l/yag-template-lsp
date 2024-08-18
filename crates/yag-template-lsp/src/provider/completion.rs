@@ -40,7 +40,7 @@ fn var_completion(doc: &Document, query: Query, existing_var: ast::Var, scope_in
     let mut completions = Vec::new();
     for scope in scope_info.scopes_containing(query.offset) {
         completions.extend(
-            scope_info[scope]
+            scope
                 .vars_visible_at_offset(query.offset)
                 .filter(|var| var.name != existing_var.name() && var.name.starts_with(existing_var.name()))
                 .map(|var| CompletionItem {

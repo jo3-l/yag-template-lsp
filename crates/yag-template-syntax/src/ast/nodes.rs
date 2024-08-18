@@ -615,6 +615,10 @@ define_node! {
 }
 
 impl ExprFieldChain {
+    pub fn base_expr(&self) -> Option<Expr> {
+        self.syntax.find_first_child()
+    }
+
     pub fn fields(&self) -> AstTokenChildren<tokens::Field> {
         self.syntax.cast_tokens()
     }
