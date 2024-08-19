@@ -125,8 +125,8 @@ impl Lexer<'_> {
                 self.s.uneat();
                 self.number()
             }
-            '.' if self.s.eat_if(char::is_alphanumeric) => {
-                self.s.eat_while(char::is_alphanumeric);
+            '.' if self.s.eat_if(upstream_compat::is_alphanumeric) => {
+                self.s.eat_while(upstream_compat::is_alphanumeric);
                 SyntaxKind::Field
             }
             '.' => SyntaxKind::Dot,
