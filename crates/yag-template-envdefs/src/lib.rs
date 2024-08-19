@@ -109,11 +109,13 @@ fn process_source(defs: &mut EnvDefs, src: &EnvDefSource) -> Result<(), ParseErr
     let mut funcs: Vec<(Func, usize)> = vec![];
     for (lineno, line) in src.data.lines().enumerate() {
         if line.starts_with("==") {
-            // section comment; ignore
+            // comment; ignore
         } else if line.chars().all(char::is_whitespace) {
             // blank line, possibly separating paragraphs in function documentation
             if let Some((f, _)) = funcs.last_mut() {
                 if !f.doc.is_empty() {
+                    // might result in some trailing blank lines, but it's OK:
+                    // we'll trim the documentation at the end
                     f.doc.push('\n');
                 }
             }
@@ -138,10 +140,13 @@ fn process_source(defs: &mut EnvDefs, src: &EnvDefSource) -> Result<(), ParseErr
         }
     }
 
-    for (f, lineno) in funcs {
-        match defs.funcs.entry(f.name.clone()) {
-            Entry::Occupied(_) => bail!(format!("duplicate definition for function {}", f.name), lineno),
-            Entry::Vacant(e) => e.insert(f),
+    for (func, lineno) in funcs {
+        match defs.funcs.entry(func.name.clone()) {
+            Entry::Occupied(_) => bail!(format!("duplicate definition for function {}", func.name), lineno),
+            Entry::Vacant(entry) => entry.insert(Func {
+                doc: func.doc.trim().to_string(),
+                ..func
+            }),
         };
     }
     Ok(())
@@ -167,13 +172,14 @@ fn parse_func_signature(line: &str) -> Result<Func, String> {
     let mut params = vec![];
     ensure!(s.eat_if('('), "expected '(' after function name");
     while !s.done() && !s.at(')') {
-        // Check for a comma if this isn't the first parameter.
+        // Ensure there's a comma if this isn't the first parameter.
         s.eat_whitespace();
         if !params.is_empty() {
             ensure!(s.eat_if(','), "expected ',' separating parameters");
             s.eat_whitespace();
         }
 
+        // Parse the parameter name.
         ensure!(s.at(char::is_ascii_alphanumeric), "expected parameter name");
         let param_name = s.eat_while(char::is_ascii_alphanumeric);
 
