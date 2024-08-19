@@ -60,7 +60,49 @@
 				"scopeName": "source.ydef",
 				"path": "./ydef.tmLanguage.json"
 			}
-		]
+		],
+		"configuration": {
+			"title": "Yag Template LSP",
+			"properties": {
+				"yag-template-lsp.server.path": {
+					"markdownDescription": "Optional path to local yag-template-lsp executable; will be used instead of bundled server if provided.",
+					"type": [
+						"string",
+						"null"
+					],
+					"default": null
+				},
+				"yag-template-lsp.server.extraEnv": {
+					"type": [
+						"null",
+						"object"
+					],
+					"additionalProperties": {
+						"type": [
+							"string"
+						]
+					},
+					"markdownDescription": "Extra environment variables that will be passed to the yag-template-lsp executable. Useful for providing `YAG_LSP_LOG` for debugging.",
+					"default": "null"
+				},
+				"yag-template-lsp.trace.server": {
+					"scope": "window",
+					"type": "string",
+					"enum": [
+						"off",
+						"messages",
+						"verbose"
+					],
+					"enumDescriptions": [
+						"No traces",
+						"Error only",
+						"Full log"
+					],
+					"default": "off",
+					"markdownDescription": "Traces the communication between VSCode and the language server."
+				}
+			}
+		}
 	},
 	"main": "./dist/extension.js",
 	"scripts": {

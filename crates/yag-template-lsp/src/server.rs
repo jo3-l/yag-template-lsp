@@ -4,8 +4,8 @@ use tower_lsp::jsonrpc::{self, Result};
 use tower_lsp::lsp_types::{
     CompletionOptions, CompletionParams, CompletionResponse, DidChangeTextDocumentParams, DidCloseTextDocumentParams,
     DidOpenTextDocumentParams, FoldingRange, FoldingRangeParams, FoldingRangeProviderCapability, Hover, HoverParams,
-    HoverProviderCapability, InitializeParams, InitializeResult, InlayHint, InlayHintParams, OneOf, ServerCapabilities,
-    ServerInfo, TextDocumentSyncCapability, TextDocumentSyncKind,
+    HoverProviderCapability, InitializeParams, InitializeResult, InitializedParams, InlayHint, InlayHintParams, OneOf,
+    ServerCapabilities, ServerInfo, TextDocumentSyncCapability, TextDocumentSyncKind,
 };
 use tower_lsp::{async_trait, Client, LanguageServer};
 
@@ -57,6 +57,10 @@ impl LanguageServer for YagTemplateLanguageServer {
                 version: Some(env!("CARGO_PKG_VERSION").into()),
             }),
         })
+    }
+
+    async fn initialized(&self, _: InitializedParams) {
+        tracing::info!("server initialized")
     }
 
     async fn shutdown(&self) -> Result<()> {

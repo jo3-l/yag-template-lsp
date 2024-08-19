@@ -94,8 +94,20 @@ project in VSCode and use the provided `Run Extension` debug configuration. This
 the Rust and TypeScript components and open a new VSCode window with the modified language server
 installed.
 
-To debug changes, use the logging macros from the `tracing` crate; the resulting logs are visible in
-the VSCode output window under the `YAGPDB Template Language Server` channel.
+To debug changes, use the logging macros from the `tracing` crate. By default, however, only error logs are output. Add
+the following entries to your `settings.json` to show more:
+
+```json
+{
+	"yag-template-lsp.trace.server": "messages", // "trace" for all LSP interactions
+	"yag-template-lsp.server.extraEnv": {
+		// hide tower_lsp tracing logs (which are redundant with the above), but display everything else
+		"YAG_LSP_LOG": "tower_lsp::codec=info,trace"
+	}
+}
+```
+
+The resulting logs will then be visible in the VSCode output window under the `YAGPDB Template Language Server` channel.
 
 ## License
 
