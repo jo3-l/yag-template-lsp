@@ -13,16 +13,16 @@ new_key_type! { pub struct DeclaredVarId; }
 
 #[derive(Debug)]
 pub struct Scope {
-    pub text_range: TextRange,
+    pub range: TextRange,
     pub vars_by_name: AHashMap<SmolStr, DeclaredVarId>,
     pub declared_vars: Vec<DeclaredVar>,
     pub parent: Option<ScopeId>,
 }
 
 impl Scope {
-    pub fn new(text_range: TextRange, parent: Option<ScopeId>) -> Self {
+    pub fn new(range: TextRange, parent: Option<ScopeId>) -> Self {
         Self {
-            text_range,
+            range,
             vars_by_name: AHashMap::new(),
             declared_vars: Vec::new(),
             parent,
@@ -47,20 +47,20 @@ pub struct DeclaredVar {
 
 #[derive(Debug)]
 pub struct ScopeInfo {
-    all_declared_vars: SlotMap<DeclaredVarId, DeclaredVar>,
-    var_uses: AHashMap<TextRange, DeclaredVarId>, // maps variable access or assignment to corresponding variable declaration
+    vars: SlotMap<DeclaredVarId, DeclaredVar>,
+    resolved_var_uses: AHashMap<TextRange, DeclaredVarId>,
     scopes: SlotMap<ScopeId, Scope>,
 }
 
 impl ScopeInfo {
     pub(crate) fn new(
-        all_declared_vars: SlotMap<DeclaredVarId, DeclaredVar>,
-        var_uses: AHashMap<TextRange, DeclaredVarId>,
+        vars: SlotMap<DeclaredVarId, DeclaredVar>,
+        resolved_var_uses: AHashMap<TextRange, DeclaredVarId>,
         scopes: SlotMap<ScopeId, Scope>,
     ) -> Self {
         Self {
-            all_declared_vars,
-            var_uses,
+            vars,
+            resolved_var_uses,
             scopes,
         }
     }
@@ -68,9 +68,9 @@ impl ScopeInfo {
 
 impl ScopeInfo {
     pub fn resolve_var_use(&self, var: ast::Var) -> Option<&DeclaredVar> {
-        self.var_uses
+        self.resolved_var_uses
             .get(&var.syntax().text_range())
-            .and_then(|id| self.all_declared_vars.get(*id))
+            .and_then(|id| self.vars.get(*id))
     }
 
     /// Iterate over the scopes containing the offset, from the innermost outward.
@@ -81,8 +81,8 @@ impl ScopeInfo {
     fn innermost_scope_containing(&self, offset: TextSize) -> Option<ScopeId> {
         self.scopes
             .iter()
-            .filter(|(_, scope)| scope.text_range.contains_inclusive(offset))
-            .min_by_key(|(_, scope)| scope.text_range.len())
+            .filter(|(_, scope)| scope.range.contains_inclusive(offset))
+            .min_by_key(|(_, scope)| scope.range.len())
             .map(|(id, _)| id)
     }
 }

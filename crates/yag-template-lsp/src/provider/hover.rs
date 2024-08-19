@@ -1,3 +1,4 @@
+use anyhow::Context;
 use tower_lsp::lsp_types::{Hover, HoverContents, HoverParams, MarkupContent, MarkupKind};
 use yag_template_envdefs::EnvDefs;
 use yag_template_syntax::ast;
@@ -11,14 +12,14 @@ pub(crate) async fn hover(sess: &Session, params: HoverParams) -> anyhow::Result
     let doc = sess.document(&uri)?;
     let pos = doc.mapper.offset(params.text_document_position_params.position);
 
-    let query = Query::at(&doc.syntax(), pos).unwrap();
-    let resp = if query.in_func_name() {
+    let query = Query::at(&doc.syntax(), pos).context("failed querying at offset")?;
+    let hover_info = if query.in_func_name() {
         let func_ident = query.ident().unwrap();
         hover_for_func(&sess.envdefs, &doc, func_ident)
     } else {
         None
     };
-    Ok(resp)
+    Ok(hover_info)
 }
 
 fn hover_for_func(env: &EnvDefs, doc: &Document, func_ident: ast::Ident) -> Option<Hover> {

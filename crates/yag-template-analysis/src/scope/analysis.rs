@@ -20,10 +20,10 @@ pub fn analyze(root: ast::Root) -> (ScopeInfo, Vec<AnalysisError>) {
 struct ScopeAnalyzer {
     scopes: SlotMap<ScopeId, Scope>,
     top_scope: ScopeId,
-    scope_stack: Vec<ScopeId>, // parents of top_scope, unless top_scope is detached
+    scope_stack: Vec<ScopeId>, // lexical parents of top_scope
 
-    all_declared_vars: SlotMap<DeclaredVarId, DeclaredVar>,
-    var_uses: AHashMap<TextRange, DeclaredVarId>,
+    vars: SlotMap<DeclaredVarId, DeclaredVar>,
+    resolved_var_uses: AHashMap<TextRange, DeclaredVarId>,
     errors: Vec<AnalysisError>,
 }
 
@@ -36,8 +36,8 @@ impl ScopeAnalyzer {
             top_scope,
             scope_stack: Vec::new(),
 
-            all_declared_vars: SlotMap::with_key(),
-            var_uses: AHashMap::new(),
+            vars: SlotMap::with_key(),
+            resolved_var_uses: AHashMap::new(),
             errors: Vec::new(),
         }
     }
@@ -45,7 +45,7 @@ impl ScopeAnalyzer {
     fn finish(self) -> (ScopeInfo, Vec<AnalysisError>) {
         debug_assert!(self.scope_stack.is_empty());
         (
-            ScopeInfo::new(self.all_declared_vars, self.var_uses, self.scopes),
+            ScopeInfo::new(self.vars, self.resolved_var_uses, self.scopes),
             self.errors,
         )
     }
@@ -88,7 +88,7 @@ impl ScopeAnalyzer {
     }
 
     fn declare_var(&mut self, var: DeclaredVar) -> DeclaredVarId {
-        let id = self.all_declared_vars.insert(var.clone());
+        let id = self.vars.insert(var.clone());
         let top_scope = &mut self.scopes[self.top_scope];
         top_scope.declared_vars.push(var.clone());
         top_scope.vars_by_name.insert(var.name, id);
@@ -340,7 +340,7 @@ impl ScopeAnalyzer {
         let range = var.syntax().text_range();
         match self.lookup_var(name) {
             Some(decl_id) => {
-                self.var_uses.insert(range, decl_id);
+                self.resolved_var_uses.insert(range, decl_id);
             }
             None => self.error(format!("undefined variable {name}"), range),
         }

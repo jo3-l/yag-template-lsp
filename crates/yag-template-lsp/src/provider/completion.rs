@@ -1,3 +1,4 @@
+use anyhow::Context;
 use tower_lsp::lsp_types::{
     CompletionItem, CompletionItemKind, CompletionParams, CompletionResponse, CompletionTextEdit, TextEdit,
 };
@@ -14,8 +15,8 @@ pub(crate) async fn complete(sess: &Session, params: CompletionParams) -> anyhow
     let doc = sess.document(&uri)?;
     let pos = doc.mapper.offset(params.text_document_position.position);
 
-    let query = Query::at(&doc.syntax(), pos).unwrap();
-    let resp = if query.in_var_access() {
+    let query = Query::at(&doc.syntax(), pos).context("failed querying at offset")?;
+    let completions = if query.in_var_access() {
         let existing_var = query.var().unwrap();
         let scope_info = &doc.analysis.scope_info;
         let completions = complete_var(&doc, query, existing_var, scope_info);
@@ -27,7 +28,7 @@ pub(crate) async fn complete(sess: &Session, params: CompletionParams) -> anyhow
     } else {
         None
     };
-    Ok(resp)
+    Ok(completions)
 }
 
 fn complete_var(doc: &Document, query: Query, existing_var: ast::Var, scope_info: &ScopeInfo) -> Vec<CompletionItem> {
