@@ -32,7 +32,7 @@
 					"name": "constant.numeric.yag"
 				},
 				{
-					"match": "\\[.$]\\w+",
+					"match": "[.$]\\w+",
 					"name": "variable.other.yag"
 				},
 				{
