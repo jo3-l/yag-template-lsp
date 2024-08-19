@@ -270,19 +270,19 @@ func formatTime(time, layout?)
 	|-------------|------------------------------|
 	| Mon         | Weekday (abbreviated)        |
 	| Monday      | Weekday (full name)          |
-	| 2           | Day-of-Month (single digit)  |
-	| 02          | Day-of-Month (zero padded)   |
+	| 2           | Day of month (single digit)  |
+	| 02          | Day of month (zero padded)   |
 	| Jan         | Month (abbreviated)          |
 	| January     | Month (full name)            |
 	| 1           | Month (single digit)         |
 	| 01          | Month (zero padded)          |
 	| 15          | Hour (24-hour format)        |
-	| 3           | Hour (12-hour format, PM)    |
+	| 3           | Hour (12-hour format)        |
 	| 04          | Minute (zero padded)         |
 	| 05          | Second (zero padded)         |
 	| MST         | Timezone (abbreviated)       |
 	| 2006        | Year (full year)             |
-	| PM          | AM-PM (afternoon)            |
+	| PM          | AM-PM                        |
 
 func loadLocation(location)
 	Searches the IANA Time Zone database for the given location name, returning the corresponding
