@@ -108,8 +108,8 @@ fn process_source(defs: &mut EnvDefs, src: &EnvDefSource) -> Result<(), ParseErr
 
     let mut funcs: Vec<(Func, usize)> = vec![];
     for (lineno, line) in src.data.lines().enumerate() {
-        if line.starts_with("//") {
-            // comment; ignore
+        if line.starts_with("==") {
+            // section comment; ignore
         } else if line.chars().all(char::is_whitespace) {
             // blank line, possibly separating paragraphs in function documentation
             if let Some((f, _)) = funcs.last_mut() {

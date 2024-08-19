@@ -1,50 +1,45 @@
 func and(args...)
-	Returns the boolean AND of its arguments by returning the first empty
-	argument or the last argument. That is, `and x y` behaves as `if x then y
-	else x`.
+	Returns the boolean AND of the arguments by returning the first empty argument or the last argument. That is, `and x
+	y` behaves as `if x then y else x`.
 
-	Note that and does not short-circuit: all the arguments are evaluated.
+	Note that `and` does not short-circuit: all the arguments are evaluated.
 
 func call(fn, args...)
-	Returns the result of calling the first argument, which must be a function,
-	with the remaining arguments as parameters. Thus `call .X.Y 1 2` is, in Go
-	notation, `dot.X.Y(1, 2)` where Y is a func-valued field, map entry, or the
-	like.
+	Returns the result of calling the first argument, which must be a function, with the remaining arguments as
+	parameters. Thus `call .X.Y 1 2` is, in Go notation, `dot.X.Y(1, 2)` where Y is a func-valued field, map entry, or
+	the like.
 
-	The first argument must be the result of an evaluation that yields a value
-	of function type (as distinct from a predefined function such as print). The
-	function must return either one or two result values, the second of which is
-	of type error. If the arguments don't match the function or the returned
-	error value is non-nil, execution stops.
+	The first argument must be the result of an evaluation that yields a value of function type (as distinct from a
+	predefined function such as print). The function must return either one or two result values, the second of which is
+	of type error. If the arguments don't match the function or the returned error value is non-nil, execution stops.
 
 func execTemplate(template, data?)
-	Executes the associated template with the name and context data provided,
-	If the associated template returns a value, `execTemplate` evaluates to that
-	value and `nil` otherwise.
+	Executes the associated template with the specified name and context data, If the associated template returns a
+	value, `execTemplate` evaluates to that value and `nil` otherwise.
 
 func html(v)
 	Returns the escaped HTML equivalent of the textual representation of its
 	arguments.
 
 func index(v, keys...)
-	Return the result of indexing its first argument by the following arguments. Thus `index x 1 2 3` is, in Go syntax,
+	Return the result of indexing the first argument by the following arguments. Thus `index x 1 2 3` is, in Go syntax,
 	`x[1][2][3]`. Each indexed item must be a map, slice, or array.
 
 func js(v)
-	Returns the escaped JavaScript equivalent of the textual representation of its arguments.
+	Returns the escaped JavaScript equivalent of the textual representation of the arguments.
 
 func len(v)
-	Returns the integer length of its argument.
+	Returns the integer length of the argument.
 
 func not(v)
-	Returns the boolean negation of its argument.
+	Returns the boolean negation of the argument.
 
 func or(args...)
 	Returns the boolean OR of its arguments by returning the first non-empty argument or the last argument, that is, `or
 	x y` behaves as `if x then x else y`. All the arguments are evaluated.
 
 func urlquery(v)
-	Returns the escaped value of the textual representation of its arguments in a form suitable for embedding in a URL
+	Returns the escaped value of the textual representation of the arguments in a form suitable for embedding in a URL
 	query.
 
 func eq(x, y...)

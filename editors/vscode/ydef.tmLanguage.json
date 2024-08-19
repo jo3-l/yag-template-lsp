@@ -4,8 +4,8 @@
 	"scopeName": "source.ydef",
 	"patterns": [
 		{
-			"match": "^//[^\n]+",
-			"name": "comment.line.ydef"
+			"match": "^==[^\n]+",
+			"name": "entity.name.section.ydef"
 		},
 		{
 			"match": "\t[^\n]+",

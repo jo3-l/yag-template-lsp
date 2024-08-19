@@ -1,22 +1,23 @@
+== Type conversion
 func str(x)
-	Converts the argument to a string, returning the empty string for invalid inputs. This function
+	Converts the input to a string, returning the empty string for invalid inputs. This function
 	is an alias of the `toString` function.
 
 func toString(x)
-	Converts the argument to a string, returning the empty string on failure.
+	Converts the input to a string, returning the empty string on failure.
 
 func toInt(x)
-	Converts the argument to an integer, returning zero for invalid inputs.
+	Converts the input to an integer, returning zero for invalid inputs.
 
 func toInt64(x)
-	Converts the argument to an `int64`, returning zero for invalid inputs.
+	Converts the input to an `int64`, returning zero for invalid inputs.
 
 func toFloat(x)
-	Converts the argument to a `float64`, returning zero for invalid inputs.
+	Converts the input to a `float64`, returning zero for invalid inputs.
 
 func toDuration(x)
-	Converts the argument, which may be a number (measured in nanoseconds) or a duration string such as `5m`, to a
-	duration object. Returns the zero duration on failure.
+	Converts the input, which may be a number (measured in nanoseconds) or a duration string such as `5m`, to a
+	duration object. Returns the zero duration for invalid inputs.
 
 func toRune(str)
 	Converts the given string to a slice of runes (Unicode code points.)
@@ -24,21 +25,46 @@ func toRune(str)
 func toByte(str)
 	Converts the given string to a slice of UTF-8 bytes.
 
-func hasPrefix(str, prefix)
-	Tests whether the string starts with the given prefix.
+func structToSdict(struct)
+	Returns a string dictionary from the fields of the struct.
 
-func hasSuffix(str, suffix)
-	Tests whether the string ends with the given suffix.
+
+
+== String manipulation
+func print(args...)
+	Concatenates the arguments in order, adding spaces between operands when neither is a string.
+
+func println(args...)
+	Concatenates the arguments in order, adding spaces between operands when neither is a string and inserting a newline
+	at the end.
+
+func printf(format, args...)
+	Interpolates the arguments using the format given. See the [Go fmt package documentation](https://pkg.go.dev/fmt).
 
 func joinStr(sep, args...)
 	Concatenates the arguments in order, inserting the separator between consecutive arguments. As a
 	special case, slices of strings are formatted as if each element was provided separately, so
 
 	```yag
-	{{ joinStr " " (cslice "cat" "dog") }} {{/* outputs "cat dog" */}}
+	{{ joinStr " " (cslice "cat" "dog") }}
 	```
 
-	See also the `print` function.
+	yields `cat dog`.
+
+	See also the `print` function if you just want to concatenate arguments without any separator.
+
+func in(haystack, needle)
+	Returns whether `haystack` contains `needle`. The haystack may be a slice or a string; in the latter case, the
+	needle must also be a string and `in` reports whether `needle` is a substring of `haystack`.  
+
+func inFold(haystack, needle)
+	Same as `in`, but case-insensitive.
+
+func hasPrefix(str, prefix)
+	Tests whether the string starts with the given prefix.
+
+func hasSuffix(str, suffix)
+	Tests whether the string ends with the given suffix.
 
 func lower(str)
 	Converts the input to lowercase.
@@ -62,6 +88,16 @@ func trimSpace(str)
 func upper(str)
 	Converts the string to uppercase.
 
+func sanitizeText(string)
+	Replaces accented and confusable characters in the input with their normal, ISO-Latin variants.
+
+func reQuoteMeta(str)
+	Escapes all regular expression metacharacters in the input string; the result is a regular expression matching the
+	literal input text.
+
+
+
+== Encoding and decoding
 func urlescape(str)
 	Escapes the input so that it can be safely placed inside a URL path segment, replacing special
 	characters (including /) with %XX sequences as needed.
@@ -70,43 +106,45 @@ func urlunescape(str)
 	Undos the transformation performed by `urlescape`, converting encoded substrings of the form
 	`%AB` to the byte 0xAB.
 
-func print(args...)
-	Concatenates the arguments in order, adding spaces between operands when neither is a string.
+func json(v, indent?)
+	Encodes the argument as JSON. If the `indent` flag is provided, the output is pretty-printed
+	with appropriate indentation.
 
-func println(args...)
-	Concatenates the arguments in order, adding spaces between operands when neither is a string and inserting a newline
-	at the end.
+func jsonToSdict(jsonStr)
+	Parses the JSON-encoded data into a string dictionary, returning an error if the input was
+	invalid JSON.
 
-func printf(format, args...)
-	Interpolates the arguments using the format given. See the [Go fmt package documentation](https://pkg.go.dev/fmt).
+func hash(str)
+	Generates a SHA256 hash of the input string.
 
-func sanitizeText(string)
-	Replaces accented and confusable characters in the input with their normal, ISO-Latin variants.
+func encodeBase64(str)
+	Encodes the argument in base-64.
 
-func reQuoteMeta(string)
-	Escapes all regular expression metacharacters in the argument text; the returning string is a regular expression
-	matching the literal text.
+func decodeBase64(data)
+	Decodes the provided base-64 data.
 
+
+
+== Math operations
 func add(x, y...)
-	Returns the sum of the provided numbers. The type of the result is inferred based on the type of the first argument.
+	Returns the sum of the given numbers. The type of the result is determined by the first argument.
 
 func cbrt(x)
-	Returns the cube root of the argument.
+	Returns the cube root of `x`.
 
 func div(x, y...)
-	Returns the result of dividing `x` by the following arguments in succession. The type of division (integer or
-	floating-point) performed is dependent on the type of the first argument, so `{{ div 5 2 }}` performs integer
+	Returns the result of dividing `x` by the following numbers in succession. The kind of division (integer or
+	floating-point) to perform is determined by the type of the first argument, so `{{ div 5 2 }}` performs integer
 	division and yields `2`. To force floating-point division, use the `fdiv` function.
 
 func fdiv(x, y...)
-	Returns the result of the floating-point division of `x` by the following arguments in succession.
+	Returns the result of the floating-point division of `x` by the following numbers in succession.
 
 func log(x, base?)
-	Returns the logarithm of x to the given base. If no base is provided, returns the natural logarithm (base `e`.)
+	Returns the logarithm of `x` in the given base. If no base is provided, the natural logarithm with base `e` is used.
 
 func mathConst(const)
-	Returns the value of the specified math constant. See the [math constants
-	list](https://pkg.go.dev/math#pkg-constants).
+	Returns the value of the specified math constant. See the [math constants list](https://pkg.go.dev/math#pkg-constants).
 
 func max(x, y)
 	Returns the larger number between `x` and `y`.
@@ -115,16 +153,16 @@ func min(x, y)
 	Returns the smaller number between `x` and `y`.
 
 func mod(x, y)
-	Returns the floating-point remainder of the division of x by y.
+	Returns the floating-point remainder of the division of `x` by `y`.
 
-	Takes the sign of X, so `mod -5 3` results in `-2`, not `1`. To ensure a non-negative result, use `mod` twice:
-	`{{ mod (add (mod x y) y) y }}`.
+	The result has the same sign as `x`, so `mod -5 3` results in `-2`, not `1`. To ensure a non-negative result, use
+	`mod` twice: `{{ mod (add (mod x y) y) y }}`.
 
 func mult(x, y...)
-	Returns the product of the arguments. The type of the result is inferred based on the type of the first argument.
+	Returns the product of the given numbers. The type of the result is determined by the type of the first argument.
 
 func pow(base, exp)
-	Returns `base^exp` as a floating-point number.
+	Returns `base` raised to the power `exp` as a floating-point number.
 
 func round(x)
 	Returns the nearest integer to `x` as a floating-point number.
@@ -142,9 +180,12 @@ func sqrt(x)
 	Returns the square root of `x` as a floating-point number.
 
 func sub(x, y...)
-	Starting with `x`, subtract the following arguments in succession. The type of the result is inferred based on the
-	type of the first argument.
+	Starting with `x`, subtract the following numbers in succession. The type of the result is determined by the first
+	argument.
 
+
+
+== Bitwise operations
 func bitwiseAnd(x, y)
 	Returns `x & y`.
 
@@ -158,7 +199,7 @@ func bitwiseNot(x)
 	Returns `~x`.
 
 func bitwiseAndNot(x, y)
-	Returns `x & ~y`, which effectively strips the bits in `y` from `x`.
+	Returns `x & ~y`, effectively removing the bits in `y` from `x`.
 
 func bitwiseLeftShift(x, shift)
 	Returns `x << shift`.
@@ -167,124 +208,13 @@ func bitwiseRightShift(x, shift)
 	Returns `x >> shift`.
 
 func humanizeThousands(x)
-	Returns the number as a string with commas separating thousands.
+	Returns the number as a string with commas separating groups of thousands.
 
-func dict(keyvalues...)
-	Creates a dictionary from the provided key-value pairs. The number of arguments msut be even.
 
-func sdict(keyvalues...)
-	Creates a string dictionary from the provided key-value pairs. The number of arguments must be even.
 
-func structToSdict(struct)
-	Returns a string dictionary containing the fields of the struct.
-
-func cembed(opts...)
-	Returns an embed object to send with `sendMessage`-related functions.
-
-	All keys are optional, but the Discord API will reject completely empty embeds, so *some* content is required.
-
-	- `title`: the title of the embed
-	- `url`: the URL to hyperlink the title with
-	- `description`: the main text
-	- `color`: which color to display on the left side of the embed
-	- `fields`: a slice of sdicts with the following keys:
-		- `name`: the name of the field
-		- `value`: which text to have inside this field
-		- `inline`: an optional boolean whether this field should be displayed in-line with other fields
-	- `author`: Shows some details at the very top of the embed. Is an sdict with the following keys:
-		- `name`: The name of the author
-		- `url`: the URL to hyperlink the name with
-		- `icon_url`: the author's icon
-	- `thumbnail`: a small image in the top-right corner. Is an sdict with the following keys:
-		- `url`: the image's URL
-	- `image`: an image to display at full width at the bottom of the embed. Is a sdict with the following keys:
-		- `url`: the image's URL
-	- `footer`: Shows some details at the very bottom of the embed. Is a sdict with the following keys:
-		- `text`: the footer's text
-		- `icon_url`: a small icon to display to the left of the footer's text
-	- `timestamp`: a (static) timestamp to display to the right of the footer's text
-
-func cslice(els...)
-	Creates a slice containing the given elements in order.
-
-func complexMessage(opts...)
-	Creates a complex message object for use in `sendMessage` functions.
-
-	- `allowed_mentions`: a sdict with the following keys:
-		- `parse`: a slice of accepted values for mentions. May include `users`, `roles`, and `everyone`.
-		- `users`: a slice of user IDs to mention.
-		- `roles`: a slice of role IDs to mention.
-		- `replied_user`: whether to mention the replied user.
-	- `content`: the message content.
-	- `embed`: an embed object or a slice of up to 10 embed objects.
-	- `file`: the content to print as a file.
-	- `filename`: the name of the file.
-	- `reply`: the ID of the message to reply to.
-	- `silent`: whether to suppress push and desktop notifications.
-
-	All of these keys are optional, but providing an empty content, file, or no embeds will result in no message being sent.
-
-	### Example
-
-	The following example will output a message with an embed, some content, and a file attachment. It will also reply to
-	the triggering message and ping the author of that message, but suppress the resulting notification.
-
-	```yag
-	{{ $message := complexMessage
-		"allowed_mentions" (sdict
-			"replied_user" true
-		)
-		"content" "Hello, world!"
-		"embed" (cembed
-			"title" "Embed Title"
-			"description" "Embed Description"
-			"color" 0xff0000
-		)
-		"file" "This is a file."
-		"filename" "example.txt"
-		"reply" .Message.ID
-		"silent" true
-	}}
-	{{ sendMessage nil $message }}
-	```
-
-func complexMessageEdit(opts...)
-	Creates a complex message object for use in `editMessage` functions.
-
-	- `allowed_mentions`: a sdict with the following keys:
-		- `parse`: a slice of accepted values for mentions. May include `users`, `roles`, and `everyone`.
-		- `users`: a slice of user IDs to mention.
-		- `roles`: a slice of role IDs to mention.
-		- `replied_user`: whether to mention the replied user.
-	- `content`: the new content for the message.
-	- `embed`: an embed object or a slice of up to 10 embed objects.
-	- `silent`: whether to suppress push and desktop notifications.
-
-	All of these keys are optional, but providing none of them will have no effect.
-
-func kindOf(value, indirect?)
-	Returns the [kind](https://pkg.go.dev/reflect#Kind) of the provided value.
-
-	If `value` is behind an `interface{}` or pointer, setting `indirect` to true will read the inner value. Most users
-	of this function will want to do this.
-
+== Random
 func adjective()
 	Returns a random adjective.
-
-func in(haystack, needle)
-	Returns whether `haystack` contains `needle`. The haystack may be a slice or a string; in the latter case, the
-	needle must also be a string and `in` reports whether `needle` is a substring of `haystack`.  
-
-func inFold(haystack, needle)
-	Same as `in`, but case-insensitive.
-
-func json(v, indent?)
-	Encodes the argument as JSON. If the `indent` flag is provided, the output is pretty-printed
-	with appropriate indentation.
-
-func jsonToSdict(jsonStr)
-	Parses the JSON-encoded data into a string dictionary, returning an error if the input was
-	invalid JSON.
 
 func noun()
 	Returns a random noun.
@@ -294,34 +224,65 @@ func randInt(min?, max)
 	`max` is excluded. If only one argument is given, it is interpreted as a maximum bound and a random integer in `[0,
 	max)` is returned.
 
-func roleAbove(x, y)
-	Returns whether the first role is above the second in the role hierarchy.
+func shuffle(list)
+	Returns a shuffled copy of the provided array or slice.
+
+func verb()
+	Returns a random verb.
+
+
+
+== Collections
+func cslice(els...)
+	Creates a slice containing the given elements in order.
+
+func dict(keyvalues...)
+	Creates a dictionary from the provided key-value pairs. The number of arguments must be even.
+
+func sdict(keyvalues...)
+	Creates a string dictionary from the provided key-value pairs. The number of arguments must be even.
 
 func seq(start, stop)
 	Creates a slice containing the integers between `start` (inclusive) and `stop` (exclusive) in order. Limited to
 	10,000 elements.
 
-func shuffle(list)
-	Returns a shuffled copy of the provided array or slice.
 
-func verb()
-	Returns a randmo verb.
 
-func hash(str)
-	Generates a SHA256 hash of the input string.
-
-func encodeBase64(str)
-	Encodes the argument in base-64.
-
-func decodeBase64(data)
-	Decodes the provided base-64 data.
-
+== Time and duration
 func currentTime()
 	Returns the current time in UTC.
 
-func parseTime(value, layout, location?)
+func parseTime(input, layout, location?)
+	Reverses the operation done by `formatTime`: given some input representing a time using the
+	layout given, returns the time object in the specified location (or UTC by default). If the
+	input is invalid or does not follow the layout, the zero time is returned.
+
+	A slice of layouts may be provided, in which case the input is matched against each until one
+	matches.
 
 func formatTime(time, layout?)
+	Formats the time according to the layout. Within the layout string, certain phrases represent
+	placeholders that are replaced with data from the time: for instance, Monday is replaced with
+	the weekday. A list of common placeholders follows; see [Go time package
+	documentation](https://pkg.go.dev/time#pkg-constants) for the full list.
+
+	| Placeholder | Meaning                      |
+	|-------------|------------------------------|
+	| Mon         | Weekday (abbreviated)        |
+	| Monday      | Weekday (full name)          |
+	| 2           | Day-of-Month (single digit)  |
+	| 02          | Day-of-Month (zero padded)   |
+	| Jan         | Month (abbreviated)          |
+	| January     | Month (full name)            |
+	| 1           | Month (single digit)         |
+	| 01          | Month (zero padded)          |
+	| 15          | Hour (24-hour format)        |
+	| 3           | Hour (12-hour format, PM)    |
+	| 04          | Minute (zero padded)         |
+	| 05          | Second (zero padded)         |
+	| MST         | Timezone (abbreviated)       |
+	| 2006        | Year (full year)             |
+	| PM          | AM-PM (afternoon)            |
 
 func loadLocation(location)
 	Searches the IANA Time Zone database for the given location name, returning the corresponding
@@ -362,9 +323,109 @@ func weekNumber(time)
 	week 1 of year n+1. 
 
 func humanizeDurationHours(dur)
+	Returns the duration as a human-readable string, rounded down to the nearest hour,.
 
 func humanizeDurationMinutes(dur)
+	Returns the duration as a human-readable string, rounded down to the nearest minute.
 
 func humanizeDurationSeconds(dur)
+	Returns the duration as a human-readable string, rounded down to the nearest second.
 
-func humanizeTimeSinceDays(dur)
+func humanizeTimeSinceDays(time)
+	Returns the duration that has passed since the specified time as a human-readable string, rounded down to the
+	nearest day. 
+
+
+
+== Miscellaneous
+func cembed(opts...)
+	Creates an embed object that can then be passed to the `sendMessage` functions.
+
+	All keys are optional, but the Discord API will reject completely empty embeds, so at least one field must be
+	supplied.
+
+	- `title`: the title of the embed
+	- `url`: the URL to hyperlink the title with
+	- `description`: the main text
+	- `color`: which color to display on the left side of the embed
+	- `fields`: a slice of sdicts with the following keys:
+		- `name`: the name of the field
+		- `value`: which text to have inside this field
+		- `inline`: an optional boolean whether this field should be displayed in-line with other fields
+	- `author`: Shows some details at the very top of the embed. Is an sdict with the following keys:
+		- `name`: The name of the author
+		- `url`: the URL to hyperlink the name with
+		- `icon_url`: the author's icon
+	- `thumbnail`: a small image in the top-right corner. Is an sdict with the following keys:
+		- `url`: the image's URL
+	- `image`: an image to display at full width at the bottom of the embed. Is a sdict with the following keys:
+		- `url`: the image's URL
+	- `footer`: Shows some details at the very bottom of the embed. Is a sdict with the following keys:
+		- `text`: the footer's text
+		- `icon_url`: a small icon to display to the left of the footer's text
+	- `timestamp`: a (static) timestamp to display to the right of the footer's text
+
+func complexMessage(opts...)
+	Creates a complex message object that can then be passed to the `sendMessage` function.
+
+	- `allowed_mentions`: a sdict with the following keys:
+		- `parse`: a slice of accepted values for mentions. May include `users`, `roles`, and `everyone`.
+		- `users`: a slice of user IDs to mention.
+		- `roles`: a slice of role IDs to mention.
+		- `replied_user`: whether to mention the replied user.
+	- `content`: the message content.
+	- `embed`: an embed object or a slice of up to 10 embed objects.
+	- `file`: the content to print as a file.
+	- `filename`: the name of the file.
+	- `reply`: the ID of the message to reply to.
+	- `silent`: whether to suppress push and desktop notifications.
+
+	All of these keys are optional, but providing an empty content, file, or no embeds will result in no message being
+	sent.
+
+	### Example
+
+	The following example will output a message with an embed, some content, and a file attachment. It will also reply
+	to the triggering message and ping the author of that message, but suppress the resulting notification.
+
+	```yag
+	{{ $message := complexMessage
+		"allowed_mentions" (sdict
+			"replied_user" true
+		)
+		"content" "Hello, world!"
+		"embed" (cembed
+			"title" "Embed Title"
+			"description" "Embed Description"
+			"color" 0xff0000
+		)
+		"file" "This is a file."
+		"filename" "example.txt"
+		"reply" .Message.ID
+		"silent" true
+	}}
+	{{ sendMessage nil $message }}
+	```
+
+func complexMessageEdit(opts...)
+	Creates a complex message edit object that can then be passed to the `editMessage` function.
+
+	- `allowed_mentions`: a sdict with the following keys:
+		- `parse`: a slice of accepted values for mentions. May include `users`, `roles`, and `everyone`.
+		- `users`: a slice of user IDs to mention.
+		- `roles`: a slice of role IDs to mention.
+		- `replied_user`: whether to mention the replied user.
+	- `content`: the new content for the message.
+	- `embed`: an embed object or a slice of up to 10 embed objects.
+	- `silent`: whether to suppress push and desktop notifications.
+
+	All of these keys are optional, but providing none of them will have no effect.
+
+func kindOf(value, indirect?)
+	Returns the [kind](https://pkg.go.dev/reflect#Kind) of the provided value.
+
+	If `value` is behind an `interface{}` or pointer, setting `indirect` to true will read the inner value. Most users
+	of this function will want to do this.
+
+func roleAbove(x, y)
+	Returns whether the first role is above the second in the role hierarchy.

@@ -1,9 +1,11 @@
-// logs plugin
+== Logs plugin
 func pastUsernames(userID, offset)
 
 func pastNicknames(userID, offset)
 
-// tickets plugin
+
+
+== Tickets plugin
 func createTicket(author, topic)
 	Creates a new ticket with the topic given associated with the specified user.
 
@@ -13,23 +15,26 @@ func createTicket(author, topic)
 	For this function to work, the ticket system must be enabled.
 
 func exec(command, args...)
-	Executes the given command with the provided arguments.
+	Executes the specified built-in command, optionally with arguments.
 
 	This will not work for commands with paginated embed results, e.g. `warnings`.
 
 func execAdmin(command, args...)
-	Executes the given command with the provided arguments with the triggering user set to the bot.
+	Executes the specified built-in command with the triggering user set to the bot, optionally with arguments.
 
-func userArg(mentionOrID)
+func userArg(input)
+	Returns the full user object with the given ID or mention.
 
-// customcommands plugin
+
+
+== Custom command plugin
 func parseArgs(numRequired, errorMsg, cargs...)
 	Parses arguments passed to the custom command. Ensures that at least `numRequired` arguments are passed and parses
 	the arguments according to the defined `cargs...`, emitting `errorMsg` and exiting the custom command on error. An
 	empty error message indicates that one should be automatically generated based on the argument definitions.
 
 	The return value of `parseArgs` is an object with methods `$args.Get n` and `$args.IsSet n`. Calling `$args.IsSet N`
-	reports whether the nth argument (starting from 0) was provided, and `$args.Get n` retrieve that argument if so.
+	reports whether the nth argument (starting from 0) was provided, and `$args.Get n` retrieves that argument if so.
 
 	### Example
 
@@ -47,19 +52,19 @@ func carg(type, name, min?, max?)
 	Defines an argument with the given type.
 
 	The available types are:
-	- `int` (whole number)
-	- `float` (decimal number)
-	- `string` (text)
-	- `user` (user mentions, resolves to a user object)
-	- `userid` (mentions or user IDs, resolves to the ID itself)
-	- `member` (mentions or user IDs, resolves to a member object)
-	- `channel` (channel mention or ID, resolves to the channel structure)
-	- `role` (role name or ID, resolves to a role object)
-	- `duration` (duration that is human-readable, i.e `10h5m` or `10 hour 5 minutes` would both resolve to the same
-	duration)
+	- `int`: Resolves to an integer.
+	- `float`: Resolves to a floating-point number.
+	- `string`: Resolves to a string.
+	- `user`: Resolves to a user object. Accepts user mentions and IDs. The user must be in the server.
+	- `userid`: Resolves to an ID. Accepts user mentions and IDs but performs no additional validation.
+	- `member`: Resolves to a member object. Accepts user mentions and IDs.
+	- `channel`: Resolves to a channel object. Accepts channel mentions and IDs.
+	- `role`: Resolves to a role object. Accepts role names and IDs.
+	- `duration`: Resolves to a duration object. Accepts human-readable representations of durations,
+	such as `10h5m` or `10 hours 5 minutes`.
 
-	The `int`, `float`, and `duration` type support specifying optional minimum and maximum values, both inclusive.
-	(For `duration`, the minimum and maximum are measured in seconds.)
+	The `int`, `float`, and `duration` types support optional minimum and maximum bounds, both inclusive. For the
+	`duration` type, the minimum and maximum bounds are measured in seconds.
 
 func execCC(ccID, channel, delay, data)
 	Executes another custom command specified by `ccID`.
@@ -97,6 +102,10 @@ func scheduleUniqueCC(ccID, channel, delay, key, data)
 func cancelScheduledUniqueCC(ccID, key)
 	Cancels a previously scheduled custom command execution.
 
+
+
+
+== Custom command database
 func dbSet(userID, key, value)
 	Sets the value for the specified `key` and `userID` to `value`.
 
@@ -141,7 +150,7 @@ func dbDelByID(userID, entryID)
 	Deletes the database entry by ID.
 
 func dbDelById(userID, entryID)
-	An alias of dbDelByID.
+	An alias of `dbDelByID`.
 
 func dbDelMultiple(query, limit, numSkip)
 	Deletes up to `limit` entries from the database matching the given criteria. Returns the number of deleted entries.
@@ -167,18 +176,18 @@ func dbBottomEntries(pattern, limit, numSkip)
 	- `limit`: the maximum number of entries to return, capped at 100.
 	- `numSkip`: the number of entries to skip before returning results.
 
-func dbCount(q)	
-	Returns the count of all matching database entries that are not expired.
+func dbCount(query?)
+	Returns the count of all database entries that are not expired.
 
-	The argument must be one of the following:
-	- a user ID: count entries for the given user ID.
-	- a PostgreSQL pattern: count only entries with keys matching the given pattern.
+	If `query` is provided, it specifies which entries to include:
+	- a user ID: only count entries for the given user ID.
+	- a PostgreSQL pattern: only count entries with keys matching the given pattern.
 	- a query object supporting the given options:
 		- `userID`: only count entries with a matching UserID field. Defaults to all users.
 		- `pattern`: only counts entries with keys matching the given pattern. Defaults to all keys.
 
 func dbRank(query, userID, key)
-	Returns the rank of the specified entry in the entries defined by `query`.
+	Returns the rank of the specified entry in the sorted collection of entries defined by `query`.
 
 	- `query`: a sdict with the following optional keys:
 		- `userID`: only include entries with the given user ID.
