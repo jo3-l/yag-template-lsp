@@ -48,10 +48,10 @@ impl LanguageServer for YagTemplateLanguageServer {
                     trigger_characters: Some(completion_trigger_chars),
                     ..Default::default()
                 }),
-                inlay_hint_provider: Some(OneOf::Left(true)),
                 folding_range_provider: Some(FoldingRangeProviderCapability::Simple(true)),
                 definition_provider: Some(OneOf::Left(true)),
                 hover_provider: Some(HoverProviderCapability::Simple(true)),
+                inlay_hint_provider: Some(OneOf::Left(true)),
                 ..Default::default()
             },
             server_info: Some(ServerInfo {
@@ -85,19 +85,19 @@ impl LanguageServer for YagTemplateLanguageServer {
         try_handle!(provider::completion::complete(&self.session, params))
     }
 
-    async fn hover(&self, params: HoverParams) -> Result<Option<Hover>> {
-        try_handle!(provider::hover::hover(&self.session, params))
-    }
-
-    async fn inlay_hint(&self, params: InlayHintParams) -> Result<Option<Vec<InlayHint>>> {
-        try_handle!(provider::inlay_hint::inlay_hint(&self.session, params))
-    }
-
     async fn folding_range(&self, params: FoldingRangeParams) -> Result<Option<Vec<FoldingRange>>> {
         try_handle!(provider::folding_range::folding_range(&self.session, params))
     }
 
     async fn goto_definition(&self, params: GotoDefinitionParams) -> Result<Option<GotoDefinitionResponse>> {
         try_handle!(provider::goto_definition::goto_definition(&self.session, params))
+    }
+
+    async fn hover(&self, params: HoverParams) -> Result<Option<Hover>> {
+        try_handle!(provider::hover::hover(&self.session, params))
+    }
+
+    async fn inlay_hint(&self, params: InlayHintParams) -> Result<Option<Vec<InlayHint>>> {
+        try_handle!(provider::inlay_hint::inlay_hint(&self.session, params))
     }
 }
