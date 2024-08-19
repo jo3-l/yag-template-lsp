@@ -34,26 +34,33 @@ In the medium term, we would also like to implement:
     save function overload resolution and language server integration.
 
 Finally, as a low-priority, long-term goal, we hope to better modularize and test the language
-server driver code (and indeed the project as a whole.)
+server implementation (and indeed the project as a whole.)
 
 [typeck-branch]: https://github.com/jo3-l/yag-template-lsp/tree/feat/typechecking
 
-## Technical overview
+## Architecture overview
 
-The primary contribution of this project is a language server implemented in Rust and split over
-several crates:
+The project comprises three main components:
 
-- [`yag-template-syntax`][syntax-crate-dir], which provides an error-resilient parser for the YAGPDB
-  templating language that outputs an untyped CST using the
-  [Rowan](https://github.com/rust-analyzer/rowan) library and a typed AST view of the syntax tree;
+- a language server and associated static analysis tooling under the [`crates`][crates-dir] directory, written in Rust;
+- structured YAGPDB function definitions and documentation under the [`bundled-defs`][bundled-defs-dir] directory;
+- and a VSCode extension powered by the Rust language server under the [`editors/vscode`][editors-vscode-dir] directory,
+  written in TypeScript. (Contributions for other editors are welcome.)
+
+Of the above, the most interesting (and where the bulk of the complexity lies) is the Rust component, which is itself
+split into the following crates:
+
+- [`yag-template-syntax`][syntax-crate-dir], which provides an error-resilient parser for the YAGPDB templating language
+  outputting a CST using the [Rowan](https://github.com/rust-analyzer/rowan) library, in addition to a typed AST view of
+  the syntax tree;
 - [`yag-template-analysis`][analysis-crate-dir], which provides basic symbol resolution;
-- [`yag-template-envdefs`][envdefs-crate-dir], which provides a parser for template function definitions;
-- [`yag-template-lsp`][lsp-crate-dir], which implements the actual language server protocol using
-  [tower-lsp](https://github.com/ebkalderon/tower-lsp).
+- [`yag-template-envdefs`][envdefs-crate-dir], which provides a parser for template function definitions and embeds
+  the definitions under `bundled-defs`; and last but not least,
+- [`yag-template-lsp`][lsp-crate-dir], which implements the actual language server protocol
+  using [tower-lsp](https://github.com/ebkalderon/tower-lsp).
 
-A VSCode extension powered by this language server is provided in the [`editors/vscode`][editors-vscode-dir] directory.
-Contributions for other editors are welcome.
-
+[crates-dir]: https://github.com/jo3-l/yag-template-lsp/tree/main/crates/
+[bundled-defs-dir]: https://github.com/jo3-l/yag-template-lsp/tree/main/bundled-defs/README.md
 [syntax-crate-dir]: https://github.com/jo3-l/yag-template-lsp/tree/main/crates/yag-template-syntax
 [analysis-crate-dir]: https://github.com/jo3-l/yag-template-lsp/tree/main/crates/yag-template-analysis
 [envdefs-crate-dir]: https://github.com/jo3-l/yag-template-lsp/tree/main/crates/yag-template-envdefs
@@ -62,10 +69,11 @@ Contributions for other editors are welcome.
 
 ### Inspiration
 
-We stand on the shoulders of giants. `yag-template-lsp` is heavily inspired by—and indeed, would not
-be possible without—the following excellent projects:
+We stand on the shoulders of giants. `yag-template-lsp` is heavily inspired by—and indeed, would not exist without—the
+following excellent projects:
 
-- [rust-analyzer](https://github.com/rust-lang/rust-analyzer) (and matklad's excellent blog posts);
+- [rust-analyzer](https://github.com/rust-lang/rust-analyzer) and [matklad's excellent blog
+  posts](https://matklad.github.io/);
 - [typst](https://github.com/typst/typst) and [typst-lsp](https://github.com/nvarner/typst-lsp);
 - [rhai's LSP](https://github.com/rhaiscript/lsp);
 - and [RSLint](https://github.com/rslint/rslint).
@@ -79,7 +87,7 @@ for guidance.
 
 ### Development tips
 
-**Development requirements:** recent version of Node.js, stable Rust toolchain, and nightly rustfmt.
+**Requirements:** recent version of Node.js, stable Rust toolchain, and nightly rustfmt.
 
 The most straightforward way to run a modified version of the language server is to open this
 project in VSCode and use the provided `Run Extension` debug configuration. This will compile both
