@@ -97,7 +97,7 @@ installed.
 To debug changes, use the logging macros from the `tracing` crate. By default, however, only error logs are output. Add
 the following entries to your `settings.json` to show more:
 
-```json
+```jsonc
 {
 	"yag-template-lsp.trace.server": "messages", // "trace" for all LSP interactions
 	"yag-template-lsp.server.extraEnv": {
