@@ -25,10 +25,7 @@ async fn main() -> anyhow::Result<()> {
 }
 
 fn setup_logging() -> anyhow::Result<()> {
-    let raw_filter = env::var("YAG_LSP_LOG").ok().unwrap_or_else(|| "info".into());
-    let filter: Targets = raw_filter
-        .parse()
-        .with_context(|| format!("invalid log filter: `{raw_filter}`"))?;
+    let filter = get_log_filter()?;
 
     let stderr_writer = BoxMakeWriter::new(io::stderr);
     let fmt_layer = tracing_subscriber::fmt::layer()
@@ -37,4 +34,16 @@ fn setup_logging() -> anyhow::Result<()> {
         .with_filter(filter);
     Registry::default().with(fmt_layer).init();
     Ok(())
+}
+
+fn get_log_filter() -> anyhow::Result<Targets> {
+    /// Make tower_lsp less noisy, but otherwise show info logs by default.
+    const DEFAULT_LOG_FILTER: &str = "tower_lsp=error,info";
+
+    let filter = env::var("YAG_LSP_LOG")
+        .ok()
+        .unwrap_or_else(|| DEFAULT_LOG_FILTER.into());
+    filter
+        .parse()
+        .with_context(|| format!("invalid log filter: `{filter}`"))
 }
