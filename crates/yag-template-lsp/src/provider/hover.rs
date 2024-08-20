@@ -24,7 +24,7 @@ pub(crate) async fn hover(sess: &Session, params: HoverParams) -> anyhow::Result
 
 fn hover_var(doc: &Document, var: ast::Var) -> Option<Hover> {
     let hover_info = format!(
-        "```\n(variable) {name}\n```\n\nGo to definition (Ctrl + Click)",
+        "```\n(variable) {name}\n```\n\nGo to definition (Ctrl + Click) or Rename (F2)",
         name = var.name()
     );
     Some(Hover {

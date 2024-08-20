@@ -9,31 +9,33 @@ extensions published on the VSCode marketplace and Open VSX.
 
 ## Features
 
-- Syntax highlighting
-- Error reporting as you type
-- Basic code completion for variable and function names
-- Hover documentation for functions
-- Inlay hints for function parameter names
-- Goto definition for variables
-- Find all references for functions and variables
-- Automatic indentation
-- Folding ranges
+Most basic LSP features are supported, notably:
+
+- syntax highlighting
+- error reporting as you type
+- basic code completion for variable and function names
+- hover documentation for functions
+- inlay hints for function parameter names
+
+in addition to the following niceties:
+
+- variable renaming
+- goto definition for variables
+- find all references for functions and variables
+- automatic indentation
+- folding ranges
 
 ## Roadmap
 
-The following are relatively straightforward changes that are planned for the near future:
-
-- [ ] Automated variable renaming
-
-In the medium term, we would also like to implement:
+In the medium term, we would like to implement:
 
 - [ ] Lints for common code issues, e.g., checking `printf` format verbs
 - [ ] Type-aware code completion
   - A partial type-checker implementation is in the [`feat/typechecking`][typeck-branch] branch,
     save function overload resolution and language server integration.
 
-Finally, as a low-priority, long-term goal, we hope to better modularize and test the language
-server implementation (and indeed the project as a whole.)
+As a low-priority, long-term goal, we hope to better modularize and test the language server implementation (and indeed
+the project as a whole.)
 
 [typeck-branch]: https://github.com/jo3-l/yag-template-lsp/tree/feat/typechecking
 
