@@ -3,14 +3,14 @@ use core::fmt::Write;
 use std::collections::hash_map::Entry;
 use std::error::Error;
 
-use ahash::AHashMap;
+use foldhash::{HashMap, HashMapExt};
 use unscanny::Scanner;
 
 pub mod bundled_envdefs;
 
 #[derive(Debug)]
 pub struct EnvDefs {
-    pub funcs: AHashMap<String, Func>,
+    pub funcs: HashMap<String, Func>,
 }
 
 #[derive(Debug, Clone)]
@@ -92,7 +92,7 @@ pub struct EnvDefSource<'s> {
 }
 
 pub fn parse(sources: &[EnvDefSource]) -> Result<EnvDefs, ParseError> {
-    let mut defs = EnvDefs { funcs: AHashMap::new() };
+    let mut defs = EnvDefs { funcs: HashMap::new() };
     for src in sources {
         process_source(&mut defs, src)?;
     }

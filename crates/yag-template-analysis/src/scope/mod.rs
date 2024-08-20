@@ -2,8 +2,8 @@ mod analysis;
 
 use std::collections::hash_map;
 
-use ahash::AHashMap;
 pub use analysis::analyze;
+use foldhash::{HashMap, HashMapExt};
 use rowan::{TextRange, TextSize};
 use slotmap::{new_key_type, SlotMap};
 use smol_str::SmolStr;
@@ -16,14 +16,14 @@ new_key_type! { pub struct ScopeId; }
 #[derive(Debug)]
 pub struct ScopeInfo {
     var_syms: SlotMap<VarSymbolId, VarSymbol>,
-    resolved_var_uses: AHashMap<TextRange, VarSymbolId>, // indexed by text range of ast::Var
+    resolved_var_uses: HashMap<TextRange, VarSymbolId>, // indexed by text range of ast::Var
     scopes: SlotMap<ScopeId, Scope>,
 }
 
 impl ScopeInfo {
     pub(crate) fn new(
         var_syms: SlotMap<VarSymbolId, VarSymbol>,
-        resolved_var_uses: AHashMap<TextRange, VarSymbolId>,
+        resolved_var_uses: HashMap<TextRange, VarSymbolId>,
         scopes: SlotMap<ScopeId, Scope>,
     ) -> Self {
         Self {
@@ -69,7 +69,7 @@ pub struct VarSymbol {
 #[derive(Debug)]
 pub struct Scope {
     pub range: TextRange,
-    pub vars_by_name: AHashMap<SmolStr, VarSymbolId>,
+    pub vars_by_name: HashMap<SmolStr, VarSymbolId>,
     pub declared_vars: Vec<VarSymbol>,
     pub parent: Option<ScopeId>,
 }
@@ -78,7 +78,7 @@ impl Scope {
     pub(crate) fn new(range: TextRange, parent: Option<ScopeId>) -> Self {
         Self {
             range,
-            vars_by_name: AHashMap::new(),
+            vars_by_name: HashMap::new(),
             declared_vars: Vec::new(),
             parent,
         }

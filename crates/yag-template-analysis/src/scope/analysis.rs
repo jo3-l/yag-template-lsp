@@ -1,6 +1,6 @@
 use std::mem;
 
-use ahash::AHashMap;
+use foldhash::{HashMap, HashMapExt};
 use rowan::{TextRange, TextSize};
 use slotmap::SlotMap;
 use smol_str::SmolStr;
@@ -25,7 +25,7 @@ struct ScopeAnalyzer {
     scope_stack: Vec<ScopeId>, // lexical parents of top_scope
 
     var_syms: SlotMap<VarSymbolId, VarSymbol>,
-    resolved_var_uses: AHashMap<TextRange, VarSymbolId>, // indexed by text range of ast::Var
+    resolved_var_uses: HashMap<TextRange, VarSymbolId>, // indexed by text range of ast::Var
     errors: Vec<AnalysisError>,
 }
 
@@ -39,7 +39,7 @@ impl ScopeAnalyzer {
             scope_stack: Vec::new(),
 
             var_syms: SlotMap::with_key(),
-            resolved_var_uses: AHashMap::new(),
+            resolved_var_uses: HashMap::new(),
             errors: Vec::new(),
         }
     }

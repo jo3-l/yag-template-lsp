@@ -6,7 +6,7 @@ edition = "2021"
 [dependencies]
 yag-template-syntax = { path = "../yag-template-syntax" }
 yag-template-envdefs = { path = "../yag-template-envdefs" }
-ahash = "0.8.11"
+foldhash = "0.1.1"
 slotmap = "1.0.7"
 smol_str = "0.2.2"
 rowan = "0.15.15"
