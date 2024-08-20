@@ -2,7 +2,7 @@
 
 A VSCode extension providing rich editor support for YAGPDB's templating language.
 
-**Supported file extensions:** `.yag`, `.yagcc`, `.gotmpl`, `.go.tmpl`
+**Recognized file extensions:** `.yag`, `.yagcc`, `.gotmpl`, `.go.tmpl`
 
 ## Features
 
