@@ -1,8 +1,8 @@
 use std::collections::BTreeMap;
 
-use anyhow::{anyhow, Context};
+use anyhow::Context;
 use rowan::{TextRange, TextSize};
-use tower_lsp::lsp_types::{Position, Range};
+use tower_lsp::lsp_types::{Location, Position, Range, Url};
 use yag_template_analysis::Analysis;
 use yag_template_syntax::ast::SyntaxNodeExt;
 use yag_template_syntax::parser::Parse;
@@ -12,18 +12,18 @@ use yag_template_syntax::{ast, parser, SyntaxNode};
 use super::Session;
 
 pub(crate) struct Document {
+    pub(crate) uri: Url,
     pub(crate) parse: Parse,
     pub(crate) mapper: Mapper,
     pub(crate) analysis: Analysis,
 }
 
 impl Document {
-    pub(crate) fn new(sess: &Session, src: &str) -> anyhow::Result<Self> {
+    pub(crate) fn new(sess: &Session, uri: Url, src: &str) -> anyhow::Result<Self> {
         let parse = parser::parse(src);
-        let root = SyntaxNode::new_root(parse.root.clone())
-            .try_to::<ast::Root>()
-            .ok_or_else(|| anyhow!("root node of parse tree should be an ast::Root"))?;
+        let root = SyntaxNode::new_root(parse.root.clone()).to::<ast::Root>();
         let document = Self {
+            uri,
             parse: parse.clone(),
             mapper: Mapper::new(src),
             analysis: yag_template_analysis::analyze(&sess.envdefs, root),
@@ -37,6 +37,10 @@ impl Document {
 
     pub(crate) fn query_syntax(&self, pos: TextSize) -> anyhow::Result<Query> {
         Query::at(&self.syntax(), pos).context("failed querying syntax tree")
+    }
+
+    pub(crate) fn location_for(&self, range: TextRange) -> Location {
+        Location::new(self.uri.clone(), self.mapper.range(range))
     }
 }
 
