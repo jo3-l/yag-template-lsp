@@ -1,12 +1,14 @@
 import { resolve } from 'path';
-import { ExtensionContext, window, workspace, WorkspaceConfiguration } from 'vscode';
+import { commands, ExtensionContext, window, workspace, WorkspaceConfiguration } from 'vscode';
 import { LanguageClient, LanguageClientOptions, ServerOptions } from 'vscode-languageclient/node';
 
 let client: LanguageClient | undefined = undefined;
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
-export async function activate(_context: ExtensionContext) {
+export async function activate(context: ExtensionContext) {
 	const config = workspace.getConfiguration('yag-template-lsp');
+
+	context.subscriptions.push(commands.registerCommand('yag-template-lsp.restartServer', restartServer));
 	try {
 		await startClient(config);
 	} catch (error) {
@@ -17,6 +19,10 @@ export async function activate(_context: ExtensionContext) {
 
 export function deactivate() {
 	return client?.stop();
+}
+
+function restartServer() {
+	void client?.restart();
 }
 
 async function startClient(config: WorkspaceConfiguration) {

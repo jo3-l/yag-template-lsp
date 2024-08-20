@@ -61,6 +61,12 @@
 				"path": "./ydef.tmLanguage.json"
 			}
 		],
+		"commands": [
+			{
+				"command": "yag-template-lsp.restartServer",
+				"title": "yag-template-lsp: Restart server"
+			}
+		],
 		"configuration": {
 			"title": "Yag Template LSP",
 			"properties": {
