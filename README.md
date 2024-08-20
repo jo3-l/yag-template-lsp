@@ -14,6 +14,7 @@ A range of basic LSP features are already implemented, namely,
 - Syntax highlighting
 - Error reporting as you type
 - Basic code completion for variable and function names
+- Goto definition and find all references for variables
 - Hover documentation for functions
 - Inlay hints for function parameter names
 - Automatic indentation
@@ -23,7 +24,6 @@ A range of basic LSP features are already implemented, namely,
 
 The following are relatively straightforward changes that are planned for the near future:
 
-- [ ] Go-to-definition for variables
 - [ ] Automated variable renaming
 
 In the medium term, we would also like to implement:

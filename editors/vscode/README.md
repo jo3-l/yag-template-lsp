@@ -9,6 +9,7 @@ A VSCode extension providing rich editor support for YAGPDB's templating languag
 - Syntax highlighting
 - Error reporting as you type
 - Basic code completion for variable and function names
+- Goto definition and find all references for variables
 - Hover documentation for functions
 - Inlay hints for function parameter names
 - Automatic indentation
