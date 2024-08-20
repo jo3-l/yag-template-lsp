@@ -27,11 +27,10 @@ func userArg(input)
 
 
 == Custom command plugin
-func parseArgs(numRequired, errorMsg, argTypes...)
-	Parses the textual input provided to the custom command as structured arguments, ensuring they conform to the
-	defined types. See the documentation of the `carg` function for how to define arguments and a list of available
-	types.
-	
+func parseArgs(numRequired, errorMsg, argDefs...)
+	Parses the input to the custom command into structured arguments, ensuring they match the defined types. See the
+	documentation of the `carg` function for how to define arguments and a listing of available types.
+
 	If the arguments are not of the expected types or if there are fewer than `numRequired` arguments, the specified
 	`errorMsg` is output and custom command execution stops immediately after. If no error message is explicitly
 	provided, one will be automatically generated based on the argument definitions.
