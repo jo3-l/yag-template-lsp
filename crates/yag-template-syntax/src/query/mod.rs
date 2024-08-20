@@ -26,12 +26,11 @@ pub struct Query {
 
 impl Query {
     pub fn at(root: &SyntaxNode, offset: TextSize) -> Self {
+        let t = root.token_at_offset(offset);
         Self {
             offset,
-            before: offset
-                .checked_sub(TextSize::from(1))
-                .and_then(|offset_before| root.token_at_offset(offset_before).right_biased()),
-            after: root.token_at_offset(offset).right_biased(),
+            before: t.clone().left_biased(),
+            after: t.right_biased(),
         }
     }
 
