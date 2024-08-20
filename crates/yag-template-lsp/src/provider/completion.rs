@@ -1,4 +1,3 @@
-use anyhow::Context;
 use tower_lsp::lsp_types::{
     CompletionItem, CompletionItemKind, CompletionParams, CompletionResponse, CompletionTextEdit, TextEdit,
 };
@@ -13,9 +12,9 @@ use crate::session::{Document, Session};
 pub(crate) async fn complete(sess: &Session, params: CompletionParams) -> anyhow::Result<Option<CompletionResponse>> {
     let uri = params.text_document_position.text_document.uri;
     let doc = sess.document(&uri)?;
-    let pos = doc.mapper.offset(params.text_document_position.position);
 
-    let query = Query::at(&doc.syntax(), pos).context("failed querying at offset")?;
+    let pos = doc.mapper.offset(params.text_document_position.position);
+    let query = doc.query_syntax(pos)?;
     let completions = if query.in_var_access() {
         let existing_var = query.var().unwrap();
         let scope_info = &doc.analysis.scope_info;

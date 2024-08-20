@@ -43,34 +43,55 @@ pub struct DeclaredVar {
     pub name: SmolStr,
     pub visible_from: TextSize,
     pub decl_range: Option<TextRange>,
+    pub uses: Vec<TextRange>,
+}
+
+impl DeclaredVar {
+    pub(crate) fn new(name: impl Into<SmolStr>, decl_range: TextRange) -> Self {
+        Self {
+            name: name.into(),
+            visible_from: decl_range.end(),
+            decl_range: Some(decl_range),
+            uses: Vec::new(),
+        }
+    }
+
+    pub(crate) fn synthetic(name: impl Into<SmolStr>, visible_from: TextSize) -> Self {
+        Self {
+            name: name.into(),
+            visible_from,
+            decl_range: None,
+            uses: Vec::new(),
+        }
+    }
 }
 
 #[derive(Debug)]
 pub struct ScopeInfo {
-    vars: SlotMap<DeclaredVarId, DeclaredVar>,
-    resolved_var_uses: AHashMap<TextRange, DeclaredVarId>,
+    declared_vars: SlotMap<DeclaredVarId, DeclaredVar>,
+    resolved_var_references: AHashMap<TextRange, DeclaredVarId>,
     scopes: SlotMap<ScopeId, Scope>,
 }
 
 impl ScopeInfo {
     pub(crate) fn new(
-        vars: SlotMap<DeclaredVarId, DeclaredVar>,
-        resolved_var_uses: AHashMap<TextRange, DeclaredVarId>,
+        declared_vars: SlotMap<DeclaredVarId, DeclaredVar>,
+        resolved_var_references: AHashMap<TextRange, DeclaredVarId>,
         scopes: SlotMap<ScopeId, Scope>,
     ) -> Self {
         Self {
-            vars,
-            resolved_var_uses,
+            declared_vars,
+            resolved_var_references,
             scopes,
         }
     }
 }
 
 impl ScopeInfo {
-    pub fn resolve_var_use(&self, var: ast::Var) -> Option<&DeclaredVar> {
-        self.resolved_var_uses
+    pub fn resolve_var(&self, var: ast::Var) -> Option<&DeclaredVar> {
+        self.resolved_var_references
             .get(&var.syntax().text_range())
-            .and_then(|id| self.vars.get(*id))
+            .and_then(|id| self.declared_vars.get(*id))
     }
 
     /// Iterate over the scopes containing the offset, from the innermost outward.

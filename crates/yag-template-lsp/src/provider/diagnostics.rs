@@ -4,7 +4,7 @@ use yag_template_syntax::SyntaxError;
 
 use crate::session::{Document, Session};
 
-pub(crate) async fn publish_diagnostics(session: &Session, uri: &Url) -> anyhow::Result<()> {
+pub(crate) async fn publish(session: &Session, uri: &Url) -> anyhow::Result<()> {
     let doc = session.document(uri)?;
 
     let syntax_error_diags = doc.parse.errors.iter().map(|err| diag_for_syntax_error(&doc, err));
@@ -27,7 +27,7 @@ fn diag_for_analysis_error(doc: &Document, err: &AnalysisError) -> Diagnostic {
     Diagnostic::new_simple(doc.mapper.range(err.range), err.message.clone())
 }
 
-pub(crate) async fn clear_diagnostics(session: &Session, uri: &Url) {
+pub(crate) async fn clear(session: &Session, uri: &Url) {
     let version = Default::default();
     session
         .client
