@@ -6,10 +6,11 @@ pub(crate) async fn goto_definition(
     sess: &Session,
     params: GotoDefinitionParams,
 ) -> anyhow::Result<Option<GotoDefinitionResponse>> {
-    let doc = sess.document(&params.text_document_position_params.text_document.uri)?;
+    let uri = params.text_document_position_params.text_document.uri;
+    let doc = sess.document(&uri)?;
 
-    let pos = doc.mapper.offset(params.text_document_position_params.position);
-    let query = doc.query_syntax(pos)?;
+    let pos = params.text_document_position_params.position;
+    let query = doc.query_at(pos)?;
     let def_info = if let Some(var) = query.var() {
         doc.analysis
             .scope_info

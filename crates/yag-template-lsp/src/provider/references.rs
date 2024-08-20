@@ -4,10 +4,11 @@ use yag_template_syntax::ast::{self, AstNode};
 use crate::session::{Document, Session};
 
 pub(crate) async fn references(sess: &Session, params: ReferenceParams) -> anyhow::Result<Option<Vec<Location>>> {
-    let doc = sess.document(&params.text_document_position.text_document.uri)?;
+    let uri = params.text_document_position.text_document.uri;
+    let doc = sess.document(&uri)?;
 
-    let pos = doc.mapper.offset(params.text_document_position.position);
-    let query = doc.query_syntax(pos)?;
+    let pos = params.text_document_position.position;
+    let query = doc.query_at(pos)?;
     let refs = if let Some(var) = query.var() {
         find_var_references(&doc, var, &params.context)
     } else if query.in_func_name() {

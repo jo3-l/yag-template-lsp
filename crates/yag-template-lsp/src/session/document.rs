@@ -35,8 +35,8 @@ impl Document {
         SyntaxNode::new_root(self.parse.root.clone())
     }
 
-    pub(crate) fn query_syntax(&self, pos: TextSize) -> anyhow::Result<Query> {
-        Query::at(&self.syntax(), pos).context("failed querying syntax tree")
+    pub(crate) fn query_at(&self, pos: Position) -> anyhow::Result<Query> {
+        Query::at(&self.syntax(), self.mapper.offset(pos)).context("failed querying syntax tree")
     }
 
     pub(crate) fn location_for(&self, range: TextRange) -> Location {
