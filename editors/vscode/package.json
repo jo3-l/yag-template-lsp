@@ -10,7 +10,7 @@
 	"author": "Joseph Liu",
 	"publisher": "jo3-l",
 	"license": "MIT",
-	"version": "0.1.2",
+	"version": "0.2.0",
 	"engines": {
 		"vscode": "^1.76.0"
 	},
