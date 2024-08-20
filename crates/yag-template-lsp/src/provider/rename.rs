@@ -32,8 +32,7 @@ fn rename_var(doc: &Document, var: ast::Var, mut new_name: String) -> Option<Wor
         .map(|range| TextEdit::new(doc.mapper.range(range), new_name.clone()))
         .collect();
 
-    let mut changes = HashMap::with_capacity(1);
-    changes.insert(doc.uri.clone(), edits);
+    let changes = HashMap::from([(doc.uri.clone(), edits)]);
     Some(WorkspaceEdit {
         changes: Some(changes),
         ..Default::default()
