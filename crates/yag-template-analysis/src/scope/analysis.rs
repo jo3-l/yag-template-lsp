@@ -3,6 +3,7 @@ use std::mem;
 use ahash::AHashMap;
 use rowan::{TextRange, TextSize};
 use slotmap::SlotMap;
+use smol_str::SmolStr;
 use yag_template_syntax::ast;
 use yag_template_syntax::ast::{Action, AstNode, AstToken};
 
@@ -10,9 +11,10 @@ use super::{DeclaredVar, DeclaredVarId, Scope, ScopeId, ScopeInfo};
 use crate::AnalysisError;
 
 pub fn analyze(root: ast::Root) -> (ScopeInfo, Vec<AnalysisError>) {
-    let mut s = ScopeAnalyzer::new(root.syntax().text_range());
+    let root_range = root.syntax().text_range();
+    let mut s = ScopeAnalyzer::new(root_range);
     // The variable $ is predefined as the initial context data.
-    s.declare(DeclaredVar::synthetic("$", TextSize::from(0)));
+    s.declare("$", root_range.start(), None);
     s.analyze_all(root.actions());
     s.finish()
 }
@@ -79,11 +81,21 @@ impl ScopeAnalyzer {
             .expect("call to exit_scope() should correspond to an earlier enter_scope()");
     }
 
-    fn declare(&mut self, decl: DeclaredVar) -> DeclaredVarId {
-        let id = self.declared_vars.insert(decl.clone());
+    fn declare(
+        &mut self,
+        var_name: impl Into<SmolStr> + Clone,
+        visible_from: TextSize,
+        decl_range: Option<TextRange>,
+    ) -> DeclaredVarId {
+        let id = self.declared_vars.insert_with_key(|id| DeclaredVar {
+            id,
+            name: var_name.clone().into(),
+            visible_from,
+            decl_range,
+        });
         let top_scope = &mut self.scopes[self.top_scope];
-        top_scope.declared_vars.push(decl.clone());
-        top_scope.vars_by_name.insert(decl.name, id);
+        top_scope.declared_vars.push(self.declared_vars[id].clone());
+        top_scope.vars_by_name.insert(var_name.into(), id);
         id
     }
 
@@ -124,11 +136,11 @@ impl ScopeAnalyzer {
 
     fn analyze_template_def(&mut self, def: ast::TemplateDefinition) {
         if let Some(list) = def.action_list() {
-            let range = list.syntax().text_range();
-            self.enter_detached_scope(range);
+            let body_range = list.syntax().text_range();
+            self.enter_detached_scope(body_range);
             // All associated template executions have the variable $ predefined
             // as the initial context data.
-            self.declare(DeclaredVar::synthetic("$", range.start()));
+            self.declare("$", body_range.start(), None);
             self.analyze_all(list.actions());
             self.exit_scope();
         }
@@ -138,9 +150,9 @@ impl ScopeAnalyzer {
         self.try_analyze_expr(access!(block.block_clause()?.context_expr()));
 
         if let Some(list) = block.action_list() {
-            let range = list.syntax().text_range();
-            self.enter_detached_scope(range);
-            self.declare(DeclaredVar::synthetic("$", range.start()));
+            let body_range = list.syntax().text_range();
+            self.enter_detached_scope(body_range);
+            self.declare("$", body_range.start(), None);
             self.analyze_all(list.actions());
             self.exit_scope();
         }
@@ -213,7 +225,11 @@ impl ScopeAnalyzer {
         let range_clause_scope = self.enter_inner_scope(range_clause.syntax().text_range());
         if range_clause.declares_vars() {
             for var in range_clause.iteration_vars() {
-                let id = self.declare(DeclaredVar::new(var.name(), range_clause.syntax().text_range()));
+                let id = self.declare(
+                    var.name(),
+                    range_clause.syntax().text_range().end(),
+                    Some(range_clause.syntax().text_range()),
+                );
                 self.set_referent(var, id);
             }
         } else if range_clause.assigns_vars() {
@@ -317,8 +333,8 @@ impl ScopeAnalyzer {
 
     fn analyze_var_decl(&mut self, decl: ast::VarDecl) {
         if let Some(var) = decl.var() {
-            let range = decl.syntax().text_range();
-            let id = self.declare(DeclaredVar::new(var.name(), range));
+            let decl_range = decl.syntax().text_range();
+            let id = self.declare(var.name(), decl_range.end(), Some(decl_range));
             self.set_referent(var, id);
         }
         self.try_analyze_expr(decl.initializer());
@@ -335,10 +351,7 @@ impl ScopeAnalyzer {
         let name = var_use.name();
         let range = var_use.syntax().text_range();
         match self.lookup_var(name) {
-            Some(id) => {
-                self.set_referent(var_use, id);
-                self.declared_vars[id].uses.push(range);
-            }
+            Some(id) => self.set_referent(var_use, id),
             None => self.error(format!("undefined variable {name}"), range),
         }
     }

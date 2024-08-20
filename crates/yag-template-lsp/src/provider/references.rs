@@ -23,16 +23,12 @@ fn find_var_references(
     var: ast::Var,
     context: &ReferenceContext,
 ) -> Option<Vec<Location>> {
-    let resolved = doc.analysis.scope_info.resolve_var(var)?;
-    let mut refs: Vec<_> = resolved
-        .uses
-        .iter()
-        .map(|text_range| Location::new(doc_uri.clone(), doc.mapper.range(*text_range)))
+    let scope_info = &doc.analysis.scope_info;
+
+    let resolved = scope_info.resolve_var(var)?;
+    let refs: Vec<_> = scope_info
+        .find_uses(resolved, context.include_declaration)
+        .map(|range| Location::new(doc_uri.clone(), doc.mapper.range(range)))
         .collect();
-    if context.include_declaration {
-        if let Some(decl_range) = resolved.decl_range {
-            refs.push(Location::new(doc_uri.clone(), doc.mapper.range(decl_range)));
-        }
-    }
     Some(refs)
 }
