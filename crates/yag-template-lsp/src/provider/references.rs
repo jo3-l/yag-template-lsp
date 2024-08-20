@@ -11,7 +11,7 @@ pub(crate) async fn references(sess: &Session, params: ReferenceParams) -> anyho
     let query = doc.query_at(pos)?;
     let refs = if let Some(var) = query.var() {
         find_var_references(&doc, var, &params.context)
-    } else if query.in_func_name() {
+    } else if query.is_func_call() {
         let func_ident = query.ident().unwrap();
         find_func_references(&doc, func_ident.get())
     } else {

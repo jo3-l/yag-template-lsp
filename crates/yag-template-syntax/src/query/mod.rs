@@ -19,7 +19,7 @@ impl Query {
 }
 
 impl Query {
-    pub fn in_var_access(&self) -> bool {
+    pub fn is_var_access(&self) -> bool {
         self.token.kind() == SyntaxKind::Var && self.token.parent().is_some_and(|parent| parent.is::<ast::VarAccess>())
     }
 
@@ -27,7 +27,7 @@ impl Query {
         ast::Var::cast(self.token.clone())
     }
 
-    pub fn in_func_name(&self) -> bool {
+    pub fn is_func_call(&self) -> bool {
         self.token.kind() == SyntaxKind::Ident && self.token.parent().is_some_and(|parent| parent.is::<ast::FuncCall>())
     }
 

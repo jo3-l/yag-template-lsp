@@ -11,16 +11,32 @@ pub(crate) async fn hover(sess: &Session, params: HoverParams) -> anyhow::Result
 
     let pos = params.text_document_position_params.position;
     let query = doc.query_at(pos)?;
-    let hover_info = if query.in_func_name() {
+    let hover_info = if let Some(var) = query.var() {
+        hover_var(&doc, var)
+    } else if query.is_func_call() {
         let func_ident = query.ident().unwrap();
-        hover_for_func(&sess.envdefs, &doc, func_ident)
+        hover_func(&sess.envdefs, &doc, func_ident)
     } else {
         None
     };
     Ok(hover_info)
 }
 
-fn hover_for_func(env: &EnvDefs, doc: &Document, func_ident: ast::Ident) -> Option<Hover> {
+fn hover_var(doc: &Document, var: ast::Var) -> Option<Hover> {
+    let hover_info = format!(
+        "```\n(variable) {name}\n```\n\nGo to definition (Ctrl + Click)",
+        name = var.name()
+    );
+    Some(Hover {
+        contents: HoverContents::Markup(MarkupContent {
+            kind: MarkupKind::Markdown,
+            value: hover_info,
+        }),
+        range: Some(doc.mapper.range(var.syntax().text_range())),
+    })
+}
+
+fn hover_func(env: &EnvDefs, doc: &Document, func_ident: ast::Ident) -> Option<Hover> {
     let func = env.funcs.get(func_ident.get())?;
     let mut hover_info = format!("```ydef\n{}\n```", func.signature());
     if !func.doc.is_empty() {
