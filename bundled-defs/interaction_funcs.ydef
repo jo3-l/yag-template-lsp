@@ -29,14 +29,14 @@ func sendModal(modal)
 func sendResponse(interactionToken, message)
 	Sends a message in response to an interaction. Supports the `ephemeral` flag in `complexMessage`.
 
+func sendResponseRetID(interactionToken, message)
+	Same as `sendResponse`, but returns the message ID.
+
 func sendResponseNoEscape(interactionToken, message)
 	Same as `sendResponse`, but does not escape mentions.
 
 func sendResponseNoEscapeRetID(interactionToken, message)
-	Same as `sendResponse`, but does not escape mentions and returns the message ID.
-
-func sendResponseRetID(interactionToken, message)
-	Same as `sendResponse`, but returns the message ID.
+	Same as `sendResponseNoEscape`, but returns the message ID.
 
 func ephemeralResponse()
 	Tells the bot to send the response text as an ephemeral message. Only works when triggered by an interaction. Works
@@ -83,8 +83,6 @@ func editResponseNoEscape(interactionToken, messageID, newContent)
 func updateMessage(newMessage)
 	Edits the message that triggered the button, select menu, or modal.
 
-	- `newMessage`: the new message content. May be a string, an embed, or a complex message.
-
 	### Example
 
 	The following example must be triggered by a component or modal submission.
@@ -101,11 +99,12 @@ func updateMessageNoEscape(newMessage)
 	Same as `updateMessage`, but does not escape mentions.
 
 func cbutton(opts...)
-	Creates a [button object](https://discord.com/developers/docs/interactions/message-components#button-object) for use
-	in interactions.
+	Creates a [button object][discord-buttons] for use in interactions.
 
 	A link style button *must* have a URL and may not have a Custom ID. All other styles *must* have a Custom ID and
 	cannot have a URL. All buttons must have either a label or an emoji.
+
+	[discord-buttons]: https://discord.com/developers/docs/interactions/message-components#button-object
 
 	### Example
 
@@ -116,11 +115,12 @@ func cbutton(opts...)
 	```
 
 func cmenu(opts...)
-	Creates a [select menu object](https://discord.com/developers/docs/interactions/message-components#select-menu-object)
-	for use in interactions.
+	Creates a [select menu object][discord-select-menus] for use in interactions.
 
 	The type should be provided as a string: `"text"`, `"user"`, `"role"`, `"mentionable"`, or `"channel"`. Text type menus
 	*must* have `options`, while all other types cannot.
+
+	[discord-select-menus]: https://discord.com/developers/docs/interactions/message-components#select-menu-object
 
 	### Example
 
@@ -140,5 +140,6 @@ func cmenu(opts...)
 	```
 
 func cmodal(opts...)
-	Creates a [modal object](https://discord.com/developers/docs/interactions/receiving-and-responding#interaction-response-object-modal)
-	for use in interactions.
+	Creates a [modal object][discord-modals] for use in interactions. See `sendModal` for more detail.
+
+	[discord-modals]: https://discord.com/developers/docs/interactions/receiving-and-responding#interaction-response-object-modal

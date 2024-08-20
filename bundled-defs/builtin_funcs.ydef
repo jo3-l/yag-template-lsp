@@ -2,7 +2,7 @@ func and(args...)
 	Returns the boolean AND of the arguments by returning the first empty argument or the last argument. That is, `and x
 	y` behaves as `if x then y else x`.
 
-	Note that `and` does not short-circuit: all the arguments are evaluated.
+	Unlike in many other programming languages, `and` does not short-circuit: all the arguments are evaluated.
 
 func call(fn, args...)
 	Returns the result of calling the first argument, which must be a function, with the remaining arguments as
@@ -14,15 +14,14 @@ func call(fn, args...)
 	of type error. If the arguments don't match the function or the returned error value is non-nil, execution stops.
 
 func execTemplate(template, data?)
-	Executes the associated template with the specified name and context data, If the associated template returns a
+	Executes the associated template with the specified name and context data. If the associated template returns a
 	value, `execTemplate` evaluates to that value and `nil` otherwise.
 
 func html(v)
-	Returns the escaped HTML equivalent of the textual representation of its
-	arguments.
+	Returns the escaped HTML equivalent of the textual representation of its arguments.
 
-func index(v, keys...)
-	Return the result of indexing the first argument by the following arguments. Thus `index x 1 2 3` is, in Go syntax,
+func index(item, keys...)
+	Returns the result of indexing the first argument by the following arguments. Thus `index x 1 2 3` is, in Go syntax,
 	`x[1][2][3]`. Each indexed item must be a map, slice, or array.
 
 func js(v)
@@ -36,23 +35,26 @@ func not(v)
 
 func or(args...)
 	Returns the boolean OR of its arguments by returning the first non-empty argument or the last argument, that is, `or
-	x y` behaves as `if x then x else y`. All the arguments are evaluated.
+	x y` behaves as `if x then x else y`.
+
+	Unlike in many other programming languages, `or` does not short-circuit: all the arguments are evaluated.
 
 func urlquery(v)
 	Returns the escaped value of the textual representation of the arguments in a form suitable for embedding in a URL
 	query.
 
 func eq(x, y...)
-	Return the boolean truth of `x == y`.
+	Returns the boolean truth of `x == y`.
 
-	For simpler multi-way equality tests, eq accepts two or more arguments and compares the second and subsequent
+	For simpler multi-way equality tests, `eq` accepts two or more arguments and compares the second and subsequent
 	arguments to the first, returning in effect
 
 	```
 	arg1==arg2 || arg1==arg3 || arg1==arg4 ...
 	```
 
-	(Unlike with || in Go, however, eq is a function call and all the arguments will be evaluated.)
+	Note, however, that as `eq` is a function call, the comparison does not short-circuit and all the arguments will be
+	evaluated.
 
 func ge(x, y)
 	Returns the boolean truth of `x >= y`.

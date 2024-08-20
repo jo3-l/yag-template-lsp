@@ -1,40 +1,43 @@
 == Logs plugin
 func pastUsernames(userID, offset)
+	**Deprecated.** This function no longer works and will always return an error.
 
 func pastNicknames(userID, offset)
-
+	**Deprecated.** This function no longer works and will always return an error.
 
 
 == Tickets plugin
 func createTicket(author, topic)
-	Creates a new ticket with the topic given associated with the specified user.
+	Creates a new ticket with the topic given and associated with the specified user.
 
-	- `author`: the member to associate this ticket with.
-	- `topic`: the topic of this ticket. Must be a string.
+	- `author`: the member to associate the ticket with.
+	- `topic`: the topic of the ticket.
 
 	For this function to work, the ticket system must be enabled.
 
 func exec(command, args...)
-	Executes the specified built-in command, optionally with arguments.
-
-	This will not work for commands with paginated embed results, e.g. `warnings`.
+	Executes the specified built-in command (optionally providing arguments) and returns its response.
 
 func execAdmin(command, args...)
-	Executes the specified built-in command with the triggering user set to the bot, optionally with arguments.
+	Executes the specified built-in command (optionally providing arguments) with the triggering user set to the bot.
 
 func userArg(input)
-	Returns the full user object with the given ID or mention.
+	Returns the full user object specified by the input, which can be an ID or a mention.
 
 
 
 == Custom command plugin
-func parseArgs(numRequired, errorMsg, cargs...)
-	Parses arguments passed to the custom command. Ensures that at least `numRequired` arguments are passed and parses
-	the arguments according to the defined `cargs...`, emitting `errorMsg` and exiting the custom command on error. An
-	empty error message indicates that one should be automatically generated based on the argument definitions.
+func parseArgs(numRequired, errorMsg, argTypes...)
+	Parses the textual input provided to the custom command as structured arguments, ensuring they conform to the
+	defined types. See the documentation of the `carg` function for how to define arguments and a list of available
+	types.
+	
+	If the arguments are not of the expected types or if there are fewer than `numRequired` arguments, the specified
+	`errorMsg` is output and custom command execution stops immediately after. If no error message is explicitly
+	provided, one will be automatically generated based on the argument definitions.
 
-	The return value of `parseArgs` is an object with methods `$args.Get n` and `$args.IsSet n`. Calling `$args.IsSet N`
-	reports whether the nth argument (starting from 0) was provided, and `$args.Get n` retrieves that argument if so.
+	The return value of `parseArgs` is an object with methods `$args.Get n` and `$args.IsSet n`. Calling `$args.IsSet n`
+	reports whether the `n`th argument (zero-based) was provided, and `$args.Get n` retrieves that argument if so.
 
 	### Example
 
@@ -49,30 +52,30 @@ func parseArgs(numRequired, errorMsg, cargs...)
 	```
 
 func carg(type, name, min?, max?)
-	Defines an argument with the given type.
+	Defines an argument with the given type and name.
 
 	The available types are:
-	- `int`: Resolves to an integer.
-	- `float`: Resolves to a floating-point number.
-	- `string`: Resolves to a string.
-	- `user`: Resolves to a user object. Accepts user mentions and IDs. The user must be in the server.
-	- `userid`: Resolves to an ID. Accepts user mentions and IDs but performs no additional validation.
-	- `member`: Resolves to a member object. Accepts user mentions and IDs.
-	- `channel`: Resolves to a channel object. Accepts channel mentions and IDs.
-	- `role`: Resolves to a role object. Accepts role names and IDs.
-	- `duration`: Resolves to a duration object. Accepts human-readable representations of durations,
+	- `int`: resolves to an integer.
+	- `float`: resolves to a floating-point number.
+	- `string`: resolves to a string.
+	- `user`: resolves to a user object. Accepts user mentions and IDs. The user must be in the server.
+	- `userid`: resolves to an ID. Accepts user mentions and IDs but performs no additional validation.
+	- `member`: resolves to a member object. Accepts user mentions and IDs.
+	- `channel`: resolves to a channel object. Accepts channel mentions and IDs.
+	- `role`: resolves to a role object. Accepts role names and IDs.
+	- `duration`: resolves to a duration object. Accepts human-readable representations of durations,
 	such as `10h5m` or `10 hours 5 minutes`.
 
 	The `int`, `float`, and `duration` types support optional minimum and maximum bounds, both inclusive. For the
 	`duration` type, the minimum and maximum bounds are measured in seconds.
 
 func execCC(ccID, channel, delay, data)
-	Executes another custom command specified by `ccID`.
+	Executes the custom command specified by `ccID` after a delay.
 
 	- `ccID`: the ID of the custom command to execute.
 	- `channel`: the channel to execute the custom command in. May be `nil`, a channel ID, or a channel name.
 	- `delay`: the delay in seconds before executing the custom command.
-	- `data`: some arbitrary data to pass to the executed custom command.
+	- `data`: arbitrary data to pass to the executed custom command.
 
 	### Example
 
@@ -89,18 +92,19 @@ func execCC(ccID, channel, delay, data)
 	```
 
 func scheduleUniqueCC(ccID, channel, delay, key, data)
-	Schedules a custom command execution to occur in the future, identified by `key`.
+	Schedules a custom command execution, associating it by a custom key which can be used to cancel the custom command
+	execution.
 
 	- `ccID`: the ID of the custom command to execute.
 	- `channel`: the channel to execute the custom command in. May be `nil`, a channel ID, or a channel name.
 	- `delay`: the delay in seconds before executing the custom command.
-	- `key`: a unique key to identify the scheduled custom command.
-	- `data`: some arbitrary data to pass to the executed custom command.
+	- `key`: an arbitrary key to identify the scheduled custom command, ideally unique.
+	- `data`: arbitrary data to pass to the executed custom command.
 
 	To cancel a scheduled custom command execution, use `cancelScheduledUniqueCC`.
 
 func cancelScheduledUniqueCC(ccID, key)
-	Cancels a previously scheduled custom command execution.
+	Cancels a custom command execution previously scheduled via `scheduleUniqueCC`.
 
 
 
@@ -114,82 +118,88 @@ func dbSet(userID, key, value)
 func dbSetExpire(userID, key, value, ttl)
 	Same as `dbSet` but with an additional expiry `ttl` in seconds.
 
-func dbIncr(userID, key, delta)
-	Increments the value of the specified database entry by `delta`. Returns the new value as a floating-point number.
-	To decrement, pass a negative delta. 
+func dbIncr(userID, key, by)
+	Increments the value of the specified database entry. Returns the new value as a floating-point number. To
+	decrement, provide a negative value for `by`.
 
-	- `delta`: the amount to increment the value by. Must be a valid number.
+	- `by`: the amount to increment the value by. Must be a valid number.
 
 func dbGet(userID, key)
-	Returns the specified database entry.
+	Returns the specified database entry object, or `nil` if it does not exist.
 
-func dbGetPattern(userID, pattern, limit, numSkip)	
-	Returns up to `limit` entries from the database in ascending order as a slice.
+func dbGetPattern(userID, pattern, amount, numSkip)	
+	Returns up to `amount` entries from the database as a slice, sorted in ascending order **by entry ID**. To sort by
+	entry value instead, see the `dbTopEntries` function.
 
-	- `userID`: the user ID to retrieve entries for.
-	- `pattern`: the PostgreSQL pattern to match entries against.
-	- `limit`: the maximum number of entries to return, capped at 100.
+	- `userID`: the user ID to filter entries by.
+	- `pattern`: the PostgreSQL pattern to filter entries by.
+	- `amount`: the maximum number of entries to return, capped at 100.
 	- `numSkip`: the number of entries to skip before returning results.
 
 	See `dbGetPatternReverse` for a function that retrieves entries in descending order.
 
-func dbGetPatternReverse(userID, pattern, limit, numSkip)
-	Returns up to `limit` entries from the database in descending order as a slice.
+func dbGetPatternReverse(userID, pattern, amount, numSkip)
+	Returns up to `amount` entries from the database as a slice, sorted in descending order by **by entry ID**. To sort
+	by entry value instead, use the `dbBottomEntries` function.
 
-	- `userID`: the user ID to retrieve entries for.
-	- `pattern`: the PostgreSQL pattern to match entries against.
-	- `limit`: the maximum number of entries to return, capped at 100.
+	- `userID`: the user ID to filter entries by.
+	- `pattern`: the PostgreSQL pattern to filter entries by.
+	- `amount`: the maximum number of entries to return, capped at 100.
 	- `numSkip`: the number of entries to skip before returning results.
 
-	See `dbGetPatternReverse` for a function that retrieves entries in descending order.
+	See `dbGetPattern` for a function that retrieves entries in ascending order.
 
 func dbDel(userID, key)
-	Deletes the specified entry from the database.
+	Deletes the specified entry from the database, doing nothing if it does not exist.
 
 func dbDelByID(userID, entryID)
-	Deletes the database entry by ID.
+	Deletes the database entry by entry ID.
 
 func dbDelById(userID, entryID)
 	An alias of `dbDelByID`.
 
-func dbDelMultiple(query, limit, numSkip)
-	Deletes up to `limit` entries from the database matching the given criteria. Returns the number of deleted entries.
+func dbDelMultiple(query, amount, numSkip)
+	Deletes up to `amount` entries from the database matching the given criteria. Returns the number of deleted entries.
 
-	- `query`: a sdict with the following (all optional) keys:
-		- `userID`: only delete entries with a matching UserID field. Defaults to all users.
+	- `query`: a sdict filtering the entries to delete, supporting the following keys (all optional):
+		- `userID`: only delete entries with a matching user ID. Defaults to all users.
 		- `pattern`: only delete entries with keys matching the given pattern. Defaults to all keys.
 		- `reverse`: whether to delete entries with the lowest value first. Default is `false` (highest value first).
-	- `limit`: the maximum number of entries to delete, capped at 100.
+	- `amount`: the maximum number of entries to delete, capped at 100.
 	- `numSkip`: the number of entries to skip before deleting.
 
-func dbTopEntries(pattern, limit, numSkip)
-	Returns up to `limit` entries from the database, sorted in descending order by the numeric value, then by entry ID.
+func dbTopEntries(pattern, amount, numSkip)
+	Returns up to `amount` entries from the database, sorted in descending order by numeric entry value then by entry ID.
 
-	- `pattern`: the PostgreSQL pattern to match entries against.
-	- `limit`: the maximum number of entries to return, capped at 100.
+	- `pattern`: the PostgreSQL pattern to filter entries by.
+	- `amount`: the maximum number of entries to return, capped at 100.
 	- `numSkip`: the number of entries to skip before returning results.
 
-func dbBottomEntries(pattern, limit, numSkip)
-	Returns up to `limit` entries from the database, sorted in descending order by the numeric value, then by entry ID.
+func dbBottomEntries(pattern, amount, numSkip)
+	Returns up to `amount` entries from the database, sorted in descending order by numeric entry value then by entry ID.
 
-	- `pattern`: the PostgreSQL pattern to match entries against.
-	- `limit`: the maximum number of entries to return, capped at 100.
+	- `pattern`: the PostgreSQL pattern to filter entries by.
+	- `amount`: the maximum number of entries to return, capped at 100.
 	- `numSkip`: the number of entries to skip before returning results.
 
 func dbCount(query?)
 	Returns the count of all database entries that are not expired.
 
-	If `query` is provided, it specifies which entries to include:
-	- a user ID: only count entries for the given user ID.
-	- a PostgreSQL pattern: only count entries with keys matching the given pattern.
-	- a query object supporting the given options:
-		- `userID`: only count entries with a matching UserID field. Defaults to all users.
-		- `pattern`: only counts entries with keys matching the given pattern. Defaults to all keys.
+	If the `query` parameter is provided, it specifies which entries to include in the count and can be any of the
+	following:
+
+	- an **integer user ID**: only count entries for the given user ID.
+	- a **string PostgreSQL pattern**: only count entries with keys matching the given pattern.
+	- a **sdict** supporting the following keys:
+		- `userID`: only count entries with a matching user ID. Defaults to all users.
+		- `pattern`: only counts entries with keys matching the pattern. Defaults to all keys.
 
 func dbRank(query, userID, key)
-	Returns the rank of the specified entry in the sorted collection of entries defined by `query`.
+	Returns the rank of the specified entry in the collection of entries defined by `query`, ordered by numeric entry
+	value then by entry ID.
 
-	- `query`: a sdict with the following optional keys:
+	- `query`: a sdict specifying the collection of entries to rank the specified entry in, supporting the following keys
+	  (all optional):
 		- `userID`: only include entries with the given user ID.
 		- `pattern`: only include entries with keys matching the given pattern.
-	- `reverse`: if `true`, entries with lower values have higher ranks. Default is `false`.
+		- `reverse`: if `true`, entries with lower values have higher ranks. Default is `false`.

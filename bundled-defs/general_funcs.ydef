@@ -4,46 +4,46 @@ func str(x)
 	is an alias of the `toString` function.
 
 func toString(x)
-	Converts the input to a string, returning the empty string on failure.
+	Converts the input to a string, returning the empty string for invalid inputs.
 
 func toInt(x)
 	Converts the input to an integer, returning zero for invalid inputs.
 
 func toInt64(x)
-	Converts the input to an `int64`, returning zero for invalid inputs.
+	Converts the input to an int64, returning zero for invalid inputs.
 
 func toFloat(x)
-	Converts the input to a `float64`, returning zero for invalid inputs.
+	Converts the input to a float64, returning zero for invalid inputs.
 
 func toDuration(x)
 	Converts the input, which may be a number (measured in nanoseconds) or a duration string such as `5m`, to a
 	duration object. Returns the zero duration for invalid inputs.
 
 func toRune(str)
-	Converts the given string to a slice of runes (Unicode code points.)
+	Converts the given string to a slice of runes (that is, Unicode code points.)
 
 func toByte(str)
 	Converts the given string to a slice of UTF-8 bytes.
 
 func structToSdict(struct)
-	Returns a string dictionary from the fields of the struct.
+	Constructs a sdict from the fields of the struct.
 
 
 
 == String manipulation
 func print(args...)
-	Concatenates the arguments in order, adding spaces between operands when neither is a string.
+	Concatenates the arguments in order, adding spaces between arguments when neither is a string.
 
 func println(args...)
-	Concatenates the arguments in order, adding spaces between operands when neither is a string and inserting a newline
-	at the end.
+	Concatenates the arguments in order, adding spaces between arguments when neither is a string and inserting a
+	newline at the end.
 
 func printf(format, args...)
 	Interpolates the arguments using the format given. See the [Go fmt package documentation](https://pkg.go.dev/fmt).
 
 func joinStr(sep, args...)
-	Concatenates the arguments in order, inserting the separator between consecutive arguments. As a
-	special case, slices of strings are formatted as if each element was provided separately, so
+	Concatenates the arguments in order, inserting the given separator between consecutive arguments. As a special case,
+	slices of strings are formatted as if each element was provided separately, so
 
 	```yag
 	{{ joinStr " " (cslice "cat" "dog") }}
@@ -51,14 +51,19 @@ func joinStr(sep, args...)
 
 	yields `cat dog`.
 
-	See also the `print` function if you just want to concatenate arguments without any separator.
+	See also the `print` function if you just want to concatenate arguments without a separator.
 
-func in(haystack, needle)
-	Returns whether `haystack` contains `needle`. The haystack may be a slice or a string; in the latter case, the
-	needle must also be a string and `in` reports whether `needle` is a substring of `haystack`.  
+func in(item, value)
+	Returns whether `item` contains `value`. The item may be a string or a slice of primitive values, and behaves as
+	follows in each case:
+	
+	- If `item` is a string, the value must also be a string and `in` reports whether `value` is a substring of `item`.
+	- Otherwise, if `item` is a slice of primitives, `in` reports whether the slice contains the element `value`.
 
-func inFold(haystack, needle)
-	Same as `in`, but case-insensitive.
+	Note that `in` will not work for slices of complex values, such as slices of user objects.
+
+func inFold(item, value)
+	Same as `in`, but compares strings in a case-insensitive manner.
 
 func hasPrefix(str, prefix)
 	Tests whether the string starts with the given prefix.
@@ -70,14 +75,12 @@ func lower(str)
 	Converts the input to lowercase.
 
 func slice(item, start, end?)
-	Returns a subslice of the input item (which may be an array, slice, or string) containing the
-	elements starting at index `start`, inclusive, and ending at index `end`, exclusive. If only one
-	index is provided, it is interpreted as the start index and the slice extends to the end of the
-	input.
+	Returns a subslice of the input item (which may be an array, slice, or string) containing the elements starting at
+	index `start`, inclusive, and ending at index `end`, exclusive. If only one index is provided, it is interpreted as
+	the start index and the slice extends to the end of the input.
 
 func split(str, sep)
-	Splits the string around each instance of the separator, returning a slice of delimited
-	substrings.
+	Splits the string around each instance of the separator, returning a slice of delimited substrings.
 
 func title(str)
 	Returns the string with the first letter of each word capitalized.
@@ -93,32 +96,30 @@ func sanitizeText(string)
 
 func reQuoteMeta(str)
 	Escapes all regular expression metacharacters in the input string; the result is a regular expression matching the
-	literal input text.
+	literal input string.
 
 
 
 == Encoding and decoding
 func urlescape(str)
-	Escapes the input so that it can be safely placed inside a URL path segment, replacing special
-	characters (including /) with %XX sequences as needed.
+	Escapes the input so that it can be safely placed inside a URL path segment, replacing special characters (including
+	/) with %XX sequences as needed.
 
 func urlunescape(str)
-	Undos the transformation performed by `urlescape`, converting encoded substrings of the form
-	`%AB` to the byte 0xAB.
+	Undos the transformation performed by `urlescape`, converting encoded substrings of the form `%AB` to the byte 0xAB.
 
 func json(v, indent?)
-	Encodes the argument as JSON. If the `indent` flag is provided, the output is pretty-printed
-	with appropriate indentation.
+	Encodes the argument as JSON. If the `indent` flag is provided, the output is pretty-printed with appropriate
+	indentation.
 
 func jsonToSdict(jsonStr)
-	Parses the JSON-encoded data into a string dictionary, returning an error if the input was
-	invalid JSON.
+	Parses the JSON-encoded data into a string dictionary, returning an error if the input was invalid JSON.
 
 func hash(str)
 	Generates a SHA256 hash of the input string.
 
 func encodeBase64(str)
-	Encodes the argument in base-64.
+	Encodes the argument iasn base-64.
 
 func decodeBase64(data)
 	Decodes the provided base-64 data.
@@ -127,30 +128,42 @@ func decodeBase64(data)
 
 == Math operations
 func add(x, y...)
-	Returns the sum of the given numbers. The type of the result is determined by the first argument.
+	Returns the sum of the given numbers. The type of the result is determined by the first argument; all subsequent
+	arguments are cast to the same type. Hence,
 
-func cbrt(x)
-	Returns the cube root of `x`.
+	```yag
+	{{ add 2 1.1 }} {{/* outputs 3, not 3.1 */}}
+	```
+
+	If the default behavior results in undesired truncation, explicitly convert the first argument to the required type.
+
+	```yag
+	{{ add (toFloat 2) 1.1 }}
+	```
+
+func sub(x, y...)
+	Starting with `x`, subtract the following numbers in succession. The type of the result is determined by the first
+	argument which can sometimes lead to undesirable truncation if one is not careful; see the documentation of the
+	`add` function for more discussion.
+
+func mult(x, y...)
+	Returns the product of the given numbers. As with `add`, `sub`, and `div`, he type of the result is determined by
+	the type of the first argument, which can sometimes result in undesirable truncation if one is not careful. See the
+	documentation of the `add` function for more detail.
 
 func div(x, y...)
 	Returns the result of dividing `x` by the following numbers in succession. The kind of division (integer or
-	floating-point) to perform is determined by the type of the first argument, so `{{ div 5 2 }}` performs integer
-	division and yields `2`. To force floating-point division, use the `fdiv` function.
+	floating-point) to perform is determined by the type of the first argument, so
+	
+	```yag
+	{{ div 5 2 }} {{/* outputs 2 */}}
+	```
+
+	performs integer division. To force floating-point division, either cast the type of the first argument using
+	`float64` or use the `fdiv` function.
 
 func fdiv(x, y...)
 	Returns the result of the floating-point division of `x` by the following numbers in succession.
-
-func log(x, base?)
-	Returns the logarithm of `x` in the given base. If no base is provided, the natural logarithm with base `e` is used.
-
-func mathConst(const)
-	Returns the value of the specified math constant. See the [math constants list](https://pkg.go.dev/math#pkg-constants).
-
-func max(x, y)
-	Returns the larger number between `x` and `y`.
-
-func min(x, y)
-	Returns the smaller number between `x` and `y`.
 
 func mod(x, y)
 	Returns the floating-point remainder of the division of `x` by `y`.
@@ -158,11 +171,28 @@ func mod(x, y)
 	The result has the same sign as `x`, so `mod -5 3` results in `-2`, not `1`. To ensure a non-negative result, use
 	`mod` twice: `{{ mod (add (mod x y) y) y }}`.
 
-func mult(x, y...)
-	Returns the product of the given numbers. The type of the result is determined by the type of the first argument.
-
 func pow(base, exp)
 	Returns `base` raised to the power `exp` as a floating-point number.
+
+func log(x, base?)
+	Returns the logarithm of `x` in the given base. If no base is provided, the natural logarithm (that is, base `e`) is
+	used.
+
+func mathConst(const)
+	Returns the value of the specified math constant by name. See the [math constants
+	list](https://pkg.go.dev/math#pkg-constants).
+
+	### Example
+
+	```yag
+	{{ mathConst "phi" }} {{/* outputs 1.618... */}}
+	```
+
+func max(x, y)
+	Returns the larger of the two numbers `x` and `y`.
+
+func min(x, y)
+	Returns the smaller of the two numbers `x` and `y`.
 
 func round(x)
 	Returns the nearest integer to `x` as a floating-point number.
@@ -171,7 +201,7 @@ func roundCeil(x)
 	Returns the smallest integer greater than or equal to `x`.
 
 func roundEven(x)
-	Returns the nearest integer to `x`, preferring even integers in the case of a tie.
+	Returns the nearest integer to `x`, preferring even integers in the case of a tie (`.5`).
 
 func roundFloor(x)
 	Returns the largest integer less than or equal to `x`.
@@ -179,9 +209,8 @@ func roundFloor(x)
 func sqrt(x)
 	Returns the square root of `x` as a floating-point number.
 
-func sub(x, y...)
-	Starting with `x`, subtract the following numbers in succession. The type of the result is determined by the first
-	argument.
+func cbrt(x)
+	Returns the cube root of `x` as a floating-point number.
 
 
 
@@ -208,7 +237,7 @@ func bitwiseRightShift(x, shift)
 	Returns `x >> shift`.
 
 func humanizeThousands(x)
-	Returns the number as a string with commas separating groups of thousands.
+	Formats the number as a string with commas separating groups of thousands.
 
 
 
@@ -219,6 +248,9 @@ func adjective()
 func noun()
 	Returns a random noun.
 
+func verb()
+	Returns a random verb.
+
 func randInt(min?, max)
 	Returns a uniformly distributed random integer in the half-open interval `[min, max)`. That is, `min` is included;
 	`max` is excluded. If only one argument is given, it is interpreted as a maximum bound and a random integer in `[0,
@@ -226,9 +258,6 @@ func randInt(min?, max)
 
 func shuffle(list)
 	Returns a shuffled copy of the provided array or slice.
-
-func verb()
-	Returns a random verb.
 
 
 
@@ -251,14 +280,6 @@ func seq(start, stop)
 == Time and duration
 func currentTime()
 	Returns the current time in UTC.
-
-func parseTime(input, layout, location?)
-	Reverses the operation done by `formatTime`: given some input representing a time using the
-	layout given, returns the time object in the specified location (or UTC by default). If the
-	input is invalid or does not follow the layout, the zero time is returned.
-
-	A slice of layouts may be provided, in which case the input is matched against each until one
-	matches.
 
 func formatTime(time, layout?)
 	Formats the time according to the layout. Within the layout string, certain phrases represent
@@ -284,13 +305,21 @@ func formatTime(time, layout?)
 	| 2006        | Year (full year)             |
 	| PM          | AM-PM                        |
 
-func loadLocation(location)
-	Searches the IANA Time Zone database for the given location name, returning the corresponding
-	location object on success. (Given a time object `$time`, `$time.In $location` then returns a
-	copy of the time set in the given location for display purposes.)
+func parseTime(input, layout, location?)
+	Undos the operation performed by `formatTime`: that is, given some input representing a time using the layout given,
+	`parseTime` returns the corresponding time object in the specified location (or UTC by default). If the input is
+	invalid or does not follow the layout, the zero time is returned.
 
-	As a special case, providing `UTC` or the empty string yields the UTC location. Providing
-	`Local` yields the local time zone of the hosting YAGPDB server.
+	A slice of layouts may be provided, in which case the input is matched against each in order until one matches or
+	the end of the slice is reached.
+
+func loadLocation(location)
+	Searches the IANA Time Zone database for the given location name, returning the corresponding location object on
+	success. (Given a time object `$time`, `$time.In $location` then returns a copy of the time set in the given
+	location for display purposes.)
+
+	As a special case, providing `UTC` or the empty string yields the UTC location. Providing `Local` yields the local
+	time zone of the host YAGPDB server.
 
 func newDate(year, month, day, hour, minute, second, location?)
 	Returns the time object corresponding to
@@ -301,14 +330,13 @@ func newDate(year, month, day, hour, minute, second, location?)
 
 	in the appropriate zone for that time in the given location.
 
-	The month, day, hour, min, sec, and nsec values may be outside their usual ranges and will be
-	normalized during the conversion. For example, October 32 converts to November 1.
+	The month, day, hour, min, sec, and nsec values may be outside their usual ranges and will be normalized during the
+	conversion. For example, October 32 converts to November 1.
 	
-	A daylight savings time transition skips or repeats times. For example, in the United States,
-	March 13, 2011 2:15am never occurred, while November 6, 2011 1:15am occurred twice. In such
-	cases, the choice of time zone, and therefore the time, is not well-defined. Date returns a time
-	that is correct in one of the two zones involved in the transition, but it does not guarantee
-	which. 
+	A daylight savings time transition skips or repeats times. For example, in the United States, March 13, 2011 2:15am
+	never occurred, while November 6, 2011 1:15am occurred twice. In such cases, the choice of time zone, and therefore
+	the time, is not well-defined. `newDate` returns a time that is correct in one of the two zones involved in the
+	transition, but it does not guarantee which. 
 
 func snowflakeToTime(snowflake)
 	Returns the UTC time at which the given Discord snowflake was created.
@@ -318,9 +346,8 @@ func timestampToTime(unixSecs)
 	1970.
 
 func weekNumber(time)
-	Returns the ISO 8601 week number in which the time occurs, ranging between 1 to 53. Jan 01 to
-	Jan 03 of year n might belong to week 52 or 53 of year n-1, and Dec 29 to Dec 31 might belong to
-	week 1 of year n+1. 
+	Returns the ISO 8601 week number in which the time occurs, ranging between 1 to 53. Jan 01 to Jan 03 of year n might
+	belong to week 52 or 53 of year n-1, and Dec 29 to Dec 31 might belong to week 1 of year n+1. 
 
 func humanizeDurationHours(dur)
 	Returns the duration as a human-readable string, rounded down to the nearest hour,.
@@ -341,32 +368,32 @@ func humanizeTimeSinceDays(time)
 func cembed(opts...)
 	Creates an embed object that can then be passed to the `sendMessage` functions.
 
-	All keys are optional, but the Discord API will reject completely empty embeds, so at least one field must be
-	supplied.
+	While there are no required keys, keep in mind that the Discord API will reject completely empty embeds.
 
-	- `title`: the title of the embed
-	- `url`: the URL to hyperlink the title with
-	- `description`: the main text
-	- `color`: which color to display on the left side of the embed
-	- `fields`: a slice of sdicts with the following keys:
-		- `name`: the name of the field
-		- `value`: which text to have inside this field
-		- `inline`: an optional boolean whether this field should be displayed in-line with other fields
-	- `author`: Shows some details at the very top of the embed. Is an sdict with the following keys:
-		- `name`: The name of the author
-		- `url`: the URL to hyperlink the name with
-		- `icon_url`: the author's icon
-	- `thumbnail`: a small image in the top-right corner. Is an sdict with the following keys:
-		- `url`: the image's URL
-	- `image`: an image to display at full width at the bottom of the embed. Is a sdict with the following keys:
-		- `url`: the image's URL
-	- `footer`: Shows some details at the very bottom of the embed. Is a sdict with the following keys:
-		- `text`: the footer's text
-		- `icon_url`: a small icon to display to the left of the footer's text
-	- `timestamp`: a (static) timestamp to display to the right of the footer's text
+	- `title`: the title of the embed.
+	- `url`: the URL to hyperlink the title with.
+	- `description`: the main text of the embed.
+	- `color`: the integer value of the color to display on the left side of the embed.
+	- `fields`: a slice of sdicts containing the following keys:
+		- `name`: the field name.
+		- `value`: the field contents.
+		- `inline`: whether the field should be displayed in line with other fields. Defaults to false.
+	- `author`: a sdict specifying details displayed at the top of the embed, containing the following keys:
+		- `name`: the author name.
+		- `url`: the URL to hyperlink the author name with.
+		- `icon_url`: the author icon image URL.
+	- `thumbnail`: a sdict specifying an image displayed in the top-right corner of the embed, containing
+	  the following keys:
+		- `url`: the image's URL.
+	- `image`: a sdict specifying an image to display at the bottom of the embed, containing the following keys:
+		- `url`: the image's URL.
+	- `footer`: a sdict specifying details to be displayed at the bottom of the embed, containing the following keys:
+		- `text`: the footer text.
+		- `icon_url`: the footer icon image URL.
+	- `timestamp`: a time object specifying a fixed timestamp displayed to the right of the footer text.
 
 func complexMessage(opts...)
-	Creates a complex message object that can then be passed to the `sendMessage` function.
+	Creates a complex message object that can then be passed to the `sendMessage` functions.
 
 	- `allowed_mentions`: a sdict with the following keys:
 		- `parse`: a slice of accepted values for mentions. May include `users`, `roles`, and `everyone`.
@@ -380,8 +407,7 @@ func complexMessage(opts...)
 	- `reply`: the ID of the message to reply to.
 	- `silent`: whether to suppress push and desktop notifications.
 
-	All of these keys are optional, but providing an empty content, file, or no embeds will result in no message being
-	sent.
+	While there are no required keys, keep in mind that the Discord API will reject completely empty messages.
 
 	### Example
 
@@ -408,7 +434,7 @@ func complexMessage(opts...)
 	```
 
 func complexMessageEdit(opts...)
-	Creates a complex message edit object that can then be passed to the `editMessage` function.
+	Creates a complex message edit object that can then be passed to the `editMessage` functions.
 
 	- `allowed_mentions`: a sdict with the following keys:
 		- `parse`: a slice of accepted values for mentions. May include `users`, `roles`, and `everyone`.
@@ -419,10 +445,10 @@ func complexMessageEdit(opts...)
 	- `embed`: an embed object or a slice of up to 10 embed objects.
 	- `silent`: whether to suppress push and desktop notifications.
 
-	All of these keys are optional, but providing none of them will have no effect.
+	All keys are optional.
 
 func kindOf(value, indirect?)
-	Returns the [kind](https://pkg.go.dev/reflect#Kind) of the provided value.
+	Returns the [reflection kind](https://pkg.go.dev/reflect#Kind) of the provided value.
 
 	If `value` is behind an `interface{}` or pointer, setting `indirect` to true will read the inner value. Most users
 	of this function will want to do this.

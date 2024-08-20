@@ -1,9 +1,9 @@
 == Message functions
 func editMessage(channel, messageID, newContent)
-	Edits the given message, escaping any mentions in the content.
+	Edits the specified message, escaping any mentions in the content.
 
 func editMessageNoEscape(channel, messageID, newContent)
-	Edits the given message without escaping mentions.
+	Edits the specified message without escaping mentions.
 
 func pinMessage(channel, messageID)
 	Pins the specified message.
@@ -23,18 +23,17 @@ func sendMessage(channel, message)
 	Sends a message to the specified channel, escaping any role, @everyone, or @here mentions in the content.
 
 func sendMessageRetID(channel, message)
-	Sends a message to the specified channel, escaping any role, @everyone, or @here mentions, and additionally
-	returning the message ID.
+	Same as `sendMessage`, but returns the message ID.
 
 func sendMessageNoEscape(channel, message)
 	Sends a message to the specified channel without escaping any mentions.
 
 func sendMessageNoEscapeRetID(channel, message)
-	Sends a message to the specified channel without escaping any mentions, returning the ID of the message.
+	Same as `sendMessageNoEscape`, but returns the message ID.
 
 func sendTemplate(channel, template, data?)
-	Executes an associated template with optional `data` and sends its response to `channel`, returning the ID of the
-	response message.
+	Executes the specified associated template with optional data and sends its response to `channel`, returning the ID
+	of the response message.
 
 func sendTemplateDM(template, data?)
 	Same as `sendTemplate`, but sends the response to the triggering user's direct messages instead and returns the ID
@@ -47,7 +46,7 @@ func mentionHere()
 	Mentions `@here` without escaping it.
 
 func getMessage(channel, messageID)
-	Fetches the full message object with the given channel and message ID.
+	Returns the full message object specified by the arguments.
 
 func unpinMessage(channel, messageID)
 	Unpins the specified message.
@@ -74,7 +73,7 @@ func deleteTrigger(delay?)
 
 == Role functions
 func mentionRole(role)
-	Mentions the role, which may specified by role ID, mention, name, or role object, without escaping.
+	Mentions the role, which may specified by ID, mention, name, or role object, without escaping.
 
 func mentionRoleID(roleID)
 	Mentions the specified role without escaping.
@@ -85,8 +84,8 @@ func mentionRoleName(roleName)
 func addRole(role, delay?)
 	Adds the specified role to the triggering member.
 
-	- `role`: A role ID, mention, name, or role object.
-	- `delay`: An optional delay in seconds.
+	- `role`: a role ID, mention, name, or role object.
+	- `delay`: an optional delay in seconds.
 
 func addRoleID(roleID, delay?)
 	Adds the specified role to the triggering member after an optional delay in seconds.
@@ -95,10 +94,10 @@ func addRoleName(roleName, delay?)
 	Adds the specified role to the triggering member after an optional delay in seconds.
 
 func removeRole(role, delay?)
-	Removes the specified role from the triggering members.
+	Removes the specified role from the triggering member.
 
-	- `role`: A role ID, mention, name or role object.
-	- `delay`: An optional delay in seconds.
+	- `role`: a role ID, mention, name or role object.
+	- `delay`: an optional delay in seconds.
 
 func removeRoleID(roleID, delay?)
 	Removes the specified role from the triggering member after an optional delay in seconds.
@@ -109,9 +108,9 @@ func removeRoleName(roleName, delay?)
 func giveRole(target, role, delay?)
 	Gives the specified role to the target member.
 
-	- `target`: A user ID, mention, or user object. The target must be part of the server.
-	- `role`: A role ID, mention, name or role object.
-	- `delay`: An optional delay in seconds.
+	- `target`: a user ID, mention, or user object. The target must be part of the server.
+	- `role`: a role ID, mention, name or role object.
+	- `delay`: an optional delay in seconds.
 
 func giveRoleID(target, roleID, delay?)
 	Gives the specified role to the target member after an optional delay in seconds.
@@ -122,9 +121,9 @@ func giveRoleName(target, roleName, delay?)
 func takeRole(target, role, delay?)
 	Removes the specified role from the target member.
 
-	- `target`: A user ID, mention, or user object. The target must be part of the server.
-	- `role`: A role ID, mention, name or role object.
-	- `delay`: An optional delay in seconds.
+	- `target`: a user ID, mention, or user object. The target must be part of the server.
+	- `role`: a role ID, mention, name or role object.
+	- `delay`: an optional delay in seconds.
 
 func takeRoleID(target, roleID, delay?)
 	Removes the specified role from the target member after an optional delay in seconds.
@@ -133,17 +132,16 @@ func takeRoleName(target, roleName, delay?)
 	Removes the specified role from the target member after an optional delay in seconds.
 
 func setRoles(target, newRoles)
-	Updates the roles of the target member. The roles are completely overwritten, so any existing roles are removed if
-	not included in the new list.
+	Edits the roles of the target member. The roles are completely overwritten, so any existing roles that do not appear
+	in the new list will be removed.
 
-	- `target`: A user ID, mention, or user object. The target must be part of the server.
-	- `newRoles`: A slice of role IDs or role objects. The slice will be automatically deduplicated before the API
-	request is sent.
+	- `target`: a user ID, mention, or user object. The target must be part of the server.
+	- `newRoles`: a slice of role IDs or role objects.
 
 func hasRole(role)
 	Reports whether the triggering member has the specified role.
 
-	- `role`: A role ID, mention, name, or role object.
+	- `role`: a role ID, mention, name, or role object.
 
 func hasRoleID(roleID)
 	Reports whether the triggering member has the specified role.
@@ -154,8 +152,8 @@ func hasRoleName(roleName)
 func targetHasRole(target, role)
 	Reports whether the target member has the specified role.
 
-	- `target`: A user ID, mention, or user object. The target must be part of the server.
-	- `role`: A role ID, mention, name, or role object.
+	- `target`: a user ID, mention, or user object. The target must be part of the server.
+	- `role`: a role ID, mention, name, or role object.
 
 func targetHasRoleID(target, roleID)
 	Reports whether the target member has the specified role.
@@ -178,10 +176,10 @@ func getRoleName(name)
 func addReactions(emojis...)
 	Adds reactions to the triggering message.
 
-	- `emojis...`: The emojis to add. May also be a slice of emojis.
+	- `emojis...`: the emojis to react with. May also be a slice of emojis.
 
-	Default emojis should be specified using their Unicode form, and custom emojis should be formatted as `name:id`.
-	See the example below.
+	Default emojis should be specified using their Unicode form, and custom emojis should be specified using the format
+	`name:id`. See the example below.
 
 	### Example
 
@@ -192,23 +190,24 @@ func addReactions(emojis...)
 func addResponseReactions(emojis...)
 	Adds reactions to the response message.
 
-	- `emojis...`: The emojis to add. May also be a slice of emojis.
+	- `emojis...`: the emojis to react with. May also be a slice of emojis.
 
 func addMessageReactions(channel, messageID, emojis...)
 	Adds reactions to the specified message.
 
-	- `emojis...`: The emojis to add. May also be a slice of emojis.
+	- `emojis...`: the emojis to react with. May also be a slice of emojis.
 
 func deleteAllMessageReactions(channel, messageID, userID, emojis...)
-	Deletes all reactions from a message, optionally constrained to specific emojis.
+	Deletes reactions from a message. By default, this function will remove all reactions, but setting the `emojis...`
+	parameter will result in only those reactions being removed.
 
-	- `emojis`: The emojis to delete. May also be a slice of emojis. Omitting this argument will delete all reactions.
+	- `emojis`: the reaction emojis to remove. May also be a slice of emojis. Omitting this argument will delete all reactions.
 
 func deleteMessageReaction(channel, messageID, userID, emojis...)
-	Deletes a specific user's reaction from a message.
+	Deletes a specific user's reactions from a message.
 
-	- `userID`: The ID of the user whose reaction to delete.
-	- `emojis...`: One or more emojis to delete. May also be a slice of emojis.
+	- `userID`: the ID of the user whose reaction to delete.
+	- `emojis...`: one or more emojis to delete. May also be a slice of emojis.
 
 
 
@@ -216,7 +215,7 @@ func deleteMessageReaction(channel, messageID, userID, emojis...)
 func hasPermissions(permission)
 	Reports whether the triggering member has the specified [permission bit][perm-bits].
 
-	**Tip:** The `.Permissions` context data entry contains all the permission bits by name such that, for instance,
+	**Tip:** The `.Permissions` context data field contains all the permission bits by name so that, for instance,
 	`.Permissions.Administrator` is `0x0000000000000008`.
 
 	[perm-bits]: https://discord.com/developers/docs/topics/permissions#permissions-bitwise-permission-flags
@@ -271,29 +270,29 @@ func createThread(channel, messageID, name, private?, autoArchiveDuration?, invi
 
 	- `channel`: the parent channel to create the thread in.
 	- `message`: either `nil` to create a channel thread, or a message ID to create a message thread.
-	- `private`: whether the thread is private. Default `false`.
-	- `auto_archive_duration`: how long the thread will show in the channel list after inactivity.
-	Valid values are 60, 1440, 4320, and 10080 minutes. Defaults to 10080 (7 days).
-	- `invitable`: whether non-moderators can add other members to the thread. (true/false)
-
 	Note that there is no functional difference between a channel thread and a message thread.
+	- `private`: whether the thread is private. Defauls to false.
+	- `auto_archive_duration`: how long the thread will show in the channel list after inactivity before it is archived.
+	Valid values are 60, 1440, 4320, and 10080 minutes. Defaults to 10080 (7 days).
+	- `invitable`: whether non-moderators can add other members to the thread. Defaults to false.
 
-	Because the optional arguments are positional, you must provide the preceding ones if you wish to override a later
-	option. Consider the following example to create a public thread in the current channel with no message reference
-	that is archived after an hour and allows non-moderators to add others:
+	Because the optional arguments are positional, modifying a given parameter requires specifying all earlier ones even
+	if you only wish to change one parameter from the default. Consider the following example to create a public thread
+	in the current channel that is archived after an hour and allows non-moderators to add others:
 
 	```yag
 	{{ createThread nil nil "new thread" false 60 true }}
 	```
 
-func editThread(channel, opts...)
-	Edits the thread. `opts` is a sdict of parameters to change and may contain the following keys:
+func editThread(thread, opts...)
+	Edits the specified thread.
 
-	- `slowmode`: The thread's slowmode in seconds.
-	- `tags`: One or more forum tag name or ID. Duplicate and invalid tags are ignored.
-	- `auto_archive_duration`: how long the thread will show in the channel list after inactivity.
-	Valid values are 60, 1440, 4320, and 10080 minutes. Defaults to 10080 (7 days).
-	- `invitable`: whether non-moderators can add other members to the thread. (true/false)
+	- `opts`: a sdict containing the thread parameters to edit, supporting the following keys (all optional):
+		- `slowmode`: the thread's slowmode in seconds.
+		- `tags`: one or more forum tag name or ID. Duplicate and invalid tags are ignored.
+		- `auto_archive_duration`: how long the thread will show in the channel list after inactivity.
+		Valid values are 60, 1440, 4320, and 10080 minutes. Defaults to 10080 (7 days).
+		- `invitable`: whether non-moderators can add other members to the thread. Defaults to false.
 
 func openThread(thread)
 	Reopens the given thread.
@@ -313,21 +312,21 @@ func removeThreadMember(thread, member)
 func createForumPost(channel, name, content, opts...)
 	Creates a new forum post. Returns a channel object on success.
 
-	- `channel`: The forum channel to post to.
-	- `name`: The post title; may not be empty.
-	- `content`: The initial message's content; may be a string, an embed, or a complex message. May not be empty.
-	- `opts` (optional): A sdict containing additional options for the post. May include:
-		- `slowmode`: The thread's slowmode in seconds.
-		- `tags`: One or more forum tag name or ID. Duplicate and invalid tags are ignored.
+	- `channel`: the forum channel to post to.
+	- `name`: the post title; may not be empty.
+	- `content`: the initial message's content; may be a string, an embed, or a complex message. May not be empty.
+	- `opts`: a sdict containing additional options for the post, supporting the following keys (all optional):
+		- `slowmode`: the thread's slowmode in seconds.
+		- `tags`: one or more forum tag name or ID. Duplicate and invalid tags are ignored.
 
 func deleteForumPost(post)
 	Deletes the given forum post.
 
-	This function is completely identical to `deleteThread`. Use whichever function is more semantically meaningful in
-	the context of your custom command.
+	This function is an alias of `deleteThread`. Use whichever function is more semantically meaningful in the context
+	of your custom command.
 
 func pinForumPost(post)
-	Pins the given post.
+	Pins the given forum post.
 
 func unpinForumPost(post)
 	Unpins the given forum post.
@@ -361,7 +360,8 @@ func onlineCountBots()
 
 == Regular expression functions
 func reFind(regex, text)
-	Returns the first match of the regular expression in the text, or `""` if the pattern did not match.
+	Returns the first match of the regular expression in the text, or the empty string if the pattern did not match
+	anywhere.
 
 func reFindAll(regex, text, count?)
 	Returns a slice of successive matches of the regular expression in the text. If `count` is provided, the number of
@@ -369,7 +369,7 @@ func reFindAll(regex, text, count?)
 
 func reFindAllSubmatches(regex, text, count?)
 	Returns a slice of successive submatches of the regular expression in the text. Each submatch is itself a slice
-	containing the match of the whole expression, followed by any capturing group matches.
+	containing the match of the entire expression, followed by any matches of capturing groups.
 
 func reReplace(regex, text, replacement)
 	Replaces all occurrences of the regular expression in `text` with `replacement`.
@@ -379,9 +379,9 @@ func reSplit(regex, text, count?)
 
 	If the `count` parameter is specified, it limits the number of substrings to return:
 
-	- n > 0: at most n substrings; the last substring will be the unsplit remainder;
-	- n == 0: the result is nil (zero substrings);
-	- n < 0: all substrings.
+	- `count > 0`: at most `count` substrings; the last substring will be the unsplit remainder;
+	- `count == 0`: the result is nil (zero substrings);
+	- `count < 0`: all substrings.
 
 
 
