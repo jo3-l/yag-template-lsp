@@ -10,10 +10,10 @@ pub(crate) async fn hover(sess: &Session, params: HoverParams) -> anyhow::Result
     let doc = sess.document(&uri)?;
 
     let pos = params.text_document_position_params.position;
-    let query = doc.query_at(pos)?;
+    let query = doc.query_at(pos);
     let hover_info = if let Some(var) = query.var() {
         hover_var(&doc, var)
-    } else if query.is_func_call() {
+    } else if query.is_in_func_call() {
         let func_ident = query.ident().unwrap();
         hover_func(&sess.envdefs, &doc, func_ident)
     } else {

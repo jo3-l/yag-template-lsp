@@ -8,10 +8,10 @@ pub(crate) async fn references(sess: &Session, params: ReferenceParams) -> anyho
     let doc = sess.document(&uri)?;
 
     let pos = params.text_document_position.position;
-    let query = doc.query_at(pos)?;
+    let query = doc.query_at(pos);
     let refs = if let Some(var) = query.var() {
         find_var_references(&doc, var, &params.context)
-    } else if query.is_func_call() {
+    } else if query.is_in_func_call() {
         let func_ident = query.ident().unwrap();
         find_func_references(&doc, func_ident.get())
     } else {

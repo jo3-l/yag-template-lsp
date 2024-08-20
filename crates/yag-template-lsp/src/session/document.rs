@@ -1,6 +1,5 @@
 use std::collections::BTreeMap;
 
-use anyhow::Context;
 use rowan::{TextRange, TextSize};
 use tower_lsp::lsp_types::{Location, Position, Range, Url};
 use yag_template_analysis::Analysis;
@@ -35,8 +34,8 @@ impl Document {
         SyntaxNode::new_root(self.parse.root.clone())
     }
 
-    pub(crate) fn query_at(&self, pos: Position) -> anyhow::Result<Query> {
-        Query::at(&self.syntax(), self.mapper.offset(pos)).context("failed querying syntax tree")
+    pub(crate) fn query_at(&self, pos: Position) -> Query {
+        Query::at(&self.syntax(), self.mapper.offset(pos))
     }
 
     pub(crate) fn location_for(&self, range: TextRange) -> Location {

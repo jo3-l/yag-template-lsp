@@ -10,7 +10,7 @@ pub(crate) async fn goto_definition(
     let doc = sess.document(&uri)?;
 
     let pos = params.text_document_position_params.position;
-    let query = doc.query_at(pos)?;
+    let query = doc.query_at(pos);
     let def_info = if let Some(var) = query.var() {
         doc.analysis
             .scope_info

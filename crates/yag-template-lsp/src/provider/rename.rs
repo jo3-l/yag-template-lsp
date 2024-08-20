@@ -10,7 +10,7 @@ pub(crate) async fn rename(sess: &Session, params: RenameParams) -> anyhow::Resu
     let doc = sess.document(&uri)?;
 
     let pos = params.text_document_position.position;
-    let query = doc.query_at(pos)?;
+    let query = doc.query_at(pos);
     let edits = if let Some(var) = query.var() {
         rename_var(&doc, var, params.new_name)
     } else {

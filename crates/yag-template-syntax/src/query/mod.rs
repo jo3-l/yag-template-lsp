@@ -5,37 +5,73 @@ use crate::{ast, SyntaxKind, SyntaxNode, SyntaxToken};
 
 pub struct Query {
     pub offset: TextSize,
-    /// The token at the offset (left-biased in the case where the offset sits
-    /// between two tokens.)
-    pub token: SyntaxToken,
+    /// The token before the cursor.
+    ///
+    /// At edges, we do not know whether the token of interest lies to the left or to the right of the cursor, so we
+    /// need to check both. Consider:
+    ///
+    /// ```txt
+    /// case 1:
+    /// .   |func
+    ///      ^^^^ interesting token to the right
+    ///
+    /// case 2:
+    /// .   func|
+    ///     ^^^^ interesting token to the left
+    /// ```
+    pub before: Option<SyntaxToken>,
+    /// The token after the cursor.
+    pub after: Option<SyntaxToken>,
 }
 
 impl Query {
-    pub fn at(root: &SyntaxNode, offset: TextSize) -> Option<Self> {
-        let before = root.token_at_offset(offset).left_biased()?;
-        let query = Query { offset, token: before };
-        Some(query)
+    pub fn at(root: &SyntaxNode, offset: TextSize) -> Self {
+        Self {
+            offset,
+            before: offset
+                .checked_sub(TextSize::from(1))
+                .and_then(|offset_before| root.token_at_offset(offset_before).right_biased()),
+            after: root.token_at_offset(offset).right_biased(),
+        }
+    }
+
+    pub fn matches(&self, f: impl Fn(&SyntaxToken) -> bool) -> bool {
+        self.before.as_ref().is_some_and(&f) || self.after.as_ref().is_some_and(f)
+    }
+
+    pub fn map<F, R>(&self, f: F) -> Option<R>
+    where
+        F: Fn(&SyntaxToken) -> Option<R>,
+    {
+        match self.before.as_ref().and_then(&f) {
+            Some(mapped) => Some(mapped),
+            None => self.after.as_ref().and_then(f),
+        }
     }
 }
 
 impl Query {
-    pub fn is_var_access(&self) -> bool {
-        self.token.kind() == SyntaxKind::Var && self.token.parent().is_some_and(|parent| parent.is::<ast::VarAccess>())
+    pub fn is_in_var_access(&self) -> bool {
+        self.matches(|tok| {
+            tok.kind() == SyntaxKind::Var && tok.parent().is_some_and(|parent| parent.is::<ast::VarAccess>())
+        })
     }
 
     pub fn var(&self) -> Option<ast::Var> {
-        ast::Var::cast(self.token.clone())
+        self.map(|tok| ast::Var::cast(tok.clone()))
     }
 
-    pub fn is_func_call(&self) -> bool {
-        self.token.kind() == SyntaxKind::Ident && self.token.parent().is_some_and(|parent| parent.is::<ast::FuncCall>())
+    pub fn is_in_func_call(&self) -> bool {
+        self.matches(|tok| {
+            tok.kind() == SyntaxKind::Ident && tok.parent().is_some_and(|parent| parent.is::<ast::FuncCall>())
+        })
     }
 
     pub fn ident(&self) -> Option<ast::Ident> {
-        ast::Ident::cast(self.token.clone())
+        self.map(|tok| ast::Ident::cast(tok.clone()))
     }
 
     pub fn parent_expr(&self) -> Option<ast::Expr> {
-        self.token.parent_ancestors().find_map(ast::Expr::cast)
+        self.map(|tok| tok.parent_ancestors().find_map(ast::Expr::cast))
     }
 }
