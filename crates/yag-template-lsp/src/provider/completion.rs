@@ -2,7 +2,7 @@ use tower_lsp::lsp_types::{
     CompletionItem, CompletionItemKind, CompletionParams, CompletionResponse, CompletionTextEdit, TextEdit,
 };
 use yag_template_analysis::scope::VarSymbol;
-use yag_template_envdefs::EnvDefs;
+use yag_template_envdefs::{EnvDefs, Func};
 use yag_template_syntax::ast;
 use yag_template_syntax::ast::AstToken;
 use yag_template_syntax::query::Query;
@@ -30,7 +30,7 @@ pub(crate) async fn complete(sess: &Session, params: CompletionParams) -> anyhow
 }
 
 fn complete_var(doc: &Document, query: Query, existing_var: ast::Var) -> Vec<CompletionItem> {
-    let generate_completion = |var: &VarSymbol| CompletionItem {
+    let generate_var_completion = |var: &VarSymbol| CompletionItem {
         label: var.name.to_string(),
         kind: Some(CompletionItemKind::VARIABLE),
         text_edit: Some(CompletionTextEdit::Edit(TextEdit {
@@ -48,22 +48,24 @@ fn complete_var(doc: &Document, query: Query, existing_var: ast::Var) -> Vec<Com
                 .vars_visible_at_offset(query.offset)
                 .filter(|var| var.name != existing_var.name() && var.name.starts_with(existing_var.name()))
         })
-        .map(generate_completion)
+        .map(generate_var_completion)
         .collect()
 }
 
 fn complete_func(env: &EnvDefs, doc: &Document, existing_ident: ast::Ident) -> Vec<CompletionItem> {
+    let generate_func_completion = |func: &Func| CompletionItem {
+        label: func.name.to_string(),
+        kind: Some(CompletionItemKind::FUNCTION),
+        text_edit: Some(CompletionTextEdit::Edit(TextEdit {
+            new_text: func.name.to_string(),
+            range: doc.mapper.range(existing_ident.syntax().text_range()),
+        })),
+        ..Default::default()
+    };
+
     env.funcs
         .values()
         .filter(|func| func.name.starts_with(existing_ident.get()))
-        .map(|func| CompletionItem {
-            label: func.name.to_string(),
-            kind: Some(CompletionItemKind::FUNCTION),
-            text_edit: Some(CompletionTextEdit::Edit(TextEdit {
-                new_text: func.name.to_string(),
-                range: doc.mapper.range(existing_ident.syntax().text_range()),
-            })),
-            ..Default::default()
-        })
+        .map(generate_func_completion)
         .collect()
 }
