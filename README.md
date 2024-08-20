@@ -9,14 +9,13 @@ extensions published on the VSCode marketplace and Open VSX.
 
 ## Features
 
-A range of basic LSP features are already implemented, namely,
-
 - Syntax highlighting
 - Error reporting as you type
 - Basic code completion for variable and function names
-- Goto definition and find all references for variables
 - Hover documentation for functions
 - Inlay hints for function parameter names
+- Goto definition for variables
+- Find all references for functions and variables
 - Automatic indentation
 - Folding ranges
 
