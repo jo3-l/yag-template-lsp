@@ -9,8 +9,8 @@ A VSCode extension providing rich editor support for YAGPDB's templating languag
 Most basic LSP features are supported, notably:
 
 - syntax highlighting
-- error reporting as you type
-- basic code completion for variable and function names
+- live error reporting as you type
+- code completion for variable and function names
 - hover documentation for functions
 - inlay hints for function parameter names
 

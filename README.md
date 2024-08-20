@@ -4,16 +4,16 @@
 <a href="https://open-vsx.org/extension/jo3-l/yag-template-lsp"><img src="https://img.shields.io/open-vsx/v/jo3-l/yag-template-lsp?style=for-the-badge&color=blue" alt="Open VSX Version"></a>
 <a href="https://github.com/jo3-l/yag-template-lsp/actions"><img src="https://img.shields.io/github/actions/workflow/status/jo3-l/yag-template-lsp/ci.yml?style=for-the-badge" alt="GitHub build status"></a>
 
-A language server for the [YAGPDB](https://yagpdb.xyz) templating language, with accompanying
-extensions published on the VSCode marketplace and Open VSX.
+A language server for [YAGPDB](https://yagpdb.xyz)'s templating language, with accompanying extensions published on the
+VSCode marketplace and Open VSX.
 
 ## Features
 
 Most basic LSP features are supported, notably:
 
 - syntax highlighting
-- error reporting as you type
-- basic code completion for variable and function names
+- live error reporting as you type
+- code completion for variable and function names
 - hover documentation for functions
 - inlay hints for function parameter names
 
@@ -34,7 +34,7 @@ In the medium term, we would like to implement:
   - A partial type-checker implementation is in the [`feat/typechecking`][typeck-branch] branch,
     save function overload resolution and language server integration.
 
-As a low-priority, long-term goal, we hope to better modularize and test the language server implementation (and indeed
+As a low-priority, long-term goal, we aim to better modularize and test the language server implementation (and indeed
 the project as a whole.)
 
 [typeck-branch]: https://github.com/jo3-l/yag-template-lsp/tree/feat/typechecking
@@ -81,19 +81,17 @@ following excellent projects:
 
 ## Contributing
 
-Contributions are very welcome, though familiarity with Rust, error-tolerant parsers, and the
-language server protocol is a prerequisite for any significant additions. If you are interested,
-please feel free to ping me in the `#programming-discussion` channel of the YAGPDB community server
-for guidance.
+Contributions are very welcome, though familiarity with Rust, error-tolerant parsers, and the language server protocol
+are prerequisites for any significant additions. If you are interested, please feel free to ping me in the
+`#programming-discussion` channel of the YAGPDB community server for guidance.
 
 ### Development tips
 
 **Requirements:** recent version of Node.js, stable Rust toolchain, and nightly rustfmt.
 
-The most straightforward way to run a modified version of the language server is to open this
-project in VSCode and use the provided `Run Extension` debug configuration. This will compile both
-the Rust and TypeScript components and open a new VSCode window with the modified language server
-installed.
+The most straightforward way to run a modified version of the language server is to open this project in VSCode and use
+the provided `Run Extension` debug configuration. This will compile both the Rust and TypeScript components and open a
+new VSCode window with the modified language server installed.
 
 To debug changes, use the logging macros from the `tracing` crate. By default, however, only error logs are output. Add
 the following entries to your `settings.json` to show more:
