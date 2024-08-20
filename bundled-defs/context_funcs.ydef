@@ -270,10 +270,10 @@ func createThread(channel, messageID, name, private?, autoArchiveDuration?, invi
 
 	- `channel`: the parent channel to create the thread in.
 	- `message`: either `nil` to create a channel thread, or a message ID to create a message thread.
-	Note that there is no functional difference between a channel thread and a message thread.
-	- `private`: whether the thread is private. Defauls to false.
+	  Note that there is no functional difference between a channel thread and a message thread.
+	- `private`: whether the thread is private. Defaults to false.
 	- `auto_archive_duration`: how long the thread will show in the channel list after inactivity before it is archived.
-	Valid values are 60, 1440, 4320, and 10080 minutes. Defaults to 10080 (7 days).
+	  Valid values are 60, 1440, 4320, and 10080 minutes. Defaults to 10080 (7 days).
 	- `invitable`: whether non-moderators can add other members to the thread. Defaults to false.
 
 	Because the optional arguments are positional, modifying a given parameter requires specifying all earlier ones even
@@ -291,7 +291,7 @@ func editThread(thread, opts...)
 		- `slowmode`: the thread's slowmode in seconds.
 		- `tags`: one or more forum tag name or ID. Duplicate and invalid tags are ignored.
 		- `auto_archive_duration`: how long the thread will show in the channel list after inactivity.
-		Valid values are 60, 1440, 4320, and 10080 minutes. Defaults to 10080 (7 days).
+		  Valid values are 60, 1440, 4320, and 10080 minutes. Defaults to 10080 (7 days).
 		- `invitable`: whether non-moderators can add other members to the thread. Defaults to false.
 
 func openThread(thread)
@@ -395,8 +395,8 @@ func sort(list, opts...)
 	type. Additional options may be provided, with the following keys:
 
 	- `key`: if sorting a list of maps, this option specifies the key to sort by. The key must be present in
-	all maps.
+	  all maps.
 	- `reverse`: whether to sort the list in descending order, so that larger elements appear first. By default,
-	the sort order is ascending.
+	  the sort order is ascending.
 
 	Limited to 1 call on regular servers and 3 calls on premium servers.

@@ -17,12 +17,12 @@ func sendModal(modal)
 
 	```yag
 	{{ $modal := sdict
-	"title" "My Custom Modal"
-	"custom_id" "modals-my_first_modal"
-	"fields" (cslice
-		(sdict "label" "Name" "placeholder" "Duck" "required" true)
-		(sdict "label" "Do you like ducks?" "value" "Heck no")
-		(sdict "label" "Duck hate essay" "min_length" 100 "style")) }}
+		"title" "My Custom Modal"
+		"custom_id" "modals-my_first_modal"
+		"fields" (cslice
+			(sdict "label" "Name" "placeholder" "Duck" "required" true)
+			(sdict "label" "Do you like ducks?" "value" "Heck no")
+			(sdict "label" "Duck hate essay" "min_length" 100 "style")) }}
 	{{ sendModal $modal }}
 	```
 
