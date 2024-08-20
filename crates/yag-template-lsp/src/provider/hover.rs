@@ -23,10 +23,19 @@ pub(crate) async fn hover(sess: &Session, params: HoverParams) -> anyhow::Result
 }
 
 fn hover_var(doc: &Document, var: ast::Var) -> Option<Hover> {
-    let hover_info = format!(
-        "```\n(variable) {name}\n```\n\nGo to definition (Ctrl + Click) or Rename (F2)",
-        name = var.name()
-    );
+    let sym = doc.analysis.scope_info.resolve_var(var.clone())?;
+
+    let mut hover_info = format!("```\n(variable) {}\n```", var.name());
+    if sym
+        .decl_range
+        .is_some_and(|decl| decl.contains_range(var.syntax().text_range()))
+    {
+        hover_info.push('\n');
+        hover_info.push_str("Show references (Ctrl + Click) or Rename (F2)");
+    } else {
+        hover_info.push('\n');
+        hover_info.push_str("Go to definition (Ctrl + Click) or Rename (F2)");
+    }
     Some(Hover {
         contents: HoverContents::Markup(MarkupContent {
             kind: MarkupKind::Markdown,
