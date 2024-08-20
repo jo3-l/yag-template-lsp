@@ -1,5 +1,6 @@
 use tower_lsp::lsp_types::{
-    CompletionItem, CompletionItemKind, CompletionParams, CompletionResponse, CompletionTextEdit, TextEdit,
+    CompletionItem, CompletionItemKind, CompletionParams, CompletionResponse, CompletionTextEdit, Documentation,
+    MarkupContent, MarkupKind, TextEdit,
 };
 use yag_template_analysis::scope::VarSymbol;
 use yag_template_envdefs::{EnvDefs, Func};
@@ -59,6 +60,10 @@ fn complete_func(env: &EnvDefs, doc: &Document, existing_ident: ast::Ident) -> V
         text_edit: Some(CompletionTextEdit::Edit(TextEdit {
             new_text: func.name.to_string(),
             range: doc.mapper.range(existing_ident.syntax().text_range()),
+        })),
+        documentation: Some(Documentation::MarkupContent(MarkupContent {
+            kind: MarkupKind::Markdown,
+            value: func.doc.clone(),
         })),
         ..Default::default()
     };
