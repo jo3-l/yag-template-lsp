@@ -10,74 +10,37 @@ use smol_str::SmolStr;
 use yag_template_syntax::ast;
 use yag_template_syntax::ast::AstToken;
 
+new_key_type! { pub struct VarSymbolId; }
 new_key_type! { pub struct ScopeId; }
-new_key_type! { pub struct DeclaredVarId; }
-
-#[derive(Debug)]
-pub struct Scope {
-    pub range: TextRange,
-    pub vars_by_name: AHashMap<SmolStr, DeclaredVarId>,
-    pub declared_vars: Vec<DeclaredVar>,
-    pub parent: Option<ScopeId>,
-}
-
-impl Scope {
-    pub fn new(range: TextRange, parent: Option<ScopeId>) -> Self {
-        Self {
-            range,
-            vars_by_name: AHashMap::new(),
-            declared_vars: Vec::new(),
-            parent,
-        }
-    }
-
-    pub fn lookup(&self, name: &str) -> Option<DeclaredVarId> {
-        self.vars_by_name.get(name).copied()
-    }
-
-    pub fn vars_visible_at_offset(&self, offset: TextSize) -> impl Iterator<Item = &DeclaredVar> {
-        self.declared_vars.iter().filter(move |var| offset >= var.visible_from)
-    }
-}
-
-#[derive(Debug, Clone)]
-pub struct DeclaredVar {
-    pub id: DeclaredVarId,
-    pub name: SmolStr,
-    pub visible_from: TextSize, // within its scope, the variable is accessible after this offset
-    pub decl_range: Option<TextRange>,
-}
 
 #[derive(Debug)]
 pub struct ScopeInfo {
-    declared_vars: SlotMap<DeclaredVarId, DeclaredVar>,
-    resolved_var_references: AHashMap<TextRange, DeclaredVarId>,
+    var_syms: SlotMap<VarSymbolId, VarSymbol>,
+    resolved_var_uses: AHashMap<TextRange, VarSymbolId>, // indexed by text range of ast::Var
     scopes: SlotMap<ScopeId, Scope>,
 }
 
 impl ScopeInfo {
     pub(crate) fn new(
-        declared_vars: SlotMap<DeclaredVarId, DeclaredVar>,
-        resolved_var_references: AHashMap<TextRange, DeclaredVarId>,
+        var_syms: SlotMap<VarSymbolId, VarSymbol>,
+        resolved_var_uses: AHashMap<TextRange, VarSymbolId>,
         scopes: SlotMap<ScopeId, Scope>,
     ) -> Self {
         Self {
-            declared_vars,
-            resolved_var_references,
+            var_syms,
+            resolved_var_uses,
             scopes,
         }
     }
-}
 
-impl ScopeInfo {
-    pub fn resolve_var(&self, var: ast::Var) -> Option<&DeclaredVar> {
-        self.resolved_var_references
+    pub fn resolve_var(&self, var: ast::Var) -> Option<&VarSymbol> {
+        self.resolved_var_uses
             .get(&var.syntax().text_range())
-            .and_then(|id| self.declared_vars.get(*id))
+            .and_then(|id| self.var_syms.get(*id))
     }
 
-    pub fn find_uses(&self, var: &DeclaredVar, include_decl: bool) -> VarUsesIter {
-        VarUsesIter::new(self, var, include_decl)
+    pub fn find_uses(&self, sym: &VarSymbol, include_decl: bool) -> VarUsesIter {
+        VarUsesIter::new(self, sym, include_decl)
     }
 
     /// Iterate over the scopes containing the offset, from the innermost outward.
@@ -85,7 +48,7 @@ impl ScopeInfo {
         ParentScopesIter::new(self, self.innermost_scope_containing(offset))
     }
 
-    fn innermost_scope_containing(&self, offset: TextSize) -> Option<ScopeId> {
+    pub fn innermost_scope_containing(&self, offset: TextSize) -> Option<ScopeId> {
         self.scopes
             .iter()
             .filter(|(_, scope)| scope.range.contains_inclusive(offset))
@@ -94,18 +57,54 @@ impl ScopeInfo {
     }
 }
 
+#[derive(Debug, Clone)]
+pub struct VarSymbol {
+    pub id: VarSymbolId,
+    pub name: SmolStr,
+    /// Within its scope, the variable is accessible after this offset.
+    pub visible_from: TextSize,
+    pub decl_range: Option<TextRange>,
+}
+
+#[derive(Debug)]
+pub struct Scope {
+    pub range: TextRange,
+    pub vars_by_name: AHashMap<SmolStr, VarSymbolId>,
+    pub declared_vars: Vec<VarSymbol>,
+    pub parent: Option<ScopeId>,
+}
+
+impl Scope {
+    pub(crate) fn new(range: TextRange, parent: Option<ScopeId>) -> Self {
+        Self {
+            range,
+            vars_by_name: AHashMap::new(),
+            declared_vars: Vec::new(),
+            parent,
+        }
+    }
+
+    pub fn lookup(&self, name: &str) -> Option<VarSymbolId> {
+        self.vars_by_name.get(name).copied()
+    }
+
+    pub fn vars_visible_at_offset(&self, offset: TextSize) -> impl Iterator<Item = &VarSymbol> {
+        self.declared_vars.iter().filter(move |var| offset >= var.visible_from)
+    }
+}
+
 pub struct VarUsesIter<'a> {
-    var: DeclaredVar,
+    sym: VarSymbol,
     exclude_range: Option<TextRange>,
-    inner: hash_map::Iter<'a, TextRange, DeclaredVarId>,
+    all_var_uses: hash_map::Iter<'a, TextRange, VarSymbolId>,
 }
 
 impl<'a> VarUsesIter<'a> {
-    pub(crate) fn new(info: &'a ScopeInfo, var: &DeclaredVar, include_decl: bool) -> Self {
+    pub(crate) fn new(info: &'a ScopeInfo, sym: &VarSymbol, include_decl: bool) -> Self {
         Self {
-            var: var.clone(),
-            exclude_range: if include_decl { None } else { var.decl_range },
-            inner: info.resolved_var_references.iter(),
+            sym: sym.clone(),
+            exclude_range: if include_decl { None } else { sym.decl_range },
+            all_var_uses: info.resolved_var_uses.iter(),
         }
     }
 }
@@ -114,11 +113,12 @@ impl<'a> Iterator for VarUsesIter<'a> {
     type Item = TextRange;
 
     fn next(&mut self) -> Option<Self::Item> {
-        // This implementation is efficient than it could be; we iterate over all variable references whereas in theory
-        // we could directly record the locations at which a variable is used in DeclaredVar. But that trades time for
-        // memory and finding all references is an uncommon enough operation that the inefficiency here is OK.
-        self.inner.find_map(|(&range, &id)| {
-            if id == self.var.id
+        // This implementation is less efficient than it could be; we iterate over all variable references whereas in
+        // theory we could directly record the locations at which a variable is used in DeclaredVar. But that trades
+        // time for memory and makes cloning a DeclaredVar somewhat expensive, so on balance the current strategy seems
+        // acceptable too.
+        self.all_var_uses.find_map(|(&range, &id)| {
+            if id == self.sym.id
                 && !self
                     .exclude_range
                     .is_some_and(|excluded| excluded.contains_range(range))
@@ -146,8 +146,7 @@ impl<'a> Iterator for ParentScopesIter<'a> {
     type Item = &'a Scope;
 
     fn next(&mut self) -> Option<Self::Item> {
-        let scope_id = self.cur.take()?;
-        let scope = &self.info.scopes[scope_id];
+        let scope = &self.info.scopes[self.cur.take()?];
         self.cur = scope.parent;
         Some(scope)
     }

@@ -15,8 +15,8 @@ pub(crate) async fn goto_definition(
         doc.analysis
             .scope_info
             .resolve_var(var)
-            .and_then(|resolved| resolved.decl_range)
-            .map(|decl_range| GotoDefinitionResponse::Scalar(Location::new(uri, doc.mapper.range(decl_range))))
+            .and_then(|sym| sym.decl_range)
+            .map(|range| GotoDefinitionResponse::Scalar(Location::new(uri, doc.mapper.range(range))))
     } else {
         None
     };

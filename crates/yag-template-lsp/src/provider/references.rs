@@ -25,9 +25,9 @@ fn find_var_references(
 ) -> Option<Vec<Location>> {
     let scope_info = &doc.analysis.scope_info;
 
-    let resolved = scope_info.resolve_var(var)?;
+    let sym = scope_info.resolve_var(var)?;
     let refs: Vec<_> = scope_info
-        .find_uses(resolved, context.include_declaration)
+        .find_uses(sym, context.include_declaration)
         .map(|range| Location::new(doc_uri.clone(), doc.mapper.range(range)))
         .collect();
     Some(refs)
