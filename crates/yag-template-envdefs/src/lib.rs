@@ -1,5 +1,6 @@
 use core::fmt;
 use core::fmt::Write;
+use std::borrow::Cow;
 use std::collections::hash_map::Entry;
 use std::error::Error;
 
@@ -86,9 +87,25 @@ impl fmt::Display for ParseError {
 impl Error for ParseError {}
 
 #[derive(Debug)]
-pub struct EnvDefSource<'s> {
-    pub name: &'s str,
-    pub data: &'s str,
+pub struct EnvDefSource {
+    name: Cow<'static, str>,
+    data: Cow<'static, str>,
+}
+
+impl EnvDefSource {
+    pub fn new(name: impl Into<String>, data: impl Into<String>) -> Self {
+        Self {
+            name: Cow::Owned(name.into()),
+            data: Cow::Owned(data.into()),
+        }
+    }
+
+    pub const fn new_static(name: &'static str, data: &'static str) -> Self {
+        Self {
+            name: Cow::Borrowed(name),
+            data: Cow::Borrowed(data),
+        }
+    }
 }
 
 pub fn parse(sources: &[EnvDefSource]) -> Result<EnvDefs, ParseError> {
@@ -102,7 +119,7 @@ pub fn parse(sources: &[EnvDefSource]) -> Result<EnvDefs, ParseError> {
 fn process_source(defs: &mut EnvDefs, src: &EnvDefSource) -> Result<(), ParseError> {
     macro_rules! bail {
         ($msg:expr, $lineno:expr) => {
-            return Err(ParseError::new(src.name.into(), $lineno, $msg))
+            return Err(ParseError::new(src.name.to_string(), $lineno, $msg))
         };
     }
 

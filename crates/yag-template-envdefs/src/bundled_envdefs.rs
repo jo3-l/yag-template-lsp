@@ -3,16 +3,13 @@ use super::{EnvDefSource, EnvDefs, ParseError};
 macro_rules! sources {
     ($($filename:literal),*) => {
         &[$(
-            EnvDefSource {
-                name: $filename,
-                data: include_str!(concat!("../../../bundled-defs/", $filename))
-            },
+            EnvDefSource::new_static($filename, include_str!(concat!("../../../bundled-defs/", $filename))),
         )*]
     }
 }
 
 pub fn load() -> Result<EnvDefs, ParseError> {
-    static BUNDLED_SOURCES: &[EnvDefSource<'static>] = sources![
+    static BUNDLED_SOURCES: &[EnvDefSource] = sources![
         "builtin_funcs.ydef",
         "context_funcs.ydef",
         "ext_plugin_funcs.ydef",
