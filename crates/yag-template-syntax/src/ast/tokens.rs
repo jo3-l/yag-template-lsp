@@ -2,37 +2,13 @@ use std::borrow::Cow;
 
 use unscanny::Scanner;
 
+use super::macros::define_ast_token;
 use crate::ast::AstToken;
 use crate::go_syntax::EscapeContext;
 use crate::{go_syntax, SyntaxKind, SyntaxToken};
 
-macro_rules! define_token {
-    ($(#[$attr:meta])* $name:ident($pat:pat)) => {
-        #[derive(Debug, Clone, Eq, PartialEq, Hash)]
-        #[repr(transparent)]
-        $(#[$attr])*
-        pub struct $name {
-            pub(crate) syntax: SyntaxToken,
-        }
-
-        impl AstToken for $name {
-            fn cast(syntax: SyntaxToken) -> Option<Self> {
-                if matches!(syntax.kind(), $pat) {
-                    Some(Self { syntax })
-                } else {
-                    None
-                }
-            }
-
-            fn syntax(&self) -> &SyntaxToken {
-                &self.syntax
-            }
-        }
-    };
-}
-
-define_token! {
-    Text(SyntaxKind::Text)
+define_ast_token! {
+    pub struct Text;
 }
 
 impl Text {
@@ -41,8 +17,31 @@ impl Text {
     }
 }
 
-define_token! {
-    LeftDelim(SyntaxKind::LeftDelim | SyntaxKind::TrimmedLeftDelim)
+#[derive(Debug, Clone, Eq, PartialEq, Hash)]
+#[repr(transparent)]
+pub struct LeftDelim {
+    syntax: SyntaxToken,
+}
+
+impl AstToken for LeftDelim {
+    fn can_cast(kind: SyntaxKind) -> bool {
+        matches!(kind, SyntaxKind::LeftDelim | SyntaxKind::TrimmedLeftDelim)
+    }
+
+    fn cast(syntax: SyntaxToken) -> Option<Self>
+    where
+        Self: Sized,
+    {
+        if Self::can_cast(syntax.kind()) {
+            Some(Self { syntax })
+        } else {
+            None
+        }
+    }
+
+    fn syntax(&self) -> &SyntaxToken {
+        &self.syntax
+    }
 }
 
 impl LeftDelim {
@@ -51,8 +50,31 @@ impl LeftDelim {
     }
 }
 
-define_token! {
-    RightDelim(SyntaxKind::RightDelim | SyntaxKind::TrimmedRightDelim)
+#[derive(Debug, Clone, Eq, PartialEq, Hash)]
+#[repr(transparent)]
+pub struct RightDelim {
+    syntax: SyntaxToken,
+}
+
+impl AstToken for RightDelim {
+    fn can_cast(kind: SyntaxKind) -> bool {
+        matches!(kind, SyntaxKind::RightDelim | SyntaxKind::TrimmedLeftDelim)
+    }
+
+    fn cast(syntax: SyntaxToken) -> Option<Self>
+    where
+        Self: Sized,
+    {
+        if Self::can_cast(syntax.kind()) {
+            Some(Self { syntax })
+        } else {
+            None
+        }
+    }
+
+    fn syntax(&self) -> &SyntaxToken {
+        &self.syntax
+    }
 }
 
 impl RightDelim {
@@ -61,8 +83,8 @@ impl RightDelim {
     }
 }
 
-define_token! {
-    Ident(SyntaxKind::Ident)
+define_ast_token! {
+    pub struct Ident;
 }
 
 impl Ident {
@@ -71,8 +93,8 @@ impl Ident {
     }
 }
 
-define_token! {
-    Field(SyntaxKind::Field)
+define_ast_token! {
+    pub struct Field;
 }
 
 impl Field {
@@ -81,8 +103,8 @@ impl Field {
     }
 }
 
-define_token! {
-    Var(SyntaxKind::Var)
+define_ast_token! {
+    pub struct Var;
 }
 
 impl Var {
@@ -91,8 +113,8 @@ impl Var {
     }
 }
 
-define_token! {
-    Bool(SyntaxKind::Bool)
+define_ast_token! {
+    pub struct Bool;
 }
 
 impl Bool {
@@ -101,8 +123,8 @@ impl Bool {
     }
 }
 
-define_token! {
-    Int(SyntaxKind::Int)
+define_ast_token! {
+    pub struct Int;
 }
 
 impl Int {
@@ -111,8 +133,8 @@ impl Int {
     }
 }
 
-define_token! {
-    Float(SyntaxKind::Float)
+define_ast_token! {
+    pub struct Float;
 }
 
 impl Float {
@@ -121,8 +143,8 @@ impl Float {
     }
 }
 
-define_token! {
-    Char(SyntaxKind::Char)
+define_ast_token! {
+    pub struct Char;
 }
 
 impl Char {
@@ -140,8 +162,8 @@ impl Char {
     }
 }
 
-define_token! {
-    Nil(SyntaxKind::Nil)
+define_ast_token! {
+    pub struct Nil;
 }
 
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
@@ -151,6 +173,10 @@ pub enum StringLiteral {
 }
 
 impl AstToken for StringLiteral {
+    fn can_cast(kind: SyntaxKind) -> bool {
+        matches!(kind, SyntaxKind::InterpretedString | SyntaxKind::RawString)
+    }
+
     fn cast(syntax: SyntaxToken) -> Option<Self> {
         match syntax.kind() {
             SyntaxKind::InterpretedString => InterpretedString::cast(syntax).map(Self::Interpreted),
@@ -167,19 +193,19 @@ impl AstToken for StringLiteral {
     }
 }
 
-define_token! {
-    InterpretedString(SyntaxKind::InterpretedString)
+define_ast_token! {
+    pub struct InterpretedString;
 }
 
-impl<'a> InterpretedString {
-    pub fn get(&'a self) -> Cow<'a, str> {
+impl InterpretedString {
+    pub fn get(&self) -> Cow<str> {
         let content = strip_quotes(self.syntax.text(), '"');
         go_syntax::interpret_string_content(content)
     }
 }
 
-define_token! {
-    RawString(SyntaxKind::RawString)
+define_ast_token! {
+    pub struct RawString;
 }
 
 impl RawString {

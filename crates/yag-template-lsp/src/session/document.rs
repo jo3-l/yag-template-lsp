@@ -3,7 +3,7 @@ use std::collections::BTreeMap;
 use rowan::{TextRange, TextSize};
 use tower_lsp::lsp_types::{Location, Position, Range, Url};
 use yag_template_analysis::Analysis;
-use yag_template_syntax::ast::SyntaxNodeExt;
+use yag_template_syntax::ast::ext::SyntaxNodeExt;
 use yag_template_syntax::parser::Parse;
 use yag_template_syntax::query::Query;
 use yag_template_syntax::{ast, parser, SyntaxNode};

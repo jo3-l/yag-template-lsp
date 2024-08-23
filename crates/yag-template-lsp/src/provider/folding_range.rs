@@ -1,5 +1,6 @@
 use tower_lsp::lsp_types::{FoldingRange, FoldingRangeKind, FoldingRangeParams, Range};
-use yag_template_syntax::ast::{AstNode, SyntaxNodeExt};
+use yag_template_syntax::ast::ext::SyntaxNodeExt;
+use yag_template_syntax::ast::AstNode;
 use yag_template_syntax::{ast, SyntaxKind, SyntaxNode};
 
 use crate::session::{Document, Session};
@@ -22,13 +23,13 @@ fn folding_range_for_node(doc: &Document, node: SyntaxNode) -> Option<FoldingRan
 
     let range = doc.mapper.range(node.text_range());
     match node.kind() {
-        TemplateDefinition => fold(range, node.to::<ast::TemplateDefinition>().define_clause()),
-        TemplateBlock => fold(range, node.to::<ast::TemplateBlock>().block_clause()),
-        IfConditional => fold(range, node.to::<ast::IfConditional>().if_clause()),
+        TemplateDefinition => fold(range, node.to::<ast::TemplateDefinition>().clause()),
+        TemplateBlock => fold(range, node.to::<ast::TemplateBlock>().clause()),
+        IfConditional => fold(range, node.to::<ast::IfConditional>().clause()),
         ElseBranch => fold_else_branch(doc, node.to::<ast::ElseBranch>()),
-        WithConditional => fold(range, node.to::<ast::WithConditional>().with_clause()),
-        RangeLoop => fold(range, node.to::<ast::RangeLoop>().range_clause()),
-        WhileLoop => fold(range, node.to::<ast::WhileLoop>().while_clause()),
+        WithConditional => fold(range, node.to::<ast::WithConditional>().clause()),
+        RangeLoop => fold(range, node.to::<ast::RangeLoop>().clause()),
+        WhileLoop => fold(range, node.to::<ast::WhileLoop>().clause()),
         TryCatchAction => fold(range, node.to::<ast::TryCatchAction>().try_clause()),
         CatchClause => fold_catch_clause(doc, node.to::<ast::CatchClause>()),
         VarDecl | VarAssign => fold_var_decl_or_assign(doc, node),
@@ -55,16 +56,16 @@ fn fold<N: AstNode>(r: Range, collapsed_node: Option<N>) -> Option<FoldingRange>
 fn fold_else_branch(doc: &Document, else_branch: ast::ElseBranch) -> Option<FoldingRange> {
     let trimmed_range = Range {
         start: doc.mapper.position(else_branch.text_range().start()),
-        end: doc.mapper.position(else_branch.action_list()?.trimmed_end_pos()),
+        end: doc.mapper.position(else_branch.body()?.trimmed_end_pos()),
     };
-    fold(trimmed_range, else_branch.else_clause())
+    fold(trimmed_range, else_branch.clause())
 }
 
 fn fold_catch_clause(doc: &Document, catch_clause: ast::CatchClause) -> Option<FoldingRange> {
-    let try_catch = catch_clause.syntax().parent()?.try_to::<ast::TryCatchAction>()?;
+    let trycatch = catch_clause.syntax().parent()?.try_to::<ast::TryCatchAction>()?;
     let range = Range {
         start: doc.mapper.position(catch_clause.text_range().start()),
-        end: doc.mapper.position(try_catch.catch_action_list()?.trimmed_end_pos()),
+        end: doc.mapper.position(trycatch.catch_body()?.trimmed_end_pos()),
     };
     fold(range, Some(catch_clause))
 }

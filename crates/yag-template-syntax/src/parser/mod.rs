@@ -60,7 +60,7 @@ impl<'s> Parser<'s> {
 pub(crate) struct Marker(DropBomb);
 
 impl Marker {
-    /// Mark the subtree starting at the beginning of the marker as complete.
+    /// Mark the subtree starting at the marker as complete.
     pub(crate) fn complete(mut self, p: &mut Parser) {
         self.0.defuse();
         p.green.finish_node();

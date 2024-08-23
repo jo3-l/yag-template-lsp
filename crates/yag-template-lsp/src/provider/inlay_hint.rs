@@ -36,20 +36,16 @@ where
         return None;
     }
 
-    Some(
-        call.call_args()
-            .zip(func.params.iter())
-            .map(|(call_expr, param)| InlayHint {
-                position: doc.mapper.position(call_expr.text_range().start()),
-                label: InlayHintLabel::String(param_label(param)),
-                kind: Some(InlayHintKind::PARAMETER),
-                text_edits: None,
-                padding_right: Some(true),
-                tooltip: None,
-                padding_left: None,
-                data: None,
-            }),
-    )
+    Some(call.args().zip(func.params.iter()).map(|(call_expr, param)| InlayHint {
+        position: doc.mapper.position(call_expr.text_range().start()),
+        label: InlayHintLabel::String(param_label(param)),
+        kind: Some(InlayHintKind::PARAMETER),
+        text_edits: None,
+        padding_right: Some(true),
+        tooltip: None,
+        padding_left: None,
+        data: None,
+    }))
 }
 
 fn param_label(param: &Param) -> String {

@@ -46,10 +46,8 @@ impl ScopeAnalyzer {
 
     fn finish(self) -> (ScopeInfo, Vec<AnalysisError>) {
         debug_assert!(self.scope_stack.is_empty());
-        (
-            ScopeInfo::new(self.var_syms, self.resolved_var_uses, self.scopes),
-            self.errors,
-        )
+        let info = ScopeInfo::new(self.var_syms, self.resolved_var_uses, self.scopes);
+        (info, self.errors)
     }
 
     fn error(&mut self, message: impl Into<String>, range: TextRange) {
@@ -135,90 +133,88 @@ impl ScopeAnalyzer {
     }
 
     fn analyze_template_def(&mut self, def: ast::TemplateDefinition) {
-        if let Some(list) = def.action_list() {
-            let body_range = list.text_range();
-            self.enter_detached_scope(body_range);
+        if let Some(body) = def.template_body() {
+            self.enter_detached_scope(body.text_range());
             // All associated template executions have the variable $ predefined
             // as the initial context data.
-            self.declare_var("$", body_range.start(), None);
-            self.analyze_all(list.actions());
+            self.declare_var("$", body.text_range().start(), None);
+            self.analyze_all(body.actions());
             self.exit_scope();
         }
     }
 
     fn analyze_template_block(&mut self, block: ast::TemplateBlock) {
-        self.try_analyze_expr(access!(block.block_clause()?.context_expr()));
+        self.try_analyze_expr(access!(block.clause()?.context_data()));
 
-        if let Some(list) = block.action_list() {
-            let body_range = list.text_range();
-            self.enter_detached_scope(body_range);
-            self.declare_var("$", body_range.start(), None);
-            self.analyze_all(list.actions());
+        if let Some(body) = block.template_body() {
+            self.enter_detached_scope(body.text_range());
+            self.declare_var("$", body.text_range().start(), None);
+            self.analyze_all(body.actions());
             self.exit_scope();
         }
     }
 
     fn analyze_template_invocation(&mut self, invocation: ast::TemplateInvocation) {
-        self.try_analyze_expr(invocation.context_expr());
+        self.try_analyze_expr(invocation.context_data());
     }
 
-    fn analyze_return_action(&mut self, return_action: ast::ReturnAction) {
-        self.try_analyze_expr(return_action.return_expr());
+    fn analyze_return_action(&mut self, ret: ast::ReturnAction) {
+        self.try_analyze_expr(ret.expr());
     }
 
     fn analyze_if_conditional(&mut self, if_conditional: ast::IfConditional) {
-        let Some(if_clause) = if_conditional.if_clause() else {
+        let Some(if_clause) = if_conditional.clause() else {
             return;
         };
         let if_clause_scope = self.enter_inner_scope(if_clause.text_range());
-        self.try_analyze_expr(if_clause.if_expr());
+        self.try_analyze_expr(if_clause.condition());
         self.exit_scope();
-        if let Some(if_list) = if_conditional.if_action_list() {
-            self.enter_scope_with_parent(if_list.text_range(), if_clause_scope);
-            self.analyze_all(if_list.actions());
+        if let Some(if_body) = if_conditional.body() {
+            self.enter_scope_with_parent(if_body.text_range(), if_clause_scope);
+            self.analyze_all(if_body.actions());
             self.exit_scope();
         }
-        self.analyze_if_or_with_else_branches(if_clause_scope, if_conditional.else_branches());
+        self.analyze_conditional_else_branches(if_clause_scope, if_conditional.else_branches());
     }
 
     fn analyze_with_conditional(&mut self, with_conditional: ast::WithConditional) {
-        let Some(with_clause) = with_conditional.with_clause() else {
+        let Some(with_clause) = with_conditional.clause() else {
             return;
         };
         let with_clause_scope = self.enter_inner_scope(with_clause.text_range());
-        self.try_analyze_expr(with_clause.with_expr());
+        self.try_analyze_expr(with_clause.condition());
         self.exit_scope();
-        if let Some(with_list) = with_conditional.with_action_list() {
-            self.enter_scope_with_parent(with_list.text_range(), with_clause_scope);
-            self.analyze_all(with_list.actions());
+        if let Some(with_body) = with_conditional.body() {
+            self.enter_scope_with_parent(with_body.text_range(), with_clause_scope);
+            self.analyze_all(with_body.actions());
             self.exit_scope();
         }
-        self.analyze_if_or_with_else_branches(with_clause_scope, with_conditional.else_branches());
+        self.analyze_conditional_else_branches(with_clause_scope, with_conditional.else_branches());
     }
 
-    fn analyze_if_or_with_else_branches(
+    fn analyze_conditional_else_branches(
         &mut self,
-        if_or_with_clause_scope: ScopeId,
+        clause_scope: ScopeId,
         else_branches: impl Iterator<Item = ast::ElseBranch>,
     ) {
-        let mut parent_scope = if_or_with_clause_scope;
+        let mut parent_scope = clause_scope;
         for else_branch in else_branches {
-            if let Some(else_clause) = else_branch.else_clause() {
+            if let Some(else_clause) = else_branch.clause() {
                 parent_scope = self.enter_scope_with_parent(else_clause.text_range(), parent_scope);
-                self.try_analyze_expr(else_clause.cond_expr());
+                self.try_analyze_expr(else_clause.condition());
                 self.exit_scope();
             }
 
-            if let Some(else_list) = else_branch.action_list() {
-                self.enter_scope_with_parent(else_list.text_range(), parent_scope);
-                self.analyze_all(else_list.actions());
+            if let Some(else_body) = else_branch.body() {
+                self.enter_scope_with_parent(else_body.text_range(), parent_scope);
+                self.analyze_all(else_body.actions());
                 self.exit_scope();
             }
         }
     }
 
     fn analyze_range_loop(&mut self, range_loop: ast::RangeLoop) {
-        let Some(range_clause) = range_loop.range_clause() else {
+        let Some(range_clause) = range_loop.clause() else {
             return;
         };
 
@@ -234,57 +230,57 @@ impl ScopeAnalyzer {
             }
         } else if range_clause.assigns_vars() {
             for var in range_clause.iteration_vars() {
-                self.try_resolve_var_use(var);
+                self.resolve_var_use(var);
             }
         }
-        self.try_analyze_expr(range_clause.range_expr());
+        self.try_analyze_expr(range_clause.expr());
         self.exit_scope();
 
-        if let Some(range_list) = range_loop.action_list() {
-            self.enter_scope_with_parent(range_list.text_range(), range_clause_scope);
-            self.analyze_all(range_list.actions());
+        if let Some(range_body) = range_loop.body() {
+            self.enter_scope_with_parent(range_body.text_range(), range_clause_scope);
+            self.analyze_all(range_body.actions());
             self.exit_scope();
         }
         if let Some(else_branch) = range_loop.else_branch() {
-            if let Some(else_list) = else_branch.action_list() {
-                self.enter_scope_with_parent(else_list.text_range(), range_clause_scope);
-                self.analyze_all(else_list.actions());
+            if let Some(else_body) = else_branch.body() {
+                self.enter_scope_with_parent(else_body.text_range(), range_clause_scope);
+                self.analyze_all(else_body.actions());
                 self.exit_scope();
             }
         }
     }
 
     fn analyze_while_loop(&mut self, while_loop: ast::WhileLoop) {
-        let Some(while_clause) = while_loop.while_clause() else {
+        let Some(while_clause) = while_loop.clause() else {
             return;
         };
         let while_clause_scope = self.enter_inner_scope(while_clause.text_range());
-        self.try_analyze_expr(while_clause.cond_expr());
+        self.try_analyze_expr(while_clause.condition());
         self.exit_scope();
-        if let Some(while_list) = while_loop.action_list() {
-            self.enter_scope_with_parent(while_list.text_range(), while_clause_scope);
-            self.analyze_all(while_list.actions());
+        if let Some(while_body) = while_loop.actions() {
+            self.enter_scope_with_parent(while_body.text_range(), while_clause_scope);
+            self.analyze_all(while_body.actions());
             self.exit_scope();
         }
         if let Some(else_branch) = while_loop.else_branch() {
-            if let Some(else_list) = else_branch.action_list() {
-                self.enter_scope_with_parent(else_list.text_range(), while_clause_scope);
-                self.analyze_all(else_list.actions());
+            if let Some(else_body) = else_branch.body() {
+                self.enter_scope_with_parent(else_body.text_range(), while_clause_scope);
+                self.analyze_all(else_body.actions());
                 self.exit_scope();
             }
         }
     }
 
-    fn analyze_try_catch_action(&mut self, try_catch_action: ast::TryCatchAction) {
-        if let Some(try_list) = try_catch_action.try_action_list() {
-            self.enter_inner_scope(try_list.text_range());
-            self.analyze_all(try_list.actions());
+    fn analyze_try_catch_action(&mut self, trycatch: ast::TryCatchAction) {
+        if let Some(try_body) = trycatch.try_body() {
+            self.enter_inner_scope(try_body.text_range());
+            self.analyze_all(try_body.actions());
             self.exit_scope();
         }
 
-        if let Some(catch_list) = try_catch_action.catch_action_list() {
-            self.enter_inner_scope(catch_list.text_range());
-            self.analyze_all(catch_list.actions());
+        if let Some(catch_body) = trycatch.catch_body() {
+            self.enter_inner_scope(catch_body.text_range());
+            self.analyze_all(catch_body.actions());
             self.exit_scope();
         }
     }
@@ -305,15 +301,15 @@ impl ScopeAnalyzer {
     fn analyze_expr(&mut self, expr: ast::Expr) {
         use ast::Expr::*;
         match expr {
-            FuncCall(call) => call.call_args().for_each(|arg| self.analyze_expr(arg)),
+            FuncCall(call) => call.args().for_each(|arg| self.analyze_expr(arg)),
             ExprCall(call) => {
                 self.try_analyze_expr(call.callee());
-                call.call_args().for_each(|arg| self.analyze_expr(arg));
+                call.args().for_each(|arg| self.analyze_expr(arg));
             }
             Parenthesized(p) => self.try_analyze_expr(p.inner_expr()),
             Pipeline(p) => {
                 self.try_analyze_expr(p.init_expr());
-                p.stages().for_each(|stage| self.try_analyze_expr(stage.target_expr()));
+                p.stages().for_each(|stage| self.try_analyze_expr(stage.call_expr()));
             }
             ContextAccess(_) => {}
             ContextFieldChain(_) => {}
@@ -327,7 +323,7 @@ impl ScopeAnalyzer {
 
     fn analyze_var_access(&mut self, access: ast::VarAccess) {
         if let Some(var) = access.var() {
-            self.try_resolve_var_use(var);
+            self.resolve_var_use(var);
         }
     }
 
@@ -342,17 +338,16 @@ impl ScopeAnalyzer {
 
     fn analyze_var_assign(&mut self, assign: ast::VarAssign) {
         if let Some(var) = assign.var() {
-            self.try_resolve_var_use(var)
+            self.resolve_var_use(var)
         }
         self.try_analyze_expr(assign.assign_expr());
     }
 
-    fn try_resolve_var_use(&mut self, var_use: ast::Var) {
+    fn resolve_var_use(&mut self, var_use: ast::Var) {
         let name = var_use.name();
-        let range = var_use.text_range();
         match self.lookup_var(name) {
             Some(id) => self.set_referent(var_use, id),
-            None => self.error(format!("undefined variable {name}"), range),
+            None => self.error(format!("undefined variable {name}"), var_use.text_range()),
         }
     }
 

@@ -26,7 +26,10 @@ fn hover_var(doc: &Document, var: ast::Var) -> Option<Hover> {
     let sym = doc.analysis.scope_info.resolve_var(var.clone())?;
 
     let mut hover_info = format!("```\n(variable) {}\n```", var.name());
-    if sym.decl_range.is_some_and(|decl| decl.contains_range(var.text_range())) {
+    if sym
+        .decl_range
+        .is_some_and(|decl_range| decl_range.contains_range(var.text_range()))
+    {
         hover_info.push('\n');
         hover_info.push_str("Show references (Ctrl + Click) or Rename (F2)");
     } else {
