@@ -16,7 +16,7 @@ pub(crate) async fn inlay_hint(sess: &Session, params: InlayHintParams) -> anyho
         .syntax()
         .descendants()
         .filter_map(ast::FuncCall::cast)
-        .filter(|call| requested_range.contains_range(call.syntax().text_range()))
+        .filter(|call| requested_range.contains_range(call.text_range()))
         .filter_map(|call| inlay_hints_for_fn_call(&sess.envdefs, &doc, call))
         .flatten()
         .collect();
@@ -40,7 +40,7 @@ where
         call.call_args()
             .zip(func.params.iter())
             .map(|(call_expr, param)| InlayHint {
-                position: doc.mapper.position(call_expr.syntax().text_range().start()),
+                position: doc.mapper.position(call_expr.text_range().start()),
                 label: InlayHintLabel::String(param_label(param)),
                 kind: Some(InlayHintKind::PARAMETER),
                 text_edits: None,

@@ -11,7 +11,7 @@ use super::{Scope, ScopeId, ScopeInfo, VarSymbol, VarSymbolId};
 use crate::AnalysisError;
 
 pub fn analyze(root: ast::Root) -> (ScopeInfo, Vec<AnalysisError>) {
-    let root_range = root.syntax().text_range();
+    let root_range = root.text_range();
     let mut s = ScopeAnalyzer::new(root_range);
     // The variable $ is predefined as the initial context data.
     s.declare_var("$", root_range.start(), None);
@@ -100,7 +100,7 @@ impl ScopeAnalyzer {
     }
 
     fn set_referent(&mut self, var: ast::Var, sym: VarSymbolId) {
-        self.resolved_var_uses.insert(var.syntax().text_range(), sym);
+        self.resolved_var_uses.insert(var.text_range(), sym);
     }
 }
 
@@ -136,7 +136,7 @@ impl ScopeAnalyzer {
 
     fn analyze_template_def(&mut self, def: ast::TemplateDefinition) {
         if let Some(list) = def.action_list() {
-            let body_range = list.syntax().text_range();
+            let body_range = list.text_range();
             self.enter_detached_scope(body_range);
             // All associated template executions have the variable $ predefined
             // as the initial context data.
@@ -150,7 +150,7 @@ impl ScopeAnalyzer {
         self.try_analyze_expr(access!(block.block_clause()?.context_expr()));
 
         if let Some(list) = block.action_list() {
-            let body_range = list.syntax().text_range();
+            let body_range = list.text_range();
             self.enter_detached_scope(body_range);
             self.declare_var("$", body_range.start(), None);
             self.analyze_all(list.actions());
@@ -170,11 +170,11 @@ impl ScopeAnalyzer {
         let Some(if_clause) = if_conditional.if_clause() else {
             return;
         };
-        let if_clause_scope = self.enter_inner_scope(if_clause.syntax().text_range());
+        let if_clause_scope = self.enter_inner_scope(if_clause.text_range());
         self.try_analyze_expr(if_clause.if_expr());
         self.exit_scope();
         if let Some(if_list) = if_conditional.if_action_list() {
-            self.enter_scope_with_parent(if_list.syntax().text_range(), if_clause_scope);
+            self.enter_scope_with_parent(if_list.text_range(), if_clause_scope);
             self.analyze_all(if_list.actions());
             self.exit_scope();
         }
@@ -185,11 +185,11 @@ impl ScopeAnalyzer {
         let Some(with_clause) = with_conditional.with_clause() else {
             return;
         };
-        let with_clause_scope = self.enter_inner_scope(with_clause.syntax().text_range());
+        let with_clause_scope = self.enter_inner_scope(with_clause.text_range());
         self.try_analyze_expr(with_clause.with_expr());
         self.exit_scope();
         if let Some(with_list) = with_conditional.with_action_list() {
-            self.enter_scope_with_parent(with_list.syntax().text_range(), with_clause_scope);
+            self.enter_scope_with_parent(with_list.text_range(), with_clause_scope);
             self.analyze_all(with_list.actions());
             self.exit_scope();
         }
@@ -204,13 +204,13 @@ impl ScopeAnalyzer {
         let mut parent_scope = if_or_with_clause_scope;
         for else_branch in else_branches {
             if let Some(else_clause) = else_branch.else_clause() {
-                parent_scope = self.enter_scope_with_parent(else_clause.syntax().text_range(), parent_scope);
+                parent_scope = self.enter_scope_with_parent(else_clause.text_range(), parent_scope);
                 self.try_analyze_expr(else_clause.cond_expr());
                 self.exit_scope();
             }
 
             if let Some(else_list) = else_branch.action_list() {
-                self.enter_scope_with_parent(else_list.syntax().text_range(), parent_scope);
+                self.enter_scope_with_parent(else_list.text_range(), parent_scope);
                 self.analyze_all(else_list.actions());
                 self.exit_scope();
             }
@@ -222,13 +222,13 @@ impl ScopeAnalyzer {
             return;
         };
 
-        let range_clause_scope = self.enter_inner_scope(range_clause.syntax().text_range());
+        let range_clause_scope = self.enter_inner_scope(range_clause.text_range());
         if range_clause.declares_vars() {
             for var in range_clause.iteration_vars() {
                 let id = self.declare_var(
                     var.name(),
-                    range_clause.syntax().text_range().end(),
-                    Some(range_clause.syntax().text_range()),
+                    range_clause.text_range().end(),
+                    Some(range_clause.text_range()),
                 );
                 self.set_referent(var, id);
             }
@@ -241,13 +241,13 @@ impl ScopeAnalyzer {
         self.exit_scope();
 
         if let Some(range_list) = range_loop.action_list() {
-            self.enter_scope_with_parent(range_list.syntax().text_range(), range_clause_scope);
+            self.enter_scope_with_parent(range_list.text_range(), range_clause_scope);
             self.analyze_all(range_list.actions());
             self.exit_scope();
         }
         if let Some(else_branch) = range_loop.else_branch() {
             if let Some(else_list) = else_branch.action_list() {
-                self.enter_scope_with_parent(else_list.syntax().text_range(), range_clause_scope);
+                self.enter_scope_with_parent(else_list.text_range(), range_clause_scope);
                 self.analyze_all(else_list.actions());
                 self.exit_scope();
             }
@@ -258,17 +258,17 @@ impl ScopeAnalyzer {
         let Some(while_clause) = while_loop.while_clause() else {
             return;
         };
-        let while_clause_scope = self.enter_inner_scope(while_clause.syntax().text_range());
+        let while_clause_scope = self.enter_inner_scope(while_clause.text_range());
         self.try_analyze_expr(while_clause.cond_expr());
         self.exit_scope();
         if let Some(while_list) = while_loop.action_list() {
-            self.enter_scope_with_parent(while_list.syntax().text_range(), while_clause_scope);
+            self.enter_scope_with_parent(while_list.text_range(), while_clause_scope);
             self.analyze_all(while_list.actions());
             self.exit_scope();
         }
         if let Some(else_branch) = while_loop.else_branch() {
             if let Some(else_list) = else_branch.action_list() {
-                self.enter_scope_with_parent(else_list.syntax().text_range(), while_clause_scope);
+                self.enter_scope_with_parent(else_list.text_range(), while_clause_scope);
                 self.analyze_all(else_list.actions());
                 self.exit_scope();
             }
@@ -277,13 +277,13 @@ impl ScopeAnalyzer {
 
     fn analyze_try_catch_action(&mut self, try_catch_action: ast::TryCatchAction) {
         if let Some(try_list) = try_catch_action.try_action_list() {
-            self.enter_inner_scope(try_list.syntax().text_range());
+            self.enter_inner_scope(try_list.text_range());
             self.analyze_all(try_list.actions());
             self.exit_scope();
         }
 
         if let Some(catch_list) = try_catch_action.catch_action_list() {
-            self.enter_inner_scope(catch_list.syntax().text_range());
+            self.enter_inner_scope(catch_list.text_range());
             self.analyze_all(catch_list.actions());
             self.exit_scope();
         }
@@ -333,7 +333,7 @@ impl ScopeAnalyzer {
 
     fn analyze_var_decl(&mut self, decl: ast::VarDecl) {
         if let Some(var) = decl.var() {
-            let decl_range = decl.syntax().text_range();
+            let decl_range = decl.text_range();
             let id = self.declare_var(var.name(), decl_range.end(), Some(decl_range));
             self.set_referent(var, id);
         }
@@ -349,7 +349,7 @@ impl ScopeAnalyzer {
 
     fn try_resolve_var_use(&mut self, var_use: ast::Var) {
         let name = var_use.name();
-        let range = var_use.syntax().text_range();
+        let range = var_use.text_range();
         match self.lookup_var(name) {
             Some(id) => self.set_referent(var_use, id),
             None => self.error(format!("undefined variable {name}"), range),

@@ -1,6 +1,6 @@
 use std::marker::PhantomData;
 
-use rowan::{SyntaxElementChildren, SyntaxNodeChildren};
+use rowan::{SyntaxElementChildren, SyntaxNodeChildren, TextRange};
 
 use crate::{SyntaxNode, SyntaxToken, YagTemplateLanguage};
 
@@ -14,14 +14,24 @@ pub trait AstNode {
     fn cast(syntax: SyntaxNode) -> Option<Self>
     where
         Self: Sized;
+
     fn syntax(&self) -> &SyntaxNode;
+
+    fn text_range(&self) -> TextRange {
+        self.syntax().text_range()
+    }
 }
 
 pub trait AstToken {
     fn cast(syntax: SyntaxToken) -> Option<Self>
     where
         Self: Sized;
+
     fn syntax(&self) -> &SyntaxToken;
+
+    fn text_range(&self) -> TextRange {
+        self.syntax().text_range()
+    }
 }
 
 pub trait SyntaxNodeExt {

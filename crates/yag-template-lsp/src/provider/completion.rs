@@ -36,7 +36,7 @@ fn complete_var(doc: &Document, query: Query, existing_var: ast::Var) -> Vec<Com
         kind: Some(CompletionItemKind::VARIABLE),
         text_edit: Some(CompletionTextEdit::Edit(TextEdit {
             new_text: var.name.to_string(),
-            range: doc.mapper.range(existing_var.syntax().text_range()),
+            range: doc.mapper.range(existing_var.text_range()),
         })),
         ..Default::default()
     };
@@ -59,7 +59,7 @@ fn complete_func(env: &EnvDefs, doc: &Document, existing_ident: ast::Ident) -> V
         kind: Some(CompletionItemKind::FUNCTION),
         text_edit: Some(CompletionTextEdit::Edit(TextEdit {
             new_text: func.name.to_string(),
-            range: doc.mapper.range(existing_ident.syntax().text_range()),
+            range: doc.mapper.range(existing_ident.text_range()),
         })),
         documentation: Some(Documentation::MarkupContent(MarkupContent {
             kind: MarkupKind::Markdown,

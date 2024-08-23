@@ -26,10 +26,7 @@ fn hover_var(doc: &Document, var: ast::Var) -> Option<Hover> {
     let sym = doc.analysis.scope_info.resolve_var(var.clone())?;
 
     let mut hover_info = format!("```\n(variable) {}\n```", var.name());
-    if sym
-        .decl_range
-        .is_some_and(|decl| decl.contains_range(var.syntax().text_range()))
-    {
+    if sym.decl_range.is_some_and(|decl| decl.contains_range(var.text_range())) {
         hover_info.push('\n');
         hover_info.push_str("Show references (Ctrl + Click) or Rename (F2)");
     } else {
@@ -41,7 +38,7 @@ fn hover_var(doc: &Document, var: ast::Var) -> Option<Hover> {
             kind: MarkupKind::Markdown,
             value: hover_info,
         }),
-        range: Some(doc.mapper.range(var.syntax().text_range())),
+        range: Some(doc.mapper.range(var.text_range())),
     })
 }
 
@@ -57,6 +54,6 @@ fn hover_func(env: &EnvDefs, doc: &Document, func_ident: ast::Ident) -> Option<H
             kind: MarkupKind::Markdown,
             value: hover_info,
         }),
-        range: Some(doc.mapper.range(func_ident.syntax().text_range())),
+        range: Some(doc.mapper.range(func_ident.text_range())),
     })
 }

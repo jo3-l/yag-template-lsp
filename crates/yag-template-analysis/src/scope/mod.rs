@@ -35,7 +35,7 @@ impl ScopeInfo {
 
     pub fn resolve_var(&self, var: ast::Var) -> Option<&VarSymbol> {
         self.resolved_var_uses
-            .get(&var.syntax().text_range())
+            .get(&var.text_range())
             .and_then(|id| self.var_syms.get(*id))
     }
 

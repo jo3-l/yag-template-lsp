@@ -20,7 +20,7 @@ fn check_func_call(env: &EnvDefs, call: ast::FuncCall) -> Option<AnalysisError> 
     } else {
         Some(AnalysisError::new(
             format!("unknown function {func_name}"),
-            func_name_ident.syntax().text_range(),
+            func_name_ident.text_range(),
         ))
     }
 }

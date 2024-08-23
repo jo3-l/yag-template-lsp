@@ -37,7 +37,7 @@ fn find_func_references(doc: &Document, func_name: &str) -> Option<Vec<Location>
         .descendants()
         .filter_map(ast::FuncCall::cast)
         .filter(|call| call.func_name().is_some_and(|call_name| call_name.get() == func_name))
-        .map(|call| doc.location_for(call.syntax().text_range()))
+        .map(|call| doc.location_for(call.text_range()))
         .collect();
     Some(refs)
 }

@@ -54,7 +54,7 @@ fn fold<N: AstNode>(r: Range, collapsed_node: Option<N>) -> Option<FoldingRange>
 
 fn fold_else_branch(doc: &Document, else_branch: ast::ElseBranch) -> Option<FoldingRange> {
     let trimmed_range = Range {
-        start: doc.mapper.position(else_branch.syntax().text_range().start()),
+        start: doc.mapper.position(else_branch.text_range().start()),
         end: doc.mapper.position(else_branch.action_list()?.trimmed_end_pos()),
     };
     fold(trimmed_range, else_branch.else_clause())
@@ -63,7 +63,7 @@ fn fold_else_branch(doc: &Document, else_branch: ast::ElseBranch) -> Option<Fold
 fn fold_catch_clause(doc: &Document, catch_clause: ast::CatchClause) -> Option<FoldingRange> {
     let try_catch = catch_clause.syntax().parent()?.try_to::<ast::TryCatchAction>()?;
     let range = Range {
-        start: doc.mapper.position(catch_clause.syntax().text_range().start()),
+        start: doc.mapper.position(catch_clause.text_range().start()),
         end: doc.mapper.position(try_catch.catch_action_list()?.trimmed_end_pos()),
     };
     fold(range, Some(catch_clause))
@@ -71,7 +71,7 @@ fn fold_catch_clause(doc: &Document, catch_clause: ast::CatchClause) -> Option<F
 
 fn fold_var_decl_or_assign(doc: &Document, decl_or_assign: SyntaxNode) -> Option<FoldingRange> {
     let parent_action = decl_or_assign.parent()?.try_to::<ast::ExprAction>()?;
-    fold::<ast::ExprAction>(doc.mapper.range(parent_action.syntax().text_range()), None)
+    fold::<ast::ExprAction>(doc.mapper.range(parent_action.text_range()), None)
 }
 
 fn fold_comment(doc: &Document, comment: SyntaxNode) -> Option<FoldingRange> {
