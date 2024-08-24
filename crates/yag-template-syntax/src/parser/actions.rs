@@ -34,8 +34,8 @@ pub(crate) fn text_or_action(p: &mut Parser) {
         return p.err_and_eat(format!("expected left action delimiter; found {}", p.cur()));
     }
     match p.peek_ignore_space() {
-        SyntaxKind::If => if_conditional(p),
-        SyntaxKind::With => with_conditional(p),
+        SyntaxKind::If => if_action(p),
+        SyntaxKind::With => with_action(p),
         SyntaxKind::Range => range_loop(p),
         SyntaxKind::While => while_loop(p),
         SyntaxKind::Try => try_catch_action(p),
@@ -60,13 +60,13 @@ pub(crate) fn text_or_action(p: &mut Parser) {
     }
 }
 
-fn if_conditional(p: &mut Parser) {
-    let if_conditional = p.start(SyntaxKind::IfAction);
+fn if_action(p: &mut Parser) {
+    let if_action = p.start(SyntaxKind::IfAction);
     if_clause(p);
     action_list(p);
     else_branches(p, "if action", true);
     end_clause_or_recover(p, "if action");
-    if_conditional.complete(p);
+    if_action.complete(p);
 }
 
 fn if_clause(p: &mut Parser) {
@@ -81,13 +81,13 @@ fn if_clause(p: &mut Parser) {
     if_clause.complete(p);
 }
 
-fn with_conditional(p: &mut Parser) {
-    let with_conditional = p.start(SyntaxKind::WithAction);
+fn with_action(p: &mut Parser) {
+    let with_action = p.start(SyntaxKind::WithAction);
     with_clause(p);
     action_list(p);
     else_branches(p, "with action", true);
     end_clause_or_recover(p, "with action");
-    with_conditional.complete(p);
+    with_action.complete(p);
 }
 
 fn with_clause(p: &mut Parser) {
