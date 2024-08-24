@@ -1,7 +1,7 @@
 {
 	"name": "yag-template-lsp",
 	"displayName": "Yag Template LSP",
-	"description": "A language server for YAGPDB templates",
+	"description": "Fully-featured editor support for YAGPDB custom commands",
 	"icon": "icon.png",
 	"repository": {
 		"type": "git",

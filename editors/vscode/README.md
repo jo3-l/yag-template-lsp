@@ -1,6 +1,6 @@
 # YAGPDB Template LSP
 
-A VSCode extension providing rich editor support for YAGPDB's templating language.
+A VS Code extension providing rich editor support for YAGPDB's templating language.
 
 **Recognized file extensions:** `.yag`, `.yagcc`, `.gotmpl`, `.go.tmpl`
 
