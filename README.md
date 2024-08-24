@@ -4,12 +4,12 @@
 <a href="https://open-vsx.org/extension/jo3-l/yag-template-lsp"><img src="https://img.shields.io/open-vsx/v/jo3-l/yag-template-lsp?style=for-the-badge&color=blue" alt="Open VSX Version"></a>
 <a href="https://github.com/jo3-l/yag-template-lsp/actions"><img src="https://img.shields.io/github/actions/workflow/status/jo3-l/yag-template-lsp/ci.yml?style=for-the-badge" alt="GitHub build status"></a>
 
-<img align="right" src="./assets/feature_slideshow.gif" height="440" alt="Highlighted feature slideshow" />
-
 A language server for [YAGPDB](https://yagpdb.xyz)'s templating language, with accompanying extensions published on the
 VSCode marketplace and Open VSX.
 
 ## Features
+
+<img align="right" src="./assets/feature_slideshow.gif" height="440" alt="Highlighted feature slideshow" />
 
 Most basic LSP features are supported, notably:
 
