@@ -79,20 +79,21 @@ impl ScopeAnalyzer {
 
     fn declare_var(
         &mut self,
-        var_name: impl Into<SmolStr> + Clone,
+        name: impl Into<SmolStr>,
         visible_from: TextSize,
         decl_range: Option<TextRange>,
     ) -> VarSymbolId {
+        let name: SmolStr = name.into();
         let id = self.var_syms.insert_with_key(|id| VarSymbol {
             id,
-            name: var_name.clone().into(),
+            name: name.clone(),
             visible_from,
             decl_range,
         });
 
         let top = &mut self.scopes[self.top_scope];
         top.declared_vars.push(self.var_syms[id].clone());
-        top.vars_by_name.insert(var_name.into(), id);
+        top.vars_by_name.insert(name, id);
         id
     }
 
@@ -247,7 +248,7 @@ impl ScopeAnalyzer {
         let while_scope = self.enter_inner_scope(while_loop.text_range());
         {
             self.try_analyze_expr(while_loop.condition());
-            if let Some(while_body) = while_loop.actions() {
+            if let Some(while_body) = while_loop.body() {
                 let while_body_scope = self.enter_inner_scope(while_body.text_range());
                 self.analyze_all(while_body.actions());
                 self.exit(while_body_scope);

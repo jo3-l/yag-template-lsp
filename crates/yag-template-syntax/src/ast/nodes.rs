@@ -358,7 +358,7 @@ impl WhileLoop {
         self.clause()?.condition()
     }
 
-    pub fn actions(&self) -> Option<ActionList> {
+    pub fn body(&self) -> Option<ActionList> {
         self.syntax.first_matching_child()
     }
 
