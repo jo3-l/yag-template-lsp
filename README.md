@@ -11,7 +11,7 @@ VSCode marketplace and Open VSX.
 
 <img align="right" src="./assets/feature_slideshow.gif" height="440" alt="Highlighted feature slideshow" />
 
-Most basic LSP features are supported, notably:
+Most basic LSP features are supported:
 
 - syntax highlighting
 - live error reporting as you type
