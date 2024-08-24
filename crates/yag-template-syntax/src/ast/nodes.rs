@@ -130,6 +130,10 @@ impl TemplateBlock {
         self.syntax.first_matching_child()
     }
 
+    pub fn context_data(&self) -> Option<Expr> {
+        self.clause()?.context_data()
+    }
+
     pub fn template_body(&self) -> Option<ActionList> {
         self.syntax.first_matching_child()
     }
@@ -194,6 +198,10 @@ impl IfConditional {
         self.syntax.first_matching_child()
     }
 
+    pub fn condition(&self) -> Option<Expr> {
+        self.clause()?.condition()
+    }
+
     pub fn body(&self) -> Option<ActionList> {
         self.syntax.first_matching_child()
     }
@@ -225,6 +233,10 @@ define_ast_node! {
 impl WithConditional {
     pub fn clause(&self) -> Option<WithClause> {
         self.syntax.first_matching_child()
+    }
+
+    pub fn condition(&self) -> Option<Expr> {
+        self.clause()?.condition()
     }
 
     pub fn body(&self) -> Option<ActionList> {
@@ -260,6 +272,10 @@ impl ElseBranch {
         self.syntax.first_matching_child()
     }
 
+    pub fn condition(&self) -> Option<Expr> {
+        self.clause()?.condition()
+    }
+
     pub fn body(&self) -> Option<ActionList> {
         self.syntax.first_matching_child()
     }
@@ -283,6 +299,10 @@ define_ast_node! {
 impl RangeLoop {
     pub fn clause(&self) -> Option<RangeClause> {
         self.syntax.first_matching_child()
+    }
+
+    pub fn range_expr(&self) -> Option<Expr> {
+        self.clause()?.expr()
     }
 
     pub fn body(&self) -> Option<ActionList> {
@@ -332,6 +352,10 @@ define_ast_node! {
 impl WhileLoop {
     pub fn clause(&self) -> Option<WhileClause> {
         self.syntax.first_matching_child()
+    }
+
+    pub fn condition(&self) -> Option<Expr> {
+        self.clause()?.condition()
     }
 
     pub fn actions(&self) -> Option<ActionList> {
