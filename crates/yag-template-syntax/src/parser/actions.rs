@@ -61,7 +61,7 @@ pub(crate) fn text_or_action(p: &mut Parser) {
 }
 
 fn if_conditional(p: &mut Parser) {
-    let if_conditional = p.start(SyntaxKind::IfConditional);
+    let if_conditional = p.start(SyntaxKind::IfAction);
     if_clause(p);
     action_list(p);
     else_branches(p, "if action", true);
@@ -82,7 +82,7 @@ fn if_clause(p: &mut Parser) {
 }
 
 fn with_conditional(p: &mut Parser) {
-    let with_conditional = p.start(SyntaxKind::WithConditional);
+    let with_conditional = p.start(SyntaxKind::WithAction);
     with_clause(p);
     action_list(p);
     else_branches(p, "with action", true);

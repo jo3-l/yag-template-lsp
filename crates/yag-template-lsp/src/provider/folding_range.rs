@@ -25,9 +25,9 @@ fn folding_range_for_node(doc: &Document, node: SyntaxNode) -> Option<FoldingRan
     match node.kind() {
         TemplateDefinition => fold(range, node.to::<ast::TemplateDefinition>().clause()),
         TemplateBlock => fold(range, node.to::<ast::TemplateBlock>().clause()),
-        IfConditional => fold(range, node.to::<ast::IfConditional>().clause()),
+        IfAction => fold(range, node.to::<ast::IfAction>().clause()),
         ElseBranch => fold_else_branch(doc, node.to::<ast::ElseBranch>()),
-        WithConditional => fold(range, node.to::<ast::WithConditional>().clause()),
+        WithAction => fold(range, node.to::<ast::WithAction>().clause()),
         RangeLoop => fold(range, node.to::<ast::RangeLoop>().clause()),
         WhileLoop => fold(range, node.to::<ast::WhileLoop>().clause()),
         TryCatchAction => fold(range, node.to::<ast::TryCatchAction>().try_clause()),

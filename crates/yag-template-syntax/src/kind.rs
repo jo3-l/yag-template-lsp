@@ -120,7 +120,7 @@ pub enum SyntaxKind {
     /// The `{{end}}` clause completing a conditional or loop compound action.
     EndClause,
     /// An if-else compound action: `{{if x}} ... {{else if y}} ... {{else}} ... {{end}}`
-    IfConditional,
+    IfAction,
     /// The `{{if x}}` clause within an if-else compound action.
     IfClause,
     /// A single `{{else}} actions...` branch of an if-else or with-else compound action.
@@ -128,7 +128,7 @@ pub enum SyntaxKind {
     /// The `{{else}}` or `{{else if x}}` clause within an else branch.
     ElseClause,
     /// A with-else compound action: `{{with x}} ... {{else if y}} ... {{else}} ... {{end}}`.
-    WithConditional,
+    WithAction,
     /// The `{{with x}}` clause within a with-else compound action.
     WithClause,
     /// A range loop compound action: `{{range x}} ... {{else}} ... {{end}}`.
@@ -295,11 +295,11 @@ impl fmt::Display for SyntaxKind {
             TemplateInvocation => "template invocation",
             ReturnAction => "return action",
             EndClause => "end clause",
-            IfConditional => "if conditional",
+            IfAction => "if conditional",
             IfClause => "if clause",
             ElseBranch => "else branch",
             ElseClause => "else clause",
-            WithConditional => "with conditional",
+            WithAction => "with conditional",
             WithClause => "with clause",
             RangeLoop => "range loop",
             RangeClause => "range clause",

@@ -115,11 +115,11 @@ impl ScopeAnalyzer {
             Action::TemplateBlock(block) => self.analyze_template_block(block),
             Action::TemplateInvocation(invocation) => self.analyze_template_invocation(invocation),
             Action::Return(return_action) => self.analyze_return_action(return_action),
-            Action::IfConditional(if_conditional) => self.analyze_if_conditional(if_conditional),
-            Action::WithConditional(with_conditional) => self.analyze_with_conditional(with_conditional),
-            Action::RangeLoop(range_loop) => self.analyze_range_loop(range_loop),
-            Action::WhileLoop(while_loop) => self.analyze_while_loop(while_loop),
-            Action::LoopBreak(_) | Action::LoopContinue(_) => {}
+            Action::If(if_action) => self.analyze_if_action(if_action),
+            Action::With(with_action) => self.analyze_with_action(with_action),
+            Action::Range(range_loop) => self.analyze_range_loop(range_loop),
+            Action::While(while_loop) => self.analyze_while_loop(while_loop),
+            Action::Break(_) | Action::Continue(_) => {}
             Action::TryCatch(try_catch) => self.analyze_try_catch_action(try_catch),
             Action::ExprAction(expr_action) => self.analyze_expr_action(expr_action),
         }
@@ -155,35 +155,35 @@ impl ScopeAnalyzer {
         self.try_analyze_expr(ret.expr());
     }
 
-    fn analyze_if_conditional(&mut self, if_conditional: ast::IfConditional) {
-        let if_scope = self.enter_inner_scope(if_conditional.text_range());
+    fn analyze_if_action(&mut self, if_action: ast::IfAction) {
+        let if_scope = self.enter_inner_scope(if_action.text_range());
         {
-            self.try_analyze_expr(if_conditional.condition());
-            if let Some(if_body) = if_conditional.body() {
+            self.try_analyze_expr(if_action.condition());
+            if let Some(if_body) = if_action.body() {
                 let if_body_scope = self.enter_inner_scope(if_body.text_range());
                 self.analyze_all(if_body.actions());
                 self.exit(if_body_scope);
             }
-            self.analyze_conditional_else_branches(if_conditional.else_branches());
+            self.analyze_else_branches(if_action.else_branches());
         }
         self.exit(if_scope);
     }
 
-    fn analyze_with_conditional(&mut self, with_conditional: ast::WithConditional) {
-        let with_scope = self.enter_inner_scope(with_conditional.text_range());
+    fn analyze_with_action(&mut self, with_action: ast::WithAction) {
+        let with_scope = self.enter_inner_scope(with_action.text_range());
         {
-            self.try_analyze_expr(with_conditional.condition());
-            if let Some(with_body) = with_conditional.body() {
+            self.try_analyze_expr(with_action.condition());
+            if let Some(with_body) = with_action.body() {
                 let with_body_scope = self.enter_inner_scope(with_body.text_range());
                 self.analyze_all(with_body.actions());
                 self.exit(with_body_scope);
             }
-            self.analyze_conditional_else_branches(with_conditional.else_branches());
+            self.analyze_else_branches(with_action.else_branches());
         }
         self.exit(with_scope);
     }
 
-    fn analyze_conditional_else_branches(&mut self, mut else_branches: impl Iterator<Item = ast::ElseBranch>) {
+    fn analyze_else_branches(&mut self, mut else_branches: impl Iterator<Item = ast::ElseBranch>) {
         let Some(else_branch) = else_branches.next() else {
             return;
         };
@@ -198,7 +198,7 @@ impl ScopeAnalyzer {
             }
 
             // Recurse on the remaining branches.
-            self.analyze_conditional_else_branches(else_branches);
+            self.analyze_else_branches(else_branches);
         }
         self.exit(else_branch_scope);
     }

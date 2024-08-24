@@ -57,12 +57,12 @@ define_ast_enum! {
         TemplateBlock(TemplateBlock),
         TemplateInvocation(TemplateInvocation),
         Return(ReturnAction),
-        IfConditional(IfConditional),
-        WithConditional(WithConditional),
-        RangeLoop(RangeLoop),
-        WhileLoop(WhileLoop),
-        LoopBreak(LoopBreak),
-        LoopContinue(LoopContinue),
+        If(IfAction),
+        With(WithAction),
+        Range(RangeLoop),
+        While(WhileLoop),
+        Break(LoopBreak),
+        Continue(LoopContinue),
         TryCatch(TryCatchAction),
         ExprAction(ExprAction),
     }
@@ -190,10 +190,10 @@ define_ast_node! {
 define_delim_accessors!(EndClause);
 
 define_ast_node! {
-    pub struct IfConditional;
+    pub struct IfAction;
 }
 
-impl IfConditional {
+impl IfAction {
     pub fn clause(&self) -> Option<IfClause> {
         self.syntax.first_matching_child()
     }
@@ -227,10 +227,10 @@ impl IfClause {
 }
 
 define_ast_node! {
-    pub struct WithConditional;
+    pub struct WithAction;
 }
 
-impl WithConditional {
+impl WithAction {
     pub fn clause(&self) -> Option<WithClause> {
         self.syntax.first_matching_child()
     }
