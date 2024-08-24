@@ -32,11 +32,11 @@ pub(crate) use define_ast_node;
 macro_rules! define_delim_accessors {
     ($name:ident) => {
         impl $name {
-            pub fn left_delim(&self) -> Option<tokens::LeftDelim> {
+            pub fn left_delim(&self) -> Option<crate::ast::tokens::LeftDelim> {
                 self.syntax.last_matching_token()
             }
 
-            pub fn right_delim(&self) -> Option<tokens::RightDelim> {
+            pub fn right_delim(&self) -> Option<crate::ast::tokens::RightDelim> {
                 self.syntax.first_matching_token()
             }
         }
