@@ -7,6 +7,8 @@
 A language server for [YAGPDB](https://yagpdb.xyz)'s templating language, with accompanying extensions published on the
 VSCode marketplace and Open VSX.
 
+<img src="./assets/feature_slideshow.gif" height="480" alt="Highlighted feature slideshow" />
+
 ## Features
 
 Most basic LSP features are supported, notably:
