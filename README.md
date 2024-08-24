@@ -8,7 +8,11 @@ A language server for [YAGPDB](https://yagpdb.xyz)'s templating language, with a
 VSCode marketplace and Open VSX.
 
 <div align="center">
-  <img src="./assets/feature_slideshow.gif" height="480" alt="Highlighted feature slideshow" />
+
+_Click on the GIF below to start an animated feature slideshow._
+
+<img src="./assets/feature_slideshow.gif" height="480" alt="Highlighted feature slideshow" />
+
 </div>
 
 ## Features
