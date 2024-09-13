@@ -335,7 +335,10 @@ func unpinForumPost(post)
 
 == User and member functions
 func getMember(member)
-	Returns the member object with the specified ID, name, or mention.
+	Returns the member object with the specified ID or mention.
+
+func getMemberVoiceState(member)
+	Returns the voice state for the member specified by ID or mention, or nil if the member is not in a voice channel.
 
 func editNickname(newNick)
 	Edits the nickname of the triggering member. The bot must have the `MANAGE_NICKNAMES` permission and be higher in
