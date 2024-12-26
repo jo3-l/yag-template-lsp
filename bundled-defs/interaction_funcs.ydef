@@ -143,3 +143,13 @@ func cmodal(opts...)
 	Creates a [modal object][discord-modals] for use in interactions. See `sendModal` for more detail.
 
 	[discord-modals]: https://discord.com/developers/docs/interactions/receiving-and-responding#interaction-response-object-modal
+
+func deleteInteractionResponse(interactionToken, messageID, delay?)
+	Deletes the specified response or follow-up message.
+
+	- `interactionToken`: a valid interaction token or nil for the triggering interaction.
+	- `messageID`: valid message ID of a follow-up, or nil for the original interaction response.
+	- `delay`: an optional delay in seconds, max 10 seconds. Default: 10 seconds.
+
+	If you require a delay of more than 10 seconds, consider using `execCC` for deletion of an ephemeral response, or
+	`deleteMessage` to delete a regular interaction response.
