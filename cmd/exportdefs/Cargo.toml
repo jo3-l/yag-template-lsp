@@ -1,5 +1,5 @@
 [package]
-name = "exprtdefs-bin"
+name = "exprtdefs"
 version = "0.1.0"
 edition = "2021"
 
@@ -10,7 +10,7 @@ doc = false
 test = false
 
 [dependencies]
-yag-template-envdefs = { path = "../crates/yag-template-envdefs" }
+yag-template-envdefs = { path = "../../crates/yag-template-envdefs" }
 serde_json = "1.0"
 clap = { version = "4.5.23", features = ["derive"] }
 anyhow = "1.0"
