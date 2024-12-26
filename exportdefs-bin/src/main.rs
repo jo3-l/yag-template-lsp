@@ -18,7 +18,7 @@ struct Cli {
     files: Vec<PathBuf>,
 
     /// Whether to pretty-print the output.
-    #[clap(short, long, default_value = "true")]
+    #[clap(short, long, default_value = "false")]
     pretty: bool,
 }
 
@@ -39,7 +39,7 @@ fn main() -> anyhow::Result<()> {
         .collect::<anyhow::Result<Vec<_>>>()?;
 
     let defs = yag_template_envdefs::parse(&sources).map_err(|err| anyhow!("failed to parse definitions: {err}"))?;
-    let processed_defs: HashMap<String, ProcessedFunc> =
+    let processed_defs: HashMap<String, ExportedFunc> =
         defs.funcs.into_iter().map(|(name, func)| (name, func.into())).collect();
 
     let serialized = if args.pretty {
@@ -54,18 +54,41 @@ fn main() -> anyhow::Result<()> {
 }
 
 #[derive(Debug, Serialize)]
-struct ProcessedFunc {
+struct ExportedFunc {
     pub name: String,
     pub signature: String,
     pub doc: String,
 }
 
-impl From<yag_template_envdefs::Func> for ProcessedFunc {
+impl From<yag_template_envdefs::Func> for ExportedFunc {
     fn from(f: yag_template_envdefs::Func) -> Self {
         Self {
             name: f.name.clone(),
-            signature: f.signature(),
+            signature: doc_style_signature(&f),
             doc: discordmd::render(&f.doc),
         }
+    }
+}
+
+fn doc_style_signature(f: &yag_template_envdefs::Func) -> String {
+    let mut buf = String::new();
+    buf.push_str("{{ ");
+    buf.push_str(&f.name);
+    for param in &f.params {
+        buf.push(' ');
+        buf.push_str(&doc_style_param(param));
+    }
+    buf.push_str(" }}");
+    buf
+}
+
+fn doc_style_param(f: &yag_template_envdefs::Param) -> String {
+    let name = &f.name;
+    if f.is_optional {
+        format!("[{name}]")
+    } else if f.is_variadic {
+        format!("{name}...")
+    } else {
+        name.clone()
     }
 }

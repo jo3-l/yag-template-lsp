@@ -1,10 +1,10 @@
 [package]
-name = "def2json-bin"
+name = "exprtdefs-bin"
 version = "0.1.0"
 edition = "2021"
 
 [[bin]]
-name = "def2json"
+name = "exportdefs"
 path = "src/main.rs"
 doc = false
 test = false

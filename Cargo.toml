@@ -4,6 +4,6 @@ members = [
     "crates/yag-template-envdefs",
     "crates/yag-template-lsp",
     "crates/yag-template-syntax",
-    "def2json-bin",
+    "exportdefs-bin",
 ]
 resolver = "2"

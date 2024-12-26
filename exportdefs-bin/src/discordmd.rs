@@ -39,25 +39,28 @@ fn unwrap_markdown(s: &str) -> String {
         .map(|line| if line.is_empty() { line } else { &line[common_indent..] });
 
     let mut output = String::with_capacity(s.len());
+    let out_verbatim = |output: &mut String, s: &str| {
+        output.push('\n');
+        output.push_str(s);
+    };
+    let out_with_sep = |output: &mut String, sep: char, s: &str| {
+        if output.bytes().next_back().is_some_and(|c| c != b'\n') {
+            output.push(sep);
+        }
+        output.push_str(s);
+    };
+
     let mut in_codeblock = false;
     for line in dedented_lines {
-        let mut output_verbatim = |s: &str| {
-            output.push('\n');
-            output.push_str(s);
-        };
-
         if heuristic::has_codefence(line) {
             in_codeblock = !in_codeblock;
-            output_verbatim(line);
-        } else if in_codeblock || line.is_empty() || heuristic::is_list_item(line) {
-            output_verbatim(line);
+            out_with_sep(&mut output, '\n', line);
+        } else if in_codeblock {
+            out_verbatim(&mut output, line);
+        } else if line.is_empty() || heuristic::is_list_item(line) {
+            out_with_sep(&mut output, '\n', line);
         } else {
-            match output.bytes().next_back() {
-                Some(b'\n') => output.push('\n'),
-                Some(_) => output.push(' '),
-                None => {}
-            }
-            output.push_str(line);
+            out_with_sep(&mut output, ' ', line);
         }
     }
     output
