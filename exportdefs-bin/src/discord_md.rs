@@ -9,8 +9,8 @@ pub(crate) fn render(doc: &str) -> String {
     const DISCORD_TAB_WIDTH: usize = 2;
 
     let contents = interpret_markdown(doc);
-    let content = reindent_with_spaces(contents, DISCORD_TAB_WIDTH);
-    tight_layout(content)
+    let contents = reindent_with_spaces(contents, DISCORD_TAB_WIDTH);
+    tight_layout(contents)
 }
 
 #[derive(Debug, Clone)]
