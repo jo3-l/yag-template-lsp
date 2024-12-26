@@ -7,7 +7,7 @@ use clap::Parser;
 use serde::Serialize;
 use yag_template_envdefs::EnvDefSource;
 
-mod discordmd;
+mod discord_md;
 
 /// Export `ydef` files to JSON.
 #[derive(Parser)]
@@ -65,7 +65,7 @@ impl From<yag_template_envdefs::Func> for ExportedFunc {
         Self {
             name: f.name.clone(),
             signature: doc_style_signature(&f),
-            doc: discordmd::render(&f.doc),
+            doc: discord_md::render(&f.doc),
         }
     }
 }
