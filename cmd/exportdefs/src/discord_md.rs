@@ -51,11 +51,12 @@ fn tight_layout(content: Vec<Content>) -> String {
             Content::CodeItem(line) => emit_line(&mut buf, &line),
             Content::ListItem(line) => emit_line(&mut buf, &line),
             Content::Heading(line) => emit_line(&mut buf, &line),
-            Content::Hardbreak => match iter.peek() {
-                // Keep a blank line between adjacent paragraphs.
-                Some(Content::Paragraph(_)) if prev_was_paragraph => buf.push('\n'),
-                _ => {}
-            },
+            Content::Hardbreak => {
+                if prev_was_paragraph && iter.peek().is_some_and(Content::is_paragraph) {
+                    // Only keep blank lines when they delimit adjacent paragraphs.
+                    buf.push('\n');
+                }
+            }
         }
 
         prev_was_paragraph = is_paragraph;
@@ -112,8 +113,8 @@ fn is_codefence(line: &str) -> bool {
 }
 
 fn is_list_item(line: &str) -> bool {
-    static LIST_ITEM_RE: LazyLock<Regex> = LazyLock::new(|| Regex::new(r#"^\s*(?:- |\d+\. )"#).unwrap());
-    LIST_ITEM_RE.is_match(line)
+    static RE: LazyLock<Regex> = LazyLock::new(|| Regex::new(r#"^\s*(?:- |\d+\. )"#).unwrap());
+    RE.is_match(line)
 }
 
 fn is_heading(line: &str) -> bool {
