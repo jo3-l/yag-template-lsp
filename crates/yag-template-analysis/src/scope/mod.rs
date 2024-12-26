@@ -109,7 +109,7 @@ impl<'a> VarUsesIter<'a> {
     }
 }
 
-impl<'a> Iterator for VarUsesIter<'a> {
+impl Iterator for VarUsesIter<'_> {
     type Item = TextRange;
 
     fn next(&mut self) -> Option<Self::Item> {
