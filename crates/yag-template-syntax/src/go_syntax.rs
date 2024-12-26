@@ -55,7 +55,7 @@ pub(crate) struct EscapeSequences<'s> {
     ctx: EscapeContext,
 }
 
-impl<'s> Iterator for EscapeSequences<'s> {
+impl Iterator for EscapeSequences<'_> {
     // each iteration produces `(range of escape sequence, unescaped character or error)`
     type Item = (TextRange, Result<char, EscapeError>);
 

@@ -36,8 +36,8 @@ pub(crate) struct Parser<'s> {
     cur: SyntaxKind,
 }
 
-impl<'s> Parser<'s> {
-    pub(crate) fn new(input: &'s str) -> Parser {
+impl Parser<'_> {
+    pub(crate) fn new(input: &str) -> Parser {
         let mut lexer = Lexer::new(input);
         let current = lexer.next();
         Parser {
