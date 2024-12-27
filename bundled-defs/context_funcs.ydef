@@ -197,7 +197,7 @@ func addMessageReactions(channel, messageID, emojis...)
 
 	- `emojis...`: the emojis to react with. May also be a slice of emojis.
 
-func deleteAllMessageReactions(channel, messageID, userID, emojis...)
+func deleteAllMessageReactions(channel, messageID, emojis...)
 	Deletes reactions from a message. By default, this function will remove all reactions, but setting the `emojis...`
 	parameter will result in only those reactions being removed.
 
@@ -206,7 +206,7 @@ func deleteAllMessageReactions(channel, messageID, userID, emojis...)
 func deleteMessageReaction(channel, messageID, userID, emojis...)
 	Deletes a specific user's reactions from a message.
 
-	- `userID`: the ID of the user whose reaction to delete.
+	- `userID`: the ID of the target user.
 	- `emojis...`: one or more emojis to delete. May also be a slice of emojis.
 
 
