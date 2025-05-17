@@ -194,6 +194,9 @@ func max(x, y)
 func min(x, y)
 	Returns the smaller of the two numbers `x` and `y`.
 
+func abs(x)
+	Returns the absolute value of `x`.
+
 func round(x)
 	Returns the nearest integer to `x` as a floating-point number.
 
