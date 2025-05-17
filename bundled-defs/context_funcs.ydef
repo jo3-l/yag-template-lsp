@@ -55,19 +55,19 @@ func deleteMessage(channel, messageID, delay?)
 	Deletes the specified message.
 
 	- `delay`: an optional delay in seconds before deleting the response (default: 10 seconds). Max 86400 seconds,
-	corresponding to 1 day.
+	  corresponding to 1 day.
 
 func deleteResponse(delay?)
 	Deletes the response message.
 
 	- `delay`: an optional delay in seconds before deleting the response (default: 10 seconds). Max 86400 seconds,
-	corresponding to 1 day.
+	  corresponding to 1 day.
 
 func deleteTrigger(delay?)
 	Deletes the triggering message.
 
 	- `delay`: an optional delay in seconds before deleting the trigger (default: 10 seconds). Max 86400 seconds,
-	corresponding to 1 day.
+	  corresponding to 1 day.
 
 
 
