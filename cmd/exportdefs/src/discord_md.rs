@@ -137,7 +137,7 @@ fn reindent_with_spaces(contents: Vec<Content>, tab_width: usize) -> Vec<Content
 fn reindent_line(line: &str, tab_width: usize) -> String {
     let leading_tabs = line.bytes().take_while(|&c| c == b'\t').count();
     let mut buf = String::with_capacity(line.len() + leading_tabs * tab_width - leading_tabs);
-    buf.extend(iter::repeat(' ').take(leading_tabs * tab_width));
+    buf.extend(iter::repeat_n(' ', leading_tabs * tab_width));
     buf.push_str(&line[leading_tabs..]);
     buf
 }
