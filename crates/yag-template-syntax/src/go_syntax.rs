@@ -99,13 +99,14 @@ pub(crate) fn scan_escape_sequence(
         'x' => scan_hex_escape(s, 2)?,
         'u' => scan_hex_escape(s, 4)?,
         'U' => scan_hex_escape(s, 8)?,
-        '0'..='7' => {
-            let octal_digits = s.eat_while_bounded(|c| matches!(c, '0'..='7'), 3);
+        first_digit @ '0'..='7' => {
+            let mut octal_digits = s.eat_atmost(3, |c| matches!(c, '0'..='7')).to_owned();
+            octal_digits.insert(0, first_digit);
             if octal_digits.len() < 3 {
                 return Err(EscapeError::TooShort);
             }
 
-            let value = u32::from_str_radix(octal_digits, 8)
+            let value = u32::from_str_radix(&octal_digits, 8)
                 .expect("octal_digits should always represent an octal number fitting in a u32");
             if value > 255 {
                 return Err(EscapeError::OutOfRangeOctalEscape);
@@ -130,11 +131,11 @@ fn scan_hex_escape(s: &mut Scanner, expected_digits: usize) -> Result<char, Esca
 }
 
 trait ScannerExt<'s> {
-    fn eat_while_bounded<T>(&mut self, pat: impl Pattern<T> + Copy, max: usize) -> &'s str;
+    fn eat_atmost<T>(&mut self, max: usize, pat: impl Pattern<T> + Copy) -> &'s str;
 }
 
 impl<'s> ScannerExt<'s> for Scanner<'s> {
-    fn eat_while_bounded<T>(&mut self, pat: impl Pattern<T> + Copy, max: usize) -> &'s str {
+    fn eat_atmost<T>(&mut self, max: usize, pat: impl Pattern<T> + Copy) -> &'s str {
         let start = self.cursor();
         let mut consumed = 0;
         while self.at(pat) && consumed < max {
