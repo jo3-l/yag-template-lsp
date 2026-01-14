@@ -39,12 +39,12 @@ impl ScopeInfo {
             .and_then(|id| self.var_syms.get(*id))
     }
 
-    pub fn find_uses(&self, sym: &VarSymbol, include_decl: bool) -> VarUsesIter {
+    pub fn find_uses(&self, sym: &VarSymbol, include_decl: bool) -> VarUsesIter<'_> {
         VarUsesIter::new(self, sym, include_decl)
     }
 
     /// Iterate over the scopes containing the offset, from the innermost outward.
-    pub fn scopes_containing(&self, offset: TextSize) -> ParentScopesIter {
+    pub fn scopes_containing(&self, offset: TextSize) -> ParentScopesIter<'_> {
         ParentScopesIter::new(self, self.innermost_scope_containing(offset))
     }
 

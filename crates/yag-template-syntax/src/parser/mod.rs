@@ -37,7 +37,7 @@ pub(crate) struct Parser<'s> {
 }
 
 impl Parser<'_> {
-    pub(crate) fn new(input: &str) -> Parser {
+    pub(crate) fn new(input: &str) -> Parser<'_> {
         let mut lexer = Lexer::new(input);
         let current = lexer.next();
         Parser {

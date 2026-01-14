@@ -198,7 +198,7 @@ define_ast_token! {
 }
 
 impl InterpretedString {
-    pub fn get(&self) -> Cow<str> {
+    pub fn get(&self) -> Cow<'_, str> {
         let content = strip_quotes(self.syntax.text(), '"');
         go_syntax::interpret_string_content(content)
     }
