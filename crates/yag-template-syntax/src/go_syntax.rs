@@ -99,14 +99,14 @@ pub(crate) fn scan_escape_sequence(
         'x' => scan_hex_escape(s, 2)?,
         'u' => scan_hex_escape(s, 4)?,
         'U' => scan_hex_escape(s, 8)?,
-        first_digit @ '0'..='7' => {
-            let mut octal_digits = s.eat_atmost(3, |c| matches!(c, '0'..='7')).to_owned();
-            octal_digits.insert(0, first_digit);
+        '0'..='7' => {
+            s.uneat(); // move backward to right after the '\'
+            let octal_digits = s.eat_atmost(3, |c| matches!(c, '0'..='7'));
             if octal_digits.len() < 3 {
                 return Err(EscapeError::TooShort);
             }
 
-            let value = u32::from_str_radix(&octal_digits, 8)
+            let value = u32::from_str_radix(octal_digits, 8)
                 .expect("octal_digits should always represent an octal number fitting in a u32");
             if value > 255 {
                 return Err(EscapeError::OutOfRangeOctalEscape);
