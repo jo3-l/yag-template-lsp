@@ -486,19 +486,21 @@ func componentBuilder(opts...)
 	### Section example
 
 	For brevity, this example shows both a button and a thumbnail within a single section, but only one of those accessories must be used per section.
-	```yag 
+
+	```yag
 	{{ $section := componentBuilder
-    	"section" (sdict
-       	 "text" "🍲 **Lasagna Recipe**"
-       	 "thumbnail" (sdict
-            	"media" "https://http.cat/103"
-           	 	"description" "Alt text"
-            	"spoiler" false
-       	 	)
-       	 "button" (cbutton (sdict "label" "Set Servings" "custom_id" "set-servings" "style" "primary"))
-    	)
+		"section" (sdict
+		"text" "🍲 **Lasagna Recipe**"
+		"thumbnail" (sdict
+			"media" "https://http.cat/103"
+			"description" "Alt text"
+			"spoiler" false
+		)
+		"button" (cbutton (sdict "label" "Set Servings" "custom_id" "set-servings" "style" "primary"))
+		)
 	}}
 	```
+
 	### Gallery example
 
 	```yag

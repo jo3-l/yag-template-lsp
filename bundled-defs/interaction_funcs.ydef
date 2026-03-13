@@ -13,7 +13,7 @@ func sendModal(modal)
 			- `min_length`: the minimum length of the field.
 			- `max_length`: the maximum length of the field.
 
-	### Depreciated cmodal Example
+	### Deprecated cmodal Example
 
 	```yag
 	{{ $modal := sdict
@@ -140,14 +140,14 @@ func cmenu(opts...)
 	```
 
 func cmodal(opts...)
-	Creates a [modal object][discord-modals] for use in interactions. This should be considered depreciated. Use `modalBuilder` instead. See `sendModal` for more detail. 
-
+	Creates a [modal object][discord-modals] for use in interactions. This should be considered depreciated.
+	Use `modalBuilder` instead. See `sendModal` for more detail.
 
 	[discord-modals]: https://discord.com/developers/docs/interactions/receiving-and-responding#interaction-response-object-modal
 
-func modalBuilder (custom_id, title, components)
+func modalBuilder(custom_id, title, components)
 	Creates a [modal object][discord-modals] for use in interactions using components v2.
-	You can access the response of the modal submit in `.ModalValues` sdict, where the key is the custom_id of the text component and value contains, `custom_id`, `type` ( the type of the component), and `value` which for a textInput component is a string, and for a select menu is a slice of strings. 
+	You can access the response of the modal submit in `.ModalValues` sdict, where the key is the custom_id of the text component and value contains, `custom_id`, `type` (the type of the component), and `value` which for a textInput component is a string, and for a select menu is a slice of strings. 
 
 	### Example
 	
@@ -156,11 +156,12 @@ func modalBuilder (custom_id, title, components)
 	and label1, label2, td are supported top level components. 
 
 	```yag
-	{{ $mb := modalBuilder "duck-select" 
-	"what's worse?" 
-	$label1 
-	$label2 
-	$td}}
+	{{ $mb := modalBuilder "duck-select"
+		"what's worse?"
+		$label1
+		$label2
+		$td
+	}}
 	```
 
 	[discord-modals]: https://discord.com/developers/docs/interactions/receiving-and-responding#interaction-response-object-modal
@@ -186,7 +187,7 @@ func ctextDisplay(string)
 	To display standalone text inside a modal.
 	`{{ $td := ctextDisplay "this is the content of text display" }}`
 
-func ctextInput(custom_id,opts...)
+func ctextInput(custom_id, opts...)
 	A field for text input for use in a modal.
 	It is an sdict with the following keys:
 	- `custom_id`: a unique identifier for the textInput (used in `.ModalValues` sdict to retrieve the value later.)
