@@ -183,7 +183,7 @@ fn parse_func_signature(line: &str) -> Result<Func, String> {
     // Parse the function name.
     s.expect("func");
     s.eat_whitespace();
-    let name = s.eat_while(char::is_ascii_alphanumeric);
+    let name = s.eat_while(is_ident_char);
 
     // Parse the parameter list.
     let mut params = vec![];
@@ -197,8 +197,8 @@ fn parse_func_signature(line: &str) -> Result<Func, String> {
         }
 
         // Parse the parameter name.
-        ensure!(s.at(char::is_ascii_alphanumeric), "expected parameter name");
-        let param_name = s.eat_while(char::is_ascii_alphanumeric);
+        ensure!(s.at(is_ident_char), "expected parameter name");
+        let param_name = s.eat_while(is_ident_char);
 
         // Parse trailing modifiers.
         let is_optional = s.eat_if('?');
@@ -223,4 +223,8 @@ fn parse_func_signature(line: &str) -> Result<Func, String> {
         params,
         doc: String::new(),
     })
+}
+
+fn is_ident_char(c: char) -> bool {
+    c == '_' || c.is_ascii_alphanumeric()
 }
