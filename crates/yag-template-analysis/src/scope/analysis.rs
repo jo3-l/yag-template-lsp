@@ -8,9 +8,9 @@ use yag_template_syntax::ast;
 use yag_template_syntax::ast::{Action, AstNode, AstToken};
 
 use super::{Scope, ScopeId, ScopeInfo, VarSymbol, VarSymbolId};
-use crate::AnalysisError;
+use crate::{AnalysisError, AnalysisWarning};
 
-pub fn analyze(root: ast::Root) -> (ScopeInfo, Vec<AnalysisError>) {
+pub fn analyze(root: ast::Root) -> (ScopeInfo, Vec<AnalysisError>, Vec<AnalysisWarning>) {
     let mut s = ScopeAnalyzer::new(root.text_range());
     // The variable $ is predefined as the initial context data.
     s.declare_var("$", root.text_range().start(), None);
@@ -26,6 +26,7 @@ struct ScopeAnalyzer {
     var_syms: SlotMap<VarSymbolId, VarSymbol>,
     resolved_var_uses: HashMap<TextRange, VarSymbolId>, // indexed by text range of ast::Var
     errors: Vec<AnalysisError>,
+    warnings: Vec<AnalysisWarning>,
 }
 
 impl ScopeAnalyzer {
@@ -40,17 +41,22 @@ impl ScopeAnalyzer {
             var_syms: SlotMap::with_key(),
             resolved_var_uses: HashMap::new(),
             errors: Vec::new(),
+            warnings: Vec::new(),
         }
     }
 
-    fn finish(self) -> (ScopeInfo, Vec<AnalysisError>) {
+    fn finish(self) -> (ScopeInfo, Vec<AnalysisError>, Vec<AnalysisWarning>) {
         assert!(self.parent_scopes.is_empty());
         let info = ScopeInfo::new(self.var_syms, self.resolved_var_uses, self.scopes);
-        (info, self.errors)
+        (info, self.errors, self.warnings)
     }
 
     fn error(&mut self, message: impl Into<String>, range: TextRange) {
         self.errors.push(AnalysisError::new(message, range));
+    }
+
+    fn warn(&mut self, message: impl Into<String>, range: TextRange) {
+        self.warnings.push(AnalysisWarning::new(message, range))
     }
 
     #[must_use]
@@ -324,6 +330,11 @@ impl ScopeAnalyzer {
         if let Some(var) = decl.var() {
             let decl_range = decl.text_range();
             let id = self.declare_var(var.name(), decl_range.end(), Some(decl_range));
+
+            if self.resolved_var_uses.len() == 0 {
+                self.warn(format!("unused variable {}", var.name()), decl_range);
+            }
+
             self.set_referent(var, id);
         }
         self.try_analyze_expr(decl.initializer());
