@@ -64,6 +64,7 @@ pub struct VarSymbol {
     /// Within its scope, the variable is accessible after this offset.
     pub visible_from: TextSize,
     pub decl_range: Option<TextRange>,
+    pub used: bool,
 }
 
 #[derive(Debug)]

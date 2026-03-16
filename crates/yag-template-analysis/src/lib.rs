@@ -12,12 +12,13 @@ pub mod scope;
 pub struct Analysis {
     pub scope_info: ScopeInfo,
     pub errors: Vec<AnalysisError>,
+    pub warnings: Vec<AnalysisWarning>,
 }
 
 pub fn analyze(env: &EnvDefs, root: ast::Root) -> Analysis {
-    let (scope_info, mut errors) = scope::analyze(root.clone());
+    let (scope_info, mut errors, warnings) = scope::analyze(root.clone());
     errors.extend(checks::run_all(env, root));
-    Analysis { scope_info, errors }
+    Analysis { scope_info, errors, warnings }
 }
 
 #[derive(Debug, Clone)]
@@ -42,3 +43,24 @@ impl fmt::Display for AnalysisError {
 }
 
 impl Error for AnalysisError {}
+
+#[derive(Debug, Clone)]
+pub struct AnalysisWarning {
+    pub message: String,
+    pub range: TextRange,
+}
+
+impl AnalysisWarning {
+    pub fn new(message: impl Into<String>, range: TextRange) -> Self {
+        Self {
+            message: message.into(),
+            range,
+        }
+    }
+}
+
+impl fmt::Display for AnalysisWarning {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        self.message.fmt(f)
+    }
+}
