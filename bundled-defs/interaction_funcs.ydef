@@ -140,7 +140,7 @@ func cmenu(opts...)
 	```
 
 func cmodal(opts...)
-	Creates a [modal object][discord-modals] for use in interactions. This should be considered depreciated.
+	Creates a [modal object][discord-modals] for use in interactions. This should be considered deprecated.
 	Use `modalBuilder` instead. See `sendModal` for more detail.
 
 	[discord-modals]: https://discord.com/developers/docs/interactions/receiving-and-responding#interaction-response-object-modal
