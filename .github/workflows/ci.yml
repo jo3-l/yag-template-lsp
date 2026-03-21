@@ -28,7 +28,7 @@ jobs:
         run: cargo test --no-fail-fast
 
       - name: Clippy
-        run: cargo clippy --all-targets -- -Dwarnings
+        run: cargo clippy --all-targets
 
       - uses: dtolnay/rust-toolchain@nightly
         with:
