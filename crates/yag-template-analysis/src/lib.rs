@@ -58,9 +58,3 @@ impl AnalysisWarning {
         }
     }
 }
-
-impl fmt::Display for AnalysisWarning {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        self.message.fmt(f)
-    }
-}

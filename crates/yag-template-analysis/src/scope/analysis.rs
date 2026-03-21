@@ -45,8 +45,8 @@ impl ScopeAnalyzer {
 
     fn finish(self) -> (ScopeInfo, Vec<AnalysisError>, Vec<AnalysisWarning>) {
         assert!(self.parent_scopes.is_empty());
-        let mut warnings: Vec<AnalysisWarning> = Vec::new();
-        for (_, v) in &self.var_syms {
+        let mut warnings = Vec::new();
+        for v in self.var_syms.values() {
             if !v.used && !v.name.ends_with("_") && let Some(decl_range) = v.decl_range {
                 warnings.push(AnalysisWarning::new(format!("unused variable {}", v.name), decl_range));
             }
@@ -347,8 +347,7 @@ impl ScopeAnalyzer {
         let name = var_use.name();
         match self.lookup_var(name) {
             Some(id) => {
-                let sym = &mut self.var_syms[id];
-                sym.used = true;
+                self.var_syms[id].used = true;
                 self.set_referent(var_use, id);
             }
             None => self.error(format!("undefined variable {name}"), var_use.text_range()),
