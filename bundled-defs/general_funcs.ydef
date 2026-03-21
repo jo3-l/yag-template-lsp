@@ -447,8 +447,141 @@ func complexMessageEdit(opts...)
 	- `content`: the new content for the message.
 	- `embed`: an embed object or a slice of up to 10 embed objects.
 	- `silent`: whether to suppress push and desktop notifications.
+	- `ephemeral`: message visible only to interaction user (only available in interactions)
 
 	All keys are optional.
+
+func componentBuilder(opts...)
+	Creates a message with components v2. Can be used with message and response functions. v2 messages and non-v2 messages are not interchangeable.
+	(E.g. you cannot create a message with `componentBuilder` and then use `editMessage` without the `componentBuilder` on that message.)
+
+	- `text`: a string or slice of strings.
+	- `section`: A layout block that shows text with one mandatory accessory: either a button a thumbnail.
+	- `gallery`: displays one or more media items with optional descriptions and spoiler flags.
+		- `media`: string
+		- `description`: string (optional)
+		- `spoiler`: bool (optional) 
+	- `file`: attaches text files to the message and optionally displays them.
+		- `content`: string (max 100,000 chars)
+		- `name`: string (filename, .txt appended automatically)
+	- `separator`: Adds a horizontal rule and spacing between components
+		- `true`: large separator
+		- `false` or `nil`: small separator
+	- `container`: Groups multiple components with optional styling. Similar to an embed.
+		- `components`: ComponentBuilder or list of entries
+		- `color`: hex accent color (optional)
+		- `spoiler`: hides content until revealed (optional)
+	- `buttons`: Interactive buttons users can click. Can be single or multiple. see `cbutton`.
+	- `menus`: Select menus for user options. see `cmenu`. Maximum 5 menus per message. Each menu occupies its own row.
+	- `interactive_components`: Mix of buttons and menus, auto-distributed. see `cbutton` and `cmenu`, respectively. Accepts a single component, a slice of components, or a slice of slices (to define rows).
+	- `allowed_mentions`: a sdict with the following keys:
+		- `parse`: a slice of accepted values for mentions. May include `users`, `roles`, and `everyone`.
+		- `users`: a slice of user IDs to mention.
+		- `roles`: a slice of role IDs to mention.
+		- `replied_user`: whether to mention the replied user.
+	- `reply`: a message ID to reply to.
+	- `silent`: whether to suppress push and desktop notifications.
+	- `ephemeral`: message visible only to interaction user (only available in interactions)
+
+	### Section example
+
+	For brevity, this example shows both a button and a thumbnail within a single section, but only one of those accessories must be used per section.
+
+	```yag
+	{{ $section := componentBuilder
+		"section" (sdict
+		"text" "🍲 **Lasagna Recipe**"
+		"thumbnail" (sdict
+			"media" "https://http.cat/103"
+			"description" "Alt text"
+			"spoiler" false
+		)
+		"button" (cbutton (sdict "label" "Set Servings" "custom_id" "set-servings" "style" "primary"))
+		)
+	}}
+	```
+
+	### Gallery example
+
+	```yag
+	{{ $gallery := componentBuilder
+		"gallery" (cslice
+			(sdict "media" "https://http.cat/103")
+			(sdict "media" "https://http.cat/420" "description" "I dont have food pics")
+			(sdict "media" "https://http.cat/451" "description" "So have random cats" "spoiler" true)
+		)
+	}}
+	```
+
+	### File example
+
+	```yag
+	{{ $file := componentBuilder
+		"file" (cslice
+			(sdict
+				"content" "Step 1: Boil pasta\nStep 2: Cook beef\nStep 3: Layer & bake"
+				"name" "lasagna_recipe"
+			)
+			(sdict
+				"content" "Tips:\n- Use fresh herbs\n- Let it rest 10 min before serving"
+				"name" "lasagna_tips"
+				"spoiler" true
+			)
+		)
+	}}
+	```
+
+	### Container example
+
+	```yag
+	{{ $container := componentBuilder
+		"container" (sdict
+			"color" 0xF5CDF6
+			"spoiler" false
+			"components" (componentBuilder
+				"text" "🍲 **Lasagna Recipe**"
+				"buttons" (cslice
+					(cbutton (sdict "label" "Start" "custom_id" "start" "style" "primary"))
+					(cbutton (sdict "label" "Cancel" "custom_id" "cancel" "style" "danger"))
+				)
+			)
+		)
+	}}
+	```
+
+	### Menus example
+
+	```yag
+	{{ $menu := componentBuilder
+		"menus" (cmenu
+			"custom_id" "unit-select"
+			"options" (cslice
+				(sdict "label" "Metric" "value" "metric")
+				(sdict "label" "Imperial" "value" "imperial")
+				(sdict "label" "Kelvin" "value" "kelvin")
+			)
+		)
+	}}
+	```
+
+	### Interactive components example
+
+	```yag
+	{{ $interactive := componentBuilder
+		"interactive_components" (cslice
+			(cbutton "label" "Approve" "custom_id" "approve" "style" "success")
+			(cbutton "label" "Reject" "custom_id" "reject" "style" "danger")
+			(cmenu
+				"custom_id" "priority-select"
+				"options" (cslice
+					(sdict "label" "High" "value" "high")
+					(sdict "label" "Medium" "value" "medium")
+					(sdict "label" "Low" "value" "low")
+				)
+			)
+		)
+	}}
+	```
 
 func kindOf(value, indirect?)
 	Returns the [reflection kind](https://pkg.go.dev/reflect#Kind) of the provided value.

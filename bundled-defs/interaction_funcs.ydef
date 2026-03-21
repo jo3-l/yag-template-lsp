@@ -1,6 +1,6 @@
 func sendModal(modal)
-	Sends a modal to the member who triggered the interaction.
-
+	TODO: this needs to be redone and I wasn't sure how to write it.
+	Sends a modal to the member who triggered the interaction. 
 	- `modal`: an sdict with the following keys:
 		- `title`: the title of the modal.
 		- `custom_id`: a unique identifier for the modal.
@@ -13,7 +13,7 @@ func sendModal(modal)
 			- `min_length`: the minimum length of the field.
 			- `max_length`: the maximum length of the field.
 
-	### Example
+	### Deprecated cmodal Example
 
 	```yag
 	{{ $modal := sdict
@@ -140,9 +140,77 @@ func cmenu(opts...)
 	```
 
 func cmodal(opts...)
-	Creates a [modal object][discord-modals] for use in interactions. See `sendModal` for more detail.
+	Creates a [modal object][discord-modals] for use in interactions. This should be considered deprecated.
+	Use `modalBuilder` instead. See `sendModal` for more detail.
 
 	[discord-modals]: https://discord.com/developers/docs/interactions/receiving-and-responding#interaction-response-object-modal
+
+func modalBuilder(custom_id, title, components)
+	Creates a [modal object][discord-modals] for use in interactions using components v2.
+	You can access the response of the modal submit in `.ModalValues` sdict, where the key is the custom_id of the text component and value contains, `custom_id`, `type` (the type of the component), and `value` which for a textInput component is a string, and for a select menu is a slice of strings. 
+
+	### Example
+	
+	"duck-select" is the custom_id of the modal, 
+	"what's worse?" is the title of the modal
+	and label1, label2, td are supported top level components. 
+
+	```yag
+	{{ $mb := modalBuilder "duck-select"
+		"what's worse?"
+		$label1
+		$label2
+		$td
+	}}
+	```
+
+	[discord-modals]: https://discord.com/developers/docs/interactions/receiving-and-responding#interaction-response-object-modal
+
+func clabel(custom_id, label, description?, component)
+	A label wrapper for components used inside modals. It is an `sdict` with the following keys:
+	- `custom_id`: a unique identifier for the label.
+	- `label:` label text to display above your component.
+	- `description:` smaller text that displays under the label text.
+	- `component`: a supported component, such as (but not limited to) a menu or textInput.
+
+	### Example
+
+	```yag
+	{{ $label1 := clabel 
+	"custom_id" "label1" 
+	"label" "My Custom Menu" 
+	"description" "This is a menu!" 
+	"component" $menu}}
+	```
+
+func ctextDisplay(string)
+	To display standalone text inside a modal.
+	`{{ $td := ctextDisplay "this is the content of text display" }}`
+
+func ctextInput(custom_id, opts...)
+	A field for text input for use in a modal.
+	It is an sdict with the following keys:
+	- `custom_id`: a unique identifier for the textInput (used in `.ModalValues` sdict to retrieve the value later.)
+	- `placeholder`: the placeholder text for the field.
+	- `value`: the default value for the field.
+	- `required`: whether the field is required.
+	- `style`: the style of the field (1 for short, 2 for long).
+	- `min_length`: the minimum length of the field.
+	- `max_length`: the maximum length of the field.
+
+	### Example
+
+	```yag
+	{{$ti := ctextInput 
+		"custom_id" "text_input"
+		"style" 1
+		"placeholder" "Your text here"
+		"required" true
+		"min_length" 2
+		"max_length" 100
+		"value" $valueFromDB
+	}}
+	```
 
 func deleteInteractionResponse(interactionToken, messageID, delay?)
 	Deletes the specified response or follow-up message.
