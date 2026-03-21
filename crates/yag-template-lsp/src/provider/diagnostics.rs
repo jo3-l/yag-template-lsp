@@ -9,11 +9,15 @@ pub(crate) async fn publish(sess: &Session, uri: &Url) -> anyhow::Result<()> {
 
     let syntax_error_diags = doc.parse.errors.iter().map(|err| diag_for_syntax_error(&doc, err));
     let analysis_error_diags = doc.analysis.errors.iter().map(|err| diag_for_analysis_error(&doc, err));
-    let analysis_warning_diags = doc.analysis.warnings.iter().map(|warning| diag_for_analysis_warning(&doc, warning));
+    let analysis_warning_diags = doc
+        .analysis
+        .warnings
+        .iter()
+        .map(|warning| diag_for_analysis_warning(&doc, warning));
     let all_diags = syntax_error_diags
-                    .chain(analysis_error_diags)
-                    .chain(analysis_warning_diags)
-                    .collect();
+        .chain(analysis_error_diags)
+        .chain(analysis_warning_diags)
+        .collect();
 
     let version = Default::default();
     sess.client
@@ -38,7 +42,7 @@ fn diag_for_analysis_warning(doc: &Document, warning: &AnalysisWarning) -> Diagn
         None,
         warning.message.clone(),
         None,
-        None
+        None,
     )
 }
 

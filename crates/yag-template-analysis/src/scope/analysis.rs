@@ -47,7 +47,10 @@ impl ScopeAnalyzer {
         assert!(self.parent_scopes.is_empty());
         let mut warnings = Vec::new();
         for v in self.var_syms.values() {
-            if !v.used && !v.name.ends_with("_") && let Some(decl_range) = v.decl_range {
+            if !v.used
+                && !v.name.ends_with("_")
+                && let Some(decl_range) = v.decl_range
+            {
                 warnings.push(AnalysisWarning::new(format!("unused variable {}", v.name), decl_range));
             }
         }

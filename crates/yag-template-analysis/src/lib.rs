@@ -18,7 +18,11 @@ pub struct Analysis {
 pub fn analyze(env: &EnvDefs, root: ast::Root) -> Analysis {
     let (scope_info, mut errors, warnings) = scope::analyze(root.clone());
     errors.extend(checks::run_all(env, root));
-    Analysis { scope_info, errors, warnings }
+    Analysis {
+        scope_info,
+        errors,
+        warnings,
+    }
 }
 
 #[derive(Debug, Clone)]
