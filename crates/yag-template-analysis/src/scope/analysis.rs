@@ -215,12 +215,12 @@ impl ScopeAnalyzer {
                 self.analyze_all(range_body.actions());
                 self.exit(range_body_scope);
             }
-            if let Some(else_branch) = range_loop.else_branch() {
-                if let Some(else_body) = else_branch.body() {
-                    let else_body_scope = self.enter_inner_scope(else_body.text_range());
-                    self.analyze_all(else_body.actions());
-                    self.exit(else_body_scope);
-                }
+            if let Some(else_branch) = range_loop.else_branch()
+                && let Some(else_body) = else_branch.body()
+            {
+                let else_body_scope = self.enter_inner_scope(else_body.text_range());
+                self.analyze_all(else_body.actions());
+                self.exit(else_body_scope);
             }
         }
         self.exit(range_scope);
@@ -253,12 +253,12 @@ impl ScopeAnalyzer {
                 self.analyze_all(while_body.actions());
                 self.exit(while_body_scope);
             }
-            if let Some(else_branch) = while_loop.else_branch() {
-                if let Some(else_body) = else_branch.body() {
-                    let else_body_scope = self.enter_inner_scope(else_body.text_range());
-                    self.analyze_all(else_body.actions());
-                    self.exit(else_body_scope);
-                }
+            if let Some(else_branch) = while_loop.else_branch()
+                && let Some(else_body) = else_branch.body()
+            {
+                let else_body_scope = self.enter_inner_scope(else_body.text_range());
+                self.analyze_all(else_body.actions());
+                self.exit(else_body_scope);
             }
         }
         self.exit(while_scope);

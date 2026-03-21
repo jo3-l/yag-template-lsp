@@ -1,7 +1,7 @@
 [package]
 name = "yag-template-lsp"
 version = "0.2.3"
-edition = "2021"
+edition = "2024"
 
 [dependencies]
 yag-template-syntax = { path = "../yag-template-syntax" }

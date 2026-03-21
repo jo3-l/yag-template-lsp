@@ -129,12 +129,12 @@ fn process_source(defs: &mut EnvDefs, src: &EnvDefSource) -> Result<(), ParseErr
             // comment; ignore
         } else if line.chars().all(char::is_whitespace) {
             // blank line, possibly separating paragraphs in function documentation
-            if let Some((f, _)) = funcs.last_mut() {
-                if !f.doc.is_empty() {
-                    // might result in some trailing blank lines, but it's OK:
-                    // we'll trim the documentation at the end
-                    f.doc.push('\n');
-                }
+            if let Some((f, _)) = funcs.last_mut()
+                && !f.doc.is_empty()
+            {
+                // might result in some trailing blank lines, but it's OK:
+                // we'll trim the documentation at the end
+                f.doc.push('\n');
             }
         } else if line.starts_with("func") {
             match parse_func_signature(line) {
