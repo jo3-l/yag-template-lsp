@@ -5,7 +5,7 @@ use unscanny::Scanner;
 
 use crate::error::SyntaxError;
 use crate::go_syntax::EscapeContext;
-use crate::{go_syntax, SyntaxKind};
+use crate::{SyntaxKind, go_syntax};
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 enum LexMode {

@@ -1,7 +1,7 @@
 use rowan::TextRange;
 
 use super::expr::{arg, expr_pipeline};
-use super::token_set::{TokenSet, ACTION_DELIMS, LEFT_DELIMS, RIGHT_DELIMS, STRING_LITERALS};
+use super::token_set::{ACTION_DELIMS, LEFT_DELIMS, RIGHT_DELIMS, STRING_LITERALS, TokenSet};
 use super::{Parser, TokenPattern};
 use crate::SyntaxKind;
 

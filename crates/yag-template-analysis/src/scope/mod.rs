@@ -5,7 +5,7 @@ use std::collections::hash_map;
 pub use analysis::analyze;
 use foldhash::{HashMap, HashMapExt};
 use rowan::{TextRange, TextSize};
-use slotmap::{new_key_type, SlotMap};
+use slotmap::{SlotMap, new_key_type};
 use smol_str::SmolStr;
 use yag_template_syntax::ast;
 use yag_template_syntax::ast::AstToken;

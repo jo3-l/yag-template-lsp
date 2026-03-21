@@ -1,7 +1,7 @@
 use tower_lsp::lsp_types::{FoldingRange, FoldingRangeKind, FoldingRangeParams, Range};
-use yag_template_syntax::ast::ext::SyntaxNodeExt;
 use yag_template_syntax::ast::AstNode;
-use yag_template_syntax::{ast, SyntaxKind, SyntaxNode};
+use yag_template_syntax::ast::ext::SyntaxNodeExt;
+use yag_template_syntax::{SyntaxKind, SyntaxNode, ast};
 
 use crate::session::{Document, Session};
 

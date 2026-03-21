@@ -1,7 +1,7 @@
 use rowan::Checkpoint;
 
-use super::token_set::{TokenSet, ACTION_DELIMS, LEFT_DELIMS};
 use super::Parser;
+use super::token_set::{ACTION_DELIMS, LEFT_DELIMS, TokenSet};
 use crate::SyntaxKind;
 
 /// Parse a pipeline of expressions. (If there is only one expression,

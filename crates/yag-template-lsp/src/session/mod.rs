@@ -1,16 +1,16 @@
 use std::hash::RandomState;
 
 use anyhow::Context;
-use dashmap::mapref::one::Ref;
 use dashmap::DashMap;
-use tower_lsp::lsp_types::Url;
+use dashmap::mapref::one::Ref;
 use tower_lsp::Client;
+use tower_lsp::lsp_types::Url;
 
 pub(crate) mod document;
 pub(crate) mod sync;
 
 pub(crate) use document::Document;
-use yag_template_envdefs::{bundled_envdefs, EnvDefs};
+use yag_template_envdefs::{EnvDefs, bundled_envdefs};
 
 pub(crate) struct Session {
     pub(crate) client: Client,

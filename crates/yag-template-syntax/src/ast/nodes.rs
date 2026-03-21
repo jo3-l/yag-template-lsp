@@ -4,7 +4,7 @@ use rowan::TextSize;
 
 use super::ext::{AstChildren, AstTokenChildren, SyntaxNodeExt};
 use super::macros::{define_ast_enum, define_ast_node, define_delim_accessors};
-use crate::ast::{tokens, AstNode, AstToken, SyntaxElementChildren};
+use crate::ast::{AstNode, AstToken, SyntaxElementChildren, tokens};
 use crate::{SyntaxElement, SyntaxKind, SyntaxNode, YagTemplateLanguage};
 
 define_ast_node! {

@@ -6,10 +6,10 @@ use actions::text_or_action;
 use drop_bomb::DropBomb;
 use rowan::{Checkpoint, GreenNode, GreenNodeBuilder, TextRange, TextSize};
 
+use crate::SyntaxKind;
 use crate::error::SyntaxError;
 use crate::lexer::Lexer;
 use crate::parser::token_set::TokenSet;
-use crate::SyntaxKind;
 
 pub fn parse(input: &str) -> Parse {
     let mut p = Parser::new(input);

@@ -5,7 +5,7 @@ use unscanny::Scanner;
 use super::macros::define_ast_token;
 use crate::ast::AstToken;
 use crate::go_syntax::EscapeContext;
-use crate::{go_syntax, SyntaxKind, SyntaxToken};
+use crate::{SyntaxKind, SyntaxToken, go_syntax};
 
 define_ast_token! {
     pub struct Text;

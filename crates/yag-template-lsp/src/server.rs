@@ -8,7 +8,7 @@ use tower_lsp::lsp_types::{
     InitializedParams, InlayHint, InlayHintParams, Location, OneOf, ReferenceParams, RenameParams, ServerCapabilities,
     ServerInfo, TextDocumentSyncCapability, TextDocumentSyncKind, WorkspaceEdit,
 };
-use tower_lsp::{async_trait, Client, LanguageServer};
+use tower_lsp::{Client, LanguageServer, async_trait};
 
 use crate::provider;
 use crate::session::{self, Session};
