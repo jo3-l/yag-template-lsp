@@ -1,8 +1,8 @@
 == Logs plugin
-func pastUsernames(userID, offset)
+func pastUsernames(userID, offset) DEPRECATED
 	**Deprecated.** This function no longer works and will always return an error.
 
-func pastNicknames(userID, offset)
+func pastNicknames(userID, offset) DEPRECATED
 	**Deprecated.** This function no longer works and will always return an error.
 
 
