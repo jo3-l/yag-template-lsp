@@ -16,8 +16,9 @@ pub struct Analysis {
 }
 
 pub fn analyze(env: &EnvDefs, root: ast::Root) -> Analysis {
-    let (scope_info, mut errors, warnings) = scope::analyze(root.clone());
-    errors.extend(checks::run_all(env, root));
+    let (scope_info, mut errors, mut warnings) = scope::analyze(root.clone());
+    errors.extend(checks::undefined_funcs::check(env, &root));
+    warnings.extend(checks::deprecated_funcs::check(env, &root));
     Analysis {
         scope_info,
         errors,
