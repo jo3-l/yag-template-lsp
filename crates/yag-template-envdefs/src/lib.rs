@@ -19,13 +19,13 @@ pub struct Func {
     pub name: String,
     pub params: Vec<Param>,
     pub doc: String,
-    pub deprecated: bool,
+    pub is_deprecated: bool,
 }
 
 impl Func {
     pub fn signature(&self) -> String {
         let mut buf = String::new();
-        if self.deprecated {
+        if self.is_deprecated {
             buf.push_str("DEPRECATED ");
         }
         buf.push_str("func ");
@@ -150,6 +150,9 @@ fn process_source(defs: &mut EnvDefs, src: &EnvDefSource) -> Result<(), ParseErr
                 Some((f, _)) => {
                     f.doc.push_str(doc_line);
                     f.doc.push('\n');
+                    if doc_line.starts_with("Deprecated:") {
+                        f.is_deprecated = true;
+                    }
                 }
                 None => bail!("unexpected indented line not part of function documentation", lineno),
             }
@@ -221,17 +224,12 @@ fn parse_func_signature(line: &str) -> Result<Func, String> {
     ensure!(s.eat_if(')'), "expected ')' concluding parameter list");
 
     s.eat_whitespace();
-    let mut is_deprecated = false;
-    if s.eat_if("DEPRECATED") {
-        is_deprecated = true;
-    }
-    s.eat_whitespace();
     ensure!(s.done(), "expected line to end after parameter list");
     Ok(Func {
         name: name.into(),
         params,
         doc: String::new(),
-        deprecated: is_deprecated,
+        is_deprecated: false, // assume not deprecated at this stage
     })
 }
 

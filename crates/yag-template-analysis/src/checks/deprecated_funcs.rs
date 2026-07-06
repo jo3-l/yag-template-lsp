@@ -18,6 +18,6 @@ fn check_func_call(env: &EnvDefs, call: ast::FuncCall) -> Option<AnalysisWarning
     let Some(func) = env.funcs.get(func_name) else {
         return None;
     };
-    func.deprecated
+    func.is_deprecated
         .then(|| AnalysisWarning::new(format!("{func_name} is deprecated"), func_name_ident.text_range(), true))
 }
