@@ -13,16 +13,18 @@ pub struct Analysis {
     pub scope_info: ScopeInfo,
     pub errors: Vec<AnalysisError>,
     pub warnings: Vec<AnalysisWarning>,
+    pub deprecations: Vec<AnalysisWarning>,
 }
 
 pub fn analyze(env: &EnvDefs, root: ast::Root) -> Analysis {
-    let (scope_info, mut errors, mut warnings) = scope::analyze(root.clone());
+    let (scope_info, mut errors, warnings, mut deprecations) = scope::analyze(root.clone());
     errors.extend(checks::undefined_funcs::check(env, &root));
-    warnings.extend(checks::deprecated_funcs::check(env, &root));
+    deprecations.extend(checks::deprecated_funcs::check(env, &root));
     Analysis {
         scope_info,
         errors,
         warnings,
+        deprecations,
     }
 }
 

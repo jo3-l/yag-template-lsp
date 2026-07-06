@@ -1,4 +1,4 @@
-use tower_lsp::lsp_types::{Diagnostic, DiagnosticSeverity, Url};
+use tower_lsp::lsp_types::{Diagnostic, DiagnosticSeverity, DiagnosticTag, Url};
 use yag_template_analysis::{AnalysisError, AnalysisWarning};
 use yag_template_syntax::SyntaxError;
 
@@ -14,9 +14,15 @@ pub(crate) async fn publish(sess: &Session, uri: &Url) -> anyhow::Result<()> {
         .warnings
         .iter()
         .map(|warning| diag_for_analysis_warning(&doc, warning));
+    let analysis_deprecation_diags = doc
+        .analysis
+        .deprecations
+        .iter()
+        .map(|deprecation| diag_for_deprecation_warning(&doc, deprecation));
     let all_diags = syntax_error_diags
         .chain(analysis_error_diags)
         .chain(analysis_warning_diags)
+        .chain(analysis_deprecation_diags)
         .collect();
 
     let version = Default::default();
@@ -43,6 +49,18 @@ fn diag_for_analysis_warning(doc: &Document, warning: &AnalysisWarning) -> Diagn
         warning.message.clone(),
         None,
         None,
+    )
+}
+
+fn diag_for_deprecation_warning(doc: &Document, warning: &AnalysisWarning) -> Diagnostic {
+    Diagnostic::new(
+        doc.mapper.range(warning.range),
+        Some(DiagnosticSeverity::WARNING),
+        None,
+        None,
+        warning.message.clone(),
+        None,
+        Some(vec![DiagnosticTag::DEPRECATED]),
     )
 }
 
