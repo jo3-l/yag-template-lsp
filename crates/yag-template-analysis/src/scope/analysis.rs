@@ -10,14 +10,7 @@ use yag_template_syntax::ast::{Action, AstNode, AstToken};
 use super::{Scope, ScopeId, ScopeInfo, VarSymbol, VarSymbolId};
 use crate::{AnalysisError, AnalysisWarning};
 
-pub fn analyze(
-    root: ast::Root,
-) -> (
-    ScopeInfo,
-    Vec<AnalysisError>,
-    Vec<AnalysisWarning>,
-    Vec<AnalysisWarning>,
-) {
+pub fn analyze(root: ast::Root) -> (ScopeInfo, Vec<AnalysisError>, Vec<AnalysisWarning>) {
     let mut s = ScopeAnalyzer::new(root.text_range());
     // The variable $ is predefined as the initial context data.
     s.declare_var("$", root.text_range().start(), None);
@@ -33,7 +26,6 @@ struct ScopeAnalyzer {
     var_syms: SlotMap<VarSymbolId, VarSymbol>,
     resolved_var_uses: HashMap<TextRange, VarSymbolId>, // indexed by text range of ast::Var
     errors: Vec<AnalysisError>,
-    deprecations: Vec<AnalysisWarning>,
 }
 
 impl ScopeAnalyzer {
@@ -48,18 +40,10 @@ impl ScopeAnalyzer {
             var_syms: SlotMap::with_key(),
             resolved_var_uses: HashMap::new(),
             errors: Vec::new(),
-            deprecations: Vec::new(),
         }
     }
 
-    fn finish(
-        self,
-    ) -> (
-        ScopeInfo,
-        Vec<AnalysisError>,
-        Vec<AnalysisWarning>,
-        Vec<AnalysisWarning>,
-    ) {
+    fn finish(self) -> (ScopeInfo, Vec<AnalysisError>, Vec<AnalysisWarning>) {
         assert!(self.parent_scopes.is_empty());
         let mut warnings = Vec::new();
         for v in self.var_syms.values() {
@@ -67,11 +51,15 @@ impl ScopeAnalyzer {
                 && !v.name.ends_with("_")
                 && let Some(decl_range) = v.decl_range
             {
-                warnings.push(AnalysisWarning::new(format!("unused variable {}", v.name), decl_range));
+                warnings.push(AnalysisWarning::new(
+                    format!("unused variable {}", v.name),
+                    decl_range,
+                    false,
+                ));
             }
         }
         let info = ScopeInfo::new(self.var_syms, self.resolved_var_uses, self.scopes);
-        (info, self.errors, warnings, self.deprecations)
+        (info, self.errors, warnings)
     }
 
     fn error(&mut self, message: impl Into<String>, range: TextRange) {
