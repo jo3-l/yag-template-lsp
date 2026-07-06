@@ -15,16 +15,9 @@ pub fn check(env: &EnvDefs, root: &ast::Root) -> Vec<AnalysisWarning> {
 fn check_func_call(env: &EnvDefs, call: ast::FuncCall) -> Option<AnalysisWarning> {
     let func_name_ident = call.func_name()?;
     let func_name = func_name_ident.get();
-    if let Some(func) = env.funcs.get(func_name) {
-        if func.deprecated {
-            Some(AnalysisWarning::new(
-                format!("{func_name} is deprecated"),
-                func_name_ident.text_range(),
-            ))
-        } else {
-            None
-        }
-    } else {
-        None
-    }
+    let Some(func) = env.funcs.get(func_name) else {
+        return None;
+    };
+    func.deprecated
+        .then(|| AnalysisWarning::new(format!("{func_name} is deprecated"), func_name_ident.text_range()))
 }
