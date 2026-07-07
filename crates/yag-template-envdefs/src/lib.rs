@@ -145,11 +145,11 @@ fn process_source(defs: &mut EnvDefs, src: &EnvDefSource) -> Result<(), ParseErr
         } else if let Some(doc_line) = line.strip_prefix('\t') {
             match funcs.last_mut() {
                 Some((f, _)) => {
-                    f.doc.push_str(doc_line);
-                    f.doc.push('\n');
-                    if doc_line.starts_with("Deprecated:") {
+                    if doc_line.starts_with("Deprecated:") && f.doc.is_empty() {
                         f.is_deprecated = true;
                     }
+                    f.doc.push_str(doc_line);
+                    f.doc.push('\n');
                 }
                 None => bail!("unexpected indented line not part of function documentation", lineno),
             }
