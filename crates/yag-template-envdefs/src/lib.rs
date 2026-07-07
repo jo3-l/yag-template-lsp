@@ -25,9 +25,6 @@ pub struct Func {
 impl Func {
     pub fn signature(&self) -> String {
         let mut buf = String::new();
-        if self.is_deprecated {
-            buf.push_str("DEPRECATED ");
-        }
         buf.push_str("func ");
         buf.push_str(&self.name);
 

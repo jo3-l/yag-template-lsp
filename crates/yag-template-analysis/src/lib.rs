@@ -57,11 +57,19 @@ pub struct AnalysisWarning {
 }
 
 impl AnalysisWarning {
-    pub fn new(message: impl Into<String>, range: TextRange, is_deprecation: bool) -> Self {
+    pub fn new(message: impl Into<String>, range: TextRange) -> Self {
         Self {
             message: message.into(),
             range,
-            is_deprecation,
+            is_deprecation: false,
+        }
+    }
+
+    pub fn new_deprecation(message: impl Into<String>, range: TextRange) -> Self {
+        Self {
+            message: message.into(),
+            range,
+            is_deprecation: true,
         }
     }
 }

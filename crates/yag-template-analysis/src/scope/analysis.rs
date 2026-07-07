@@ -51,10 +51,9 @@ impl ScopeAnalyzer {
                 && !v.name.ends_with("_")
                 && let Some(decl_range) = v.decl_range
             {
-                warnings.push(AnalysisWarning::new(
+                warnings.push(AnalysisWarning::new_deprecation(
                     format!("unused variable {}", v.name),
                     decl_range,
-                    false,
                 ));
             }
         }
