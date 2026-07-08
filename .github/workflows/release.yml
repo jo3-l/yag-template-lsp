@@ -38,6 +38,7 @@ jobs:
           omitDraftDuringUpdate: true
           omitNameDuringUpdate: true
           omitPrereleaseDuringUpdate: true
+          generateReleaseNotes: true
 
   publish-vscode:
     runs-on: ubuntu-latest
