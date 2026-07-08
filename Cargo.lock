@@ -1257,7 +1257,7 @@ dependencies = [
 
 [[package]]
 name = "yag-template-lsp"
-version = "0.2.5"
+version = "0.2.6"
 dependencies = [
  "anyhow",
  "dashmap",
