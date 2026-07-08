@@ -51,10 +51,7 @@ impl ScopeAnalyzer {
                 && !v.name.ends_with("_")
                 && let Some(decl_range) = v.decl_range
             {
-                warnings.push(AnalysisWarning::new_deprecation(
-                    format!("unused variable {}", v.name),
-                    decl_range,
-                ));
+                warnings.push(AnalysisWarning::new(format!("unused variable {}", v.name), decl_range));
             }
         }
         let info = ScopeInfo::new(self.var_syms, self.resolved_var_uses, self.scopes);
