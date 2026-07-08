@@ -145,9 +145,6 @@ fn process_source(defs: &mut EnvDefs, src: &EnvDefSource) -> Result<(), ParseErr
         } else if let Some(doc_line) = line.strip_prefix('\t') {
             match funcs.last_mut() {
                 Some((f, _)) => {
-                    if doc_line.starts_with("Deprecated:") && f.doc.is_empty() {
-                        f.is_deprecated = true;
-                    }
                     f.doc.push_str(doc_line);
                     f.doc.push('\n');
                 }
@@ -164,13 +161,24 @@ fn process_source(defs: &mut EnvDefs, src: &EnvDefSource) -> Result<(), ParseErr
     for (func, lineno) in funcs {
         match defs.funcs.entry(func.name.clone()) {
             Entry::Occupied(_) => bail!(format!("duplicate definition for function {}", func.name), lineno),
-            Entry::Vacant(entry) => entry.insert(Func {
-                doc: func.doc.trim().to_string(),
-                ..func
-            }),
+            Entry::Vacant(entry) => {
+                let trimmed_doc = func.doc.trim();
+                entry.insert(Func {
+                    doc: trimmed_doc.into(),
+                    is_deprecated: has_deprecation_marker(trimmed_doc),
+                    ..func
+                })
+            }
         };
     }
     Ok(())
+}
+
+fn has_deprecation_marker(docstr: &str) -> bool {
+    docstr
+        .lines()
+        .next()
+        .is_some_and(|first_line| first_line.starts_with("Deprecated:"))
 }
 
 macro_rules! ensure {
