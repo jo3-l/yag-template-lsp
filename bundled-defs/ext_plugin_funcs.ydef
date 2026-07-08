@@ -1,9 +1,9 @@
 == Logs plugin
 func pastUsernames(userID, offset)
-	**Deprecated.** This function no longer works and will always return an error.
+	Deprecated: This function no longer works and will always return an error.
 
 func pastNicknames(userID, offset)
-	**Deprecated.** This function no longer works and will always return an error.
+	Deprecated: This function no longer works and will always return an error.
 
 
 == Tickets plugin

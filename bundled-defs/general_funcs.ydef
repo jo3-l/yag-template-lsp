@@ -1,7 +1,7 @@
 == Type conversion
 func str(x)
 	Converts the input to a string, returning the empty string for invalid inputs. This function
-	is an alias of the `toString` function.
+	is an alias of the `toString` function, consider using that instead.
 
 func toString(x)
 	Converts the input to a string, returning the empty string for invalid inputs.

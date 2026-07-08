@@ -1,4 +1,4 @@
-use tower_lsp::lsp_types::{Diagnostic, DiagnosticSeverity, Url};
+use tower_lsp::lsp_types::{Diagnostic, DiagnosticSeverity, DiagnosticTag, Url};
 use yag_template_analysis::{AnalysisError, AnalysisWarning};
 use yag_template_syntax::SyntaxError;
 
@@ -42,7 +42,7 @@ fn diag_for_analysis_warning(doc: &Document, warning: &AnalysisWarning) -> Diagn
         None,
         warning.message.clone(),
         None,
-        None,
+        warning.is_deprecation.then(|| vec![DiagnosticTag::DEPRECATED]),
     )
 }
 

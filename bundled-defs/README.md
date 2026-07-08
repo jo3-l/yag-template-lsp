@@ -34,6 +34,8 @@ Removes the specified role from the triggering members.
 - `delay`: An optional delay in seconds.
 ```
 
+A function can be marked as deprecated by adding a line starting with `Deprecated:` at the beginning of the docstring.
+
 Finally, as an organizational nicety, any lines starting with `==` will be ignored (acting effectively as comments). We
 conventionally use such lines to name and visually separate groups of related functions, but they can contain any
 content.

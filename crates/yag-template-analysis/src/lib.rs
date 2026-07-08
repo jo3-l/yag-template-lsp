@@ -16,8 +16,9 @@ pub struct Analysis {
 }
 
 pub fn analyze(env: &EnvDefs, root: ast::Root) -> Analysis {
-    let (scope_info, mut errors, warnings) = scope::analyze(root.clone());
-    errors.extend(checks::run_all(env, root));
+    let (scope_info, mut errors, mut warnings) = scope::analyze(root.clone());
+    errors.extend(checks::undefined_funcs::check(env, &root));
+    warnings.extend(checks::deprecated_funcs::check(env, &root));
     Analysis {
         scope_info,
         errors,
@@ -52,6 +53,7 @@ impl Error for AnalysisError {}
 pub struct AnalysisWarning {
     pub message: String,
     pub range: TextRange,
+    pub is_deprecation: bool,
 }
 
 impl AnalysisWarning {
@@ -59,6 +61,15 @@ impl AnalysisWarning {
         Self {
             message: message.into(),
             range,
+            is_deprecation: false,
+        }
+    }
+
+    pub fn new_deprecation(message: impl Into<String>, range: TextRange) -> Self {
+        Self {
+            message: message.into(),
+            range,
+            is_deprecation: true,
         }
     }
 }

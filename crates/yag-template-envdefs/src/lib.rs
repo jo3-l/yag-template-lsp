@@ -19,6 +19,7 @@ pub struct Func {
     pub name: String,
     pub params: Vec<Param>,
     pub doc: String,
+    pub is_deprecated: bool,
 }
 
 impl Func {
@@ -160,13 +161,24 @@ fn process_source(defs: &mut EnvDefs, src: &EnvDefSource) -> Result<(), ParseErr
     for (func, lineno) in funcs {
         match defs.funcs.entry(func.name.clone()) {
             Entry::Occupied(_) => bail!(format!("duplicate definition for function {}", func.name), lineno),
-            Entry::Vacant(entry) => entry.insert(Func {
-                doc: func.doc.trim().to_string(),
-                ..func
-            }),
+            Entry::Vacant(entry) => {
+                let trimmed_doc = func.doc.trim();
+                entry.insert(Func {
+                    doc: trimmed_doc.into(),
+                    is_deprecated: has_deprecation_marker(trimmed_doc),
+                    ..func
+                })
+            }
         };
     }
     Ok(())
+}
+
+fn has_deprecation_marker(docstr: &str) -> bool {
+    docstr
+        .lines()
+        .next()
+        .is_some_and(|first_line| first_line.starts_with("Deprecated:"))
 }
 
 macro_rules! ensure {
@@ -222,6 +234,7 @@ fn parse_func_signature(line: &str) -> Result<Func, String> {
         name: name.into(),
         params,
         doc: String::new(),
+        is_deprecated: false, // assume not deprecated at this stage
     })
 }
 
