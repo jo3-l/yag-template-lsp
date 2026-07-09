@@ -5,6 +5,8 @@ on:
     - cron: 0 0 * * *
   workflow_dispatch:
 
+permissions: {}
+
 jobs:
   detect-missing-funcs:
     name: Check for new template functions
@@ -16,6 +18,8 @@ jobs:
       LYTFS_GITHUB_TOKEN: ${{ github.token }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
       - uses: actions/setup-go@v5
         with:
           go-version: 1.22

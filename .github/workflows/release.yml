@@ -10,6 +10,8 @@ on:
     tags:
       - '*'
 
+permissions: {}
+
 jobs:
   build:
     uses: ./.github/workflows/full-build.yml
@@ -19,8 +21,7 @@ jobs:
     needs: [build]
     if: success() && startsWith(github.ref, 'refs/tags/')
     permissions:
-      # needed to create releases
-      contents: write
+      contents: write # needed to create releases
     steps:
       - uses: actions/download-artifact@v4
         with:
@@ -38,6 +39,7 @@ jobs:
           omitDraftDuringUpdate: true
           omitNameDuringUpdate: true
           omitPrereleaseDuringUpdate: true
+          generateReleaseNotes: true
 
   publish-vscode:
     runs-on: ubuntu-latest
