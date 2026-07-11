@@ -53,6 +53,16 @@ fn padding_is_idempotent_for_both_modes() {
 }
 
 #[test]
+fn adjacent_flexible_actions_become_structural_lines_before_their_expressions_wrap() {
+    let source = "{{$first := print \"first\" \"value\"}} {{$second := print \"second\" \"value\"}}";
+    let options = FormatOptions::default();
+    let expected = "{{$first := print \"first\" \"value\"}}\n{{$second := print \"second\" \"value\"}}";
+
+    assert_eq!(format(source, &options).text, expected);
+    assert_formats_preserving_fingerprint(source, &options);
+}
+
+#[test]
 fn protected_width_diagnostics_measure_the_formatted_action() {
     let options = FormatOptions {
         delimiter_padding: DelimiterPadding::Spaces,

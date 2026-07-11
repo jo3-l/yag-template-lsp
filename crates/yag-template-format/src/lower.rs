@@ -54,10 +54,36 @@ impl Lowerer<'_> {
     }
 
     fn sequence(&self, elements: impl Iterator<Item = ActionOrText>, sequence_end: Option<usize>) -> Doc {
-        Doc::concat(elements.map(|element| match element {
-            ActionOrText::Action(action) => self.action(action),
-            ActionOrText::Text(text) => self.text(text, sequence_end),
-        }))
+        let elements = elements.collect::<Vec<_>>();
+        let mut parts = Vec::new();
+        for (index, element) in elements.iter().cloned().enumerate() {
+            match element {
+                ActionOrText::Action(action) => {
+                    if index > 0
+                        && matches!(elements[index - 1], ActionOrText::Action(_))
+                        && self.plan.policy_at_offset(source_range(&action).start) == LayoutPolicy::Flexible
+                    {
+                        parts.push(Doc::Line);
+                    }
+                    parts.push(self.action(action));
+                }
+                ActionOrText::Text(text) => {
+                    let separates_flexible_actions = !text.get().contains('\n')
+                        && text.get().chars().all(char::is_whitespace)
+                        && index > 0
+                        && index + 1 < elements.len()
+                        && matches!(elements[index - 1], ActionOrText::Action(_))
+                        && matches!(elements[index + 1], ActionOrText::Action(_))
+                        && self.plan.policy_at_offset(byte_offset(text.text_range().start())) == LayoutPolicy::Flexible;
+                    if separates_flexible_actions {
+                        parts.push(Doc::Line);
+                    } else {
+                        parts.push(self.text(text, sequence_end));
+                    }
+                }
+            }
+        }
+        Doc::concat(parts)
     }
 
     fn action(&self, action: Action) -> Doc {

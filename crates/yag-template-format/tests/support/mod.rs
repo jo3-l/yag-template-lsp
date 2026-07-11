@@ -1,4 +1,5 @@
 use yag_template_format::{FormatDiagnosticKind, FormatOptions, format};
+use yag_template_syntax::ast::{Action, AstNode, Expr};
 use yag_template_syntax::{SyntaxElement, SyntaxKind, SyntaxNode};
 
 /// Owned, test-only representation of the parts of a template that formatting
@@ -29,12 +30,20 @@ pub fn fingerprint(source: &str) -> TemplateFingerprint {
 }
 
 fn fingerprint_node(node: SyntaxNode, source: &str) -> TemplateFingerprint {
-    let children = node
-        .children_with_tokens()
+    let children = node.children_with_tokens().collect::<Vec<_>>();
+    let children = children
+        .iter()
+        .enumerate()
         .filter_map(|element| match element {
-            SyntaxElement::Node(node) => Some(fingerprint_node(node, source)),
-            SyntaxElement::Token(token) if token.kind() == SyntaxKind::Whitespace => None,
-            SyntaxElement::Token(token) if token.kind() == SyntaxKind::Text => {
+            (_, SyntaxElement::Node(node)) => Some(fingerprint_node(node.clone(), source)),
+            (_, SyntaxElement::Token(token)) if token.kind() == SyntaxKind::Whitespace => None,
+            (index, SyntaxElement::Token(token))
+                if token.kind() == SyntaxKind::Text
+                    && formatter_owned_action_separator(&children, index, token.text()) =>
+            {
+                None
+            }
+            (_, SyntaxElement::Token(token)) if token.kind() == SyntaxKind::Text => {
                 let layout = literal_text_layout(token.text(), token_start(&token), token_end(&token), source);
                 (!layout.content.is_empty() || !layout.inline_prefix.is_empty() || !layout.inline_suffix.is_empty())
                     .then_some(TemplateFingerprint::Text {
@@ -43,7 +52,7 @@ fn fingerprint_node(node: SyntaxNode, source: &str) -> TemplateFingerprint {
                         inline_suffix: layout.inline_suffix,
                     })
             }
-            SyntaxElement::Token(token) => Some(TemplateFingerprint::Token {
+            (_, SyntaxElement::Token(token)) => Some(TemplateFingerprint::Token {
                 kind: token.kind(),
                 text: token.text().to_owned(),
             }),
@@ -52,6 +61,38 @@ fn fingerprint_node(node: SyntaxNode, source: &str) -> TemplateFingerprint {
     TemplateFingerprint::Node {
         kind: node.kind(),
         children,
+    }
+}
+
+/// Whitespace directly between two non-display actions is formatter-owned.
+/// Display actions remain excluded because their surrounding literal spacing
+/// is output-facing.
+fn formatter_owned_action_separator(children: &[SyntaxElement], index: usize, text: &str) -> bool {
+    text.chars().all(char::is_whitespace)
+        && index > 0
+        && index + 1 < children.len()
+        && children[index - 1]
+            .clone()
+            .into_node()
+            .and_then(Action::cast)
+            .is_some_and(|action| !is_display_action(action))
+        && children[index + 1]
+            .clone()
+            .into_node()
+            .and_then(Action::cast)
+            .is_some_and(|action| !is_display_action(action))
+}
+
+fn is_display_action(action: Action) -> bool {
+    matches!(action, Action::ExprAction(action) if action.expr().is_some_and(qualifies_display_expr))
+}
+
+fn qualifies_display_expr(expr: Expr) -> bool {
+    match expr {
+        Expr::VarAccess(_) | Expr::ContextAccess(_) | Expr::ContextFieldChain(_) => true,
+        Expr::ExprFieldChain(chain) => chain.base_expr().is_some_and(qualifies_display_expr),
+        Expr::Parenthesized(parenthesized) => parenthesized.inner_expr().is_some_and(qualifies_display_expr),
+        _ => false,
     }
 }
 

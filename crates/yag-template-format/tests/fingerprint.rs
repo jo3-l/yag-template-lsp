@@ -61,6 +61,18 @@ fn fingerprint_preserves_inline_action_text_adjacency() {
 }
 
 #[test]
+fn fingerprint_ignores_whitespace_only_separators_between_flexible_actions() {
+    assert_eq!(
+        fingerprint("{{$first := 1}} {{$second := 2}}"),
+        fingerprint("{{$first := 1}}\n{{$second := 2}}")
+    );
+    assert_ne!(
+        fingerprint("{{.First}} {{.Second}}"),
+        fingerprint("{{.First}}\n{{.Second}}")
+    );
+}
+
+#[test]
 fn internal_literal_whitespace_changes_are_detectable_for_a_warning() {
     assert!(has_internal_literal_whitespace_change(
         "{{if .Foo}}\nbar baz\n{{end}}",

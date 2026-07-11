@@ -137,8 +137,10 @@ pub(super) fn render(doc: Doc, width: usize) -> String {
             Doc::SoftLine => append_line(&mut out, &mut column, &indent),
             Doc::Nest(extra, doc) => commands.push(Command::new(indented(&indent, extra), mode, *doc)),
             Doc::Group(doc) => {
-                let mut probe = commands.clone();
-                probe.push(Command::new(&indent, Mode::Flat, (*doc).clone()));
+                // A group's decision belongs to that group. Looking through
+                // later sibling documents makes short nested calls wrap only
+                // because an unrelated action shares their source line.
+                let probe = vec![Command::new(&indent, Mode::Flat, (*doc).clone())];
                 let mode = if fits(width.saturating_sub(column), probe) {
                     Mode::Flat
                 } else {
