@@ -1,13 +1,14 @@
 //! AST-to-document lowering for the formatter's conservative early stages.
 //!
-//! This pass deliberately changes only ordinary delimiter padding. Expression
-//! and block layout are added in later milestones; trim, comments, and
+//! Ordinary delimiter padding and parsed block indentation are intentionally
+//! separate from the later expression-layout stage. Trim, comments, and
 //! multi-line actions consequently remain source-verbatim here.
 
 use std::ops::Range;
 
 use yag_template_syntax::ast::{
-    Action, ActionList, ActionOrText, AstNode, CommentAction, Root, TemplateBlock, TemplateDefinition, TryCatchAction,
+    Action, ActionList, ActionOrText, AstNode, AstToken, CommentAction, Root, TemplateBlock, TemplateDefinition,
+    TryCatchAction,
 };
 use yag_template_syntax::{SyntaxKind, SyntaxNode};
 
@@ -30,17 +31,18 @@ struct Lowerer<'a> {
 
 impl Lowerer<'_> {
     fn root(&self, root: Root) -> Doc {
-        self.sequence(root.actions_with_text())
+        self.sequence(root.actions_with_text(), None)
     }
 
-    fn action_list(&self, action_list: ActionList) -> Doc {
-        self.sequence(action_list.actions_with_text())
+    fn action_list(&self, action_list: ActionList, normalize_margins: bool) -> Doc {
+        let range = source_range(&action_list);
+        self.sequence(action_list.actions_with_text(), normalize_margins.then_some(range.end))
     }
 
-    fn sequence(&self, elements: impl Iterator<Item = ActionOrText>) -> Doc {
+    fn sequence(&self, elements: impl Iterator<Item = ActionOrText>, sequence_end: Option<usize>) -> Doc {
         Doc::concat(elements.map(|element| match element {
             ActionOrText::Action(action) => self.action(action),
-            ActionOrText::Text(text) => Doc::verbatim(text.get()),
+            ActionOrText::Text(text) => self.text(text, sequence_end),
         }))
     }
 
@@ -74,7 +76,7 @@ impl Lowerer<'_> {
             &action,
             [
                 action.clause().map(|clause| self.delimited(clause)),
-                action.template_body().map(|body| self.action_list(body)),
+                action.template_body().map(|body| self.body(body)),
                 action.end_clause().map(|clause| self.delimited(clause)),
             ],
         )
@@ -85,7 +87,7 @@ impl Lowerer<'_> {
             &action,
             [
                 action.clause().map(|clause| self.delimited(clause)),
-                action.template_body().map(|body| self.action_list(body)),
+                action.template_body().map(|body| self.body(body)),
                 action.end_clause().map(|clause| self.delimited(clause)),
             ],
         )
@@ -94,11 +96,11 @@ impl Lowerer<'_> {
     fn if_action(&self, action: yag_template_syntax::ast::IfAction) -> Doc {
         let mut parts = vec![
             action.clause().map(|clause| self.delimited(clause)),
-            action.body().map(|body| self.action_list(body)),
+            action.body().map(|body| self.body(body)),
         ];
         for branch in action.else_branches() {
             parts.push(branch.clause().map(|clause| self.delimited(clause)));
-            parts.push(branch.body().map(|body| self.action_list(body)));
+            parts.push(branch.body().map(|body| self.body(body)));
         }
         parts.push(action.end_clause().map(|clause| self.delimited(clause)));
         self.compound(&action, parts)
@@ -107,11 +109,11 @@ impl Lowerer<'_> {
     fn with_action(&self, action: yag_template_syntax::ast::WithAction) -> Doc {
         let mut parts = vec![
             action.clause().map(|clause| self.delimited(clause)),
-            action.body().map(|body| self.action_list(body)),
+            action.body().map(|body| self.body(body)),
         ];
         for branch in action.else_branches() {
             parts.push(branch.clause().map(|clause| self.delimited(clause)));
-            parts.push(branch.body().map(|body| self.action_list(body)));
+            parts.push(branch.body().map(|body| self.body(body)));
         }
         parts.push(action.end_clause().map(|clause| self.delimited(clause)));
         self.compound(&action, parts)
@@ -122,13 +124,13 @@ impl Lowerer<'_> {
             &action,
             [
                 action.clause().map(|clause| self.delimited(clause)),
-                action.body().map(|body| self.action_list(body)),
+                action.body().map(|body| self.body(body)),
                 action
                     .else_branch()
                     .and_then(|branch| branch.clause().map(|clause| self.delimited(clause))),
                 action
                     .else_branch()
-                    .and_then(|branch| branch.body().map(|body| self.action_list(body))),
+                    .and_then(|branch| branch.body().map(|body| self.body(body))),
                 action.end_clause().map(|clause| self.delimited(clause)),
             ],
         )
@@ -139,13 +141,13 @@ impl Lowerer<'_> {
             &action,
             [
                 action.clause().map(|clause| self.delimited(clause)),
-                action.body().map(|body| self.action_list(body)),
+                action.body().map(|body| self.body(body)),
                 action
                     .else_branch()
                     .and_then(|branch| branch.clause().map(|clause| self.delimited(clause))),
                 action
                     .else_branch()
-                    .and_then(|branch| branch.body().map(|body| self.action_list(body))),
+                    .and_then(|branch| branch.body().map(|body| self.body(body))),
                 action.end_clause().map(|clause| self.delimited(clause)),
             ],
         )
@@ -156,12 +158,71 @@ impl Lowerer<'_> {
             &action,
             [
                 action.try_clause().map(|clause| self.delimited(clause)),
-                action.try_body().map(|body| self.action_list(body)),
+                action.try_body().map(|body| self.body(body)),
                 action.catch_clause().map(|clause| self.delimited(clause)),
-                action.catch_body().map(|body| self.action_list(body)),
+                action.catch_body().map(|body| self.body(body)),
                 action.end_clause().map(|clause| self.delimited(clause)),
             ],
         )
+    }
+
+    /// Lower a typed compound body. A final source newline belongs to the
+    /// surrounding block boundary, so it is emitted after the nested body and
+    /// aligns the following `else`, `catch`, or `end` with the header.
+    fn body(&self, body: ActionList) -> Doc {
+        let range = source_range(&body);
+        let has_terminal_newline = ends_with_line_break_after_margin(&self.source[range]);
+        let content = self.action_list(body, true);
+        let content = Doc::nest(self.options.indent, content);
+        if has_terminal_newline {
+            Doc::concat([content, Doc::Line])
+        } else {
+            content
+        }
+    }
+
+    /// Preserve literal content while letting block layout own physical-line
+    /// margins. This never strips whitespace at an action/text boundary on a
+    /// shared source line; it only removes whitespace before a source newline
+    /// or after one.
+    fn text(&self, text: yag_template_syntax::ast::Text, sequence_end: Option<usize>) -> Doc {
+        let range = text.text_range();
+        let start = byte_offset(range.start());
+        let end = byte_offset(range.end());
+        let Some(sequence_end) = sequence_end else {
+            return Doc::verbatim(text.get());
+        };
+
+        let mut at_line_start = start == 0 || self.source.as_bytes()[start - 1] == b'\n';
+        let mut parts = Vec::new();
+        let mut consumed = 0;
+        let terminal_newline_end = (end == sequence_end)
+            .then(|| final_line_break_end(text.get()))
+            .flatten();
+        for segment in text.get().split_inclusive('\n') {
+            consumed += segment.len();
+            let has_newline = segment.ends_with('\n');
+            let mut content = segment.strip_suffix('\n').unwrap_or(segment);
+            if at_line_start {
+                content = content.trim_start_matches(char::is_whitespace);
+            }
+            if has_newline {
+                content = content.trim_end_matches(char::is_whitespace);
+            }
+            if !content.is_empty() {
+                parts.push(Doc::verbatim(content));
+            }
+            if has_newline {
+                let terminal_newline = terminal_newline_end == Some(consumed);
+                if !terminal_newline {
+                    parts.push(Doc::Line);
+                }
+                at_line_start = true;
+            } else {
+                at_line_start = false;
+            }
+        }
+        Doc::concat(parts)
     }
 
     fn compound<N: AstNode>(&self, action: &N, parts: impl IntoIterator<Item = Option<Doc>>) -> Doc {
@@ -225,4 +286,15 @@ fn source_range(node: &impl AstNode) -> Range<usize> {
 
 fn byte_offset(position: impl Into<u32>) -> usize {
     position.into() as usize
+}
+
+fn ends_with_line_break_after_margin(text: &str) -> bool {
+    final_line_break_end(text).is_some()
+}
+
+/// The byte offset immediately after a final newline followed only by physical
+/// line-margin whitespace.
+fn final_line_break_end(text: &str) -> Option<usize> {
+    let without_margin = text.trim_end_matches(|character: char| character != '\n' && character.is_whitespace());
+    without_margin.ends_with('\n').then_some(without_margin.len())
 }

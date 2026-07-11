@@ -1,5 +1,7 @@
 //! A small Wadler/Leijen-style document algebra.
 
+use crate::Indent;
+
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub(super) enum Doc {
     /// A formatter-generated run of output, such as a keyword, delimiter, or
@@ -35,7 +37,7 @@ pub(super) enum Doc {
     ///
     /// when it does not.
     Group(Box<Doc>),
-    /// Add spaces to the indentation applied after line breaks in the enclosed
+    /// Add configured indentation to the indentation applied after line breaks in the enclosed
     /// document. It has no effect while the document remains flat. For
     /// example, nesting `SoftLine + Text("world")` by two under `hello`
     /// produces:
@@ -52,7 +54,7 @@ pub(super) enum Doc {
     /// ```
     ///
     /// when broken.
-    Nest(usize, Box<Doc>),
+    Nest(Indent, Box<Doc>),
 }
 
 impl Doc {
@@ -72,7 +74,7 @@ impl Doc {
         Self::Group(Box::new(doc))
     }
 
-    pub(super) fn nest(indent: usize, doc: Doc) -> Self {
+    pub(super) fn nest(indent: Indent, doc: Doc) -> Self {
         Self::Nest(indent, Box::new(doc))
     }
 }
@@ -85,14 +87,18 @@ enum Mode {
 
 #[derive(Debug, Clone)]
 struct Command {
-    indent: usize,
+    indent: String,
     mode: Mode,
     doc: Doc,
 }
 
 impl Command {
-    fn new(indent: usize, mode: Mode, doc: Doc) -> Self {
-        Self { indent, mode, doc }
+    fn new(indent: impl Into<String>, mode: Mode, doc: Doc) -> Self {
+        Self {
+            indent: indent.into(),
+            mode,
+            doc,
+        }
     }
 }
 
@@ -101,22 +107,22 @@ impl Command {
 pub(super) fn render(doc: Doc, width: usize) -> String {
     let mut out = String::new();
     let mut column = 0;
-    let mut commands = vec![Command::new(0, Mode::Break, doc)];
+    let mut commands = vec![Command::new("", Mode::Break, doc)];
 
     while let Some(Command { indent, mode, doc }) = commands.pop() {
         match doc {
             Doc::Text(text) | Doc::Verbatim(text) => append_text(&mut out, &mut column, &text),
-            Doc::Concat(parts) => push_parts(&mut commands, indent, mode, parts),
-            Doc::Line => append_line(&mut out, &mut column, indent),
+            Doc::Concat(parts) => push_parts(&mut commands, &indent, mode, parts),
+            Doc::Line => append_line(&mut out, &mut column, &indent),
             Doc::SoftLine if mode == Mode::Flat => {
                 out.push(' ');
                 column += 1;
             }
-            Doc::SoftLine => append_line(&mut out, &mut column, indent),
-            Doc::Nest(extra, doc) => commands.push(Command::new(indent + extra, mode, *doc)),
+            Doc::SoftLine => append_line(&mut out, &mut column, &indent),
+            Doc::Nest(extra, doc) => commands.push(Command::new(indented(&indent, extra), mode, *doc)),
             Doc::Group(doc) => {
                 let mut probe = commands.clone();
-                probe.push(Command::new(indent, Mode::Flat, (*doc).clone()));
+                probe.push(Command::new(&indent, Mode::Flat, (*doc).clone()));
                 let mode = if fits(width.saturating_sub(column), probe) {
                     Mode::Flat
                 } else {
@@ -129,7 +135,7 @@ pub(super) fn render(doc: Doc, width: usize) -> String {
     out
 }
 
-fn push_parts(commands: &mut Vec<Command>, indent: usize, mode: Mode, parts: Vec<Doc>) {
+fn push_parts(commands: &mut Vec<Command>, indent: &str, mode: Mode, parts: Vec<Doc>) {
     commands.extend(parts.into_iter().rev().map(|part| Command::new(indent, mode, part)));
 }
 
@@ -140,10 +146,19 @@ fn append_text(out: &mut String, column: &mut usize, text: &str) {
         .map_or(*column + text.chars().count(), |(_, tail)| tail.chars().count());
 }
 
-fn append_line(out: &mut String, column: &mut usize, indent: usize) {
+fn append_line(out: &mut String, column: &mut usize, indent: &str) {
     out.push('\n');
-    out.push_str(&" ".repeat(indent));
-    *column = indent;
+    out.push_str(indent);
+    *column = indent.chars().count();
+}
+
+fn indented(existing: &str, extra: Indent) -> String {
+    let mut indent = existing.to_owned();
+    match extra {
+        Indent::Tabs => indent.push('\t'),
+        Indent::Spaces(count) => indent.push_str(&" ".repeat(usize::from(count))),
+    }
+    indent
 }
 
 /// Bounded flat-mode probe. A hard or broken line always fits because the
@@ -162,11 +177,11 @@ fn fits(width: usize, mut commands: Vec<Command>) -> bool {
                     remaining -= text.chars().count() as isize;
                 }
             }
-            Doc::Concat(parts) => push_parts(&mut commands, indent, mode, parts),
+            Doc::Concat(parts) => push_parts(&mut commands, &indent, mode, parts),
             Doc::Line => return true,
             Doc::SoftLine if mode == Mode::Flat => remaining -= 1,
             Doc::SoftLine => return true,
-            Doc::Nest(extra, doc) => commands.push(Command::new(indent + extra, mode, *doc)),
+            Doc::Nest(extra, doc) => commands.push(Command::new(indented(&indent, extra), mode, *doc)),
             Doc::Group(doc) => commands.push(Command::new(indent, Mode::Flat, *doc)),
         }
     }
@@ -176,6 +191,7 @@ fn fits(width: usize, mut commands: Vec<Command>) -> bool {
 #[cfg(test)]
 mod tests {
     use super::{Doc, render};
+    use crate::Indent;
 
     #[test]
     fn doc_width_boundaries_choose_flat_or_broken_groups() {
@@ -188,7 +204,7 @@ mod tests {
     fn doc_nesting_applies_after_a_soft_line_break() {
         let doc = Doc::group(Doc::concat([
             Doc::text("hello"),
-            Doc::nest(2, Doc::concat([Doc::SoftLine, Doc::text("world")])),
+            Doc::nest(Indent::Spaces(2), Doc::concat([Doc::SoftLine, Doc::text("world")])),
         ]));
         assert_eq!(render(doc, 10), "hello\n  world");
     }
@@ -203,5 +219,14 @@ mod tests {
     fn doc_verbatim_content_is_rendered_exactly() {
         let literal = "line one\n  original indentation\nline three";
         assert_eq!(render(Doc::verbatim(literal), 1), literal);
+    }
+
+    #[test]
+    fn doc_nesting_uses_tabs_when_configured() {
+        let doc = Doc::concat([
+            Doc::text("header"),
+            Doc::nest(Indent::Tabs, Doc::concat([Doc::Line, Doc::text("body")])),
+        ]);
+        assert_eq!(render(doc, 100), "header\n\tbody");
     }
 }

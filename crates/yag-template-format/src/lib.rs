@@ -129,7 +129,7 @@ mod tests {
     fn valid_source_is_lowered_conservatively() {
         let source = "{{  if .Enabled }}\n{{ .Name }}\n{{ end }}";
         let result = format(source, &FormatOptions::default());
-        assert_eq!(result.text, "{{if .Enabled}}\n{{.Name}}\n{{end}}");
+        assert_eq!(result.text, "{{if .Enabled}}\n\t{{.Name}}\n{{end}}");
         assert!(result.diagnostics.is_empty());
     }
 
