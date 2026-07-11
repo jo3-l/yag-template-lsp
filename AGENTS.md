@@ -24,6 +24,14 @@ Rust uses edition 2024 and `rustfmt.toml` with module-level import grouping and 
 
 Place Rust unit tests next to the code they exercise with `#[cfg(test)]` modules or focused `#[test]` functions. Prefer parser, analysis, and envdef regression tests for language behavior changes. Run `cargo test --workspace` before submitting Rust changes. Extension tests are not prominent; at minimum run `npm run compile` to validate TypeScript, linting, and bundling.
 
+## Codex Verification
+
+For every Rust code change, Codex must run `cargo fmt --all --check` and
+`cargo clippy --workspace --all-targets` before handoff, in addition to the
+focused tests for the change. If formatting is needed, run nightly
+`cargo fmt --all` and then repeat the check. Report any verifier that could
+not be run.
+
 ## Commit & Pull Request Guidelines
 
 Recent history uses concise scoped commits such as `lsp: check for deprecated funcs`, `readme: remove deprecated VS Code badge`, `all: reformat with nightly`, and `release: bump versions to v0.2.6`. Follow the same `scope: imperative summary` pattern.
