@@ -1,11 +1,16 @@
 //! A formatter for YAG templates.
 //!
-//! This initial public surface deliberately has a conservative implementation:
-//! formatting a valid template is a no-op until AST lowering is introduced in
-//! later milestones. Invalid input is also returned verbatim.
+//! This public surface deliberately remains conservative: valid templates are
+//! unchanged until AST lowering is introduced in later milestones. The region
+//! classifier may still report protected lines that exceed the configured
+//! width. Invalid input is always returned verbatim.
+
+use yag_template_syntax::SyntaxNode;
 
 #[allow(dead_code)]
 mod doc;
+mod line_index;
+mod region;
 
 /// Indentation used for template blocks or expression continuations.
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
@@ -44,6 +49,10 @@ impl Default for FormatOptions {
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub enum FormatDiagnosticKind {
     ParseError,
+    ProtectedOverWidthLine,
+    /// Formatting changed non-margin whitespace inside literal template text.
+    /// The output remains valid, but the change may alter rendered content.
+    LiteralWhitespaceChanged,
 }
 
 #[derive(Debug, Clone, Eq, PartialEq)]
@@ -60,19 +69,40 @@ pub struct FormatResult {
 
 /// Format `source` according to `options`.
 ///
-/// The milestone-two formatter intentionally returns valid input unchanged.
-/// It still parses every input so callers get diagnostics for malformed source
-/// without ever risking an edit to it.
-pub fn format(source: &str, _options: &FormatOptions) -> FormatResult {
+/// The formatter intentionally returns valid input unchanged until AST
+/// lowering is introduced. It still parses every input and classifies valid
+/// source so callers receive parse and protected-over-width diagnostics without
+/// risking an edit.
+pub fn format(source: &str, options: &FormatOptions) -> FormatResult {
     let parsed = yag_template_syntax::parser::parse(source);
-    let diagnostics = parsed
+    let mut diagnostics = parsed
         .errors
         .iter()
         .map(|error| FormatDiagnostic {
             kind: FormatDiagnosticKind::ParseError,
             message: error.to_string(),
         })
-        .collect();
+        .collect::<Vec<_>>();
+    if parsed.errors.is_empty() {
+        let protected_textual_lines =
+            region::protected_textual_line_mask(&SyntaxNode::new_root(parsed.root.clone()), source);
+        diagnostics.extend(
+            source
+                .split('\n')
+                .enumerate()
+                .filter(|(line, text)| {
+                    protected_textual_lines[*line]
+                        && text.strip_suffix('\r').unwrap_or(text).chars().count() > options.max_width
+                })
+                .map(|(line, _)| FormatDiagnostic {
+                    kind: FormatDiagnosticKind::ProtectedOverWidthLine,
+                    message: format!(
+                        "protected-textual template region on line {} exceeds the configured width",
+                        line + 1
+                    ),
+                }),
+        );
+    }
     FormatResult {
         text: source.to_owned(),
         diagnostics,
