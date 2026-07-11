@@ -1287,3 +1287,11 @@ dependencies = [
  "unic-ucd-category",
  "unscanny",
 ]
+
+[[package]]
+name = "yagfmt"
+version = "0.1.0"
+dependencies = [
+ "clap",
+ "yag-template-format",
+]
