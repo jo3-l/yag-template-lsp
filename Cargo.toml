@@ -2,6 +2,7 @@
 members = [
     "crates/yag-template-analysis",
     "crates/yag-template-envdefs",
+    "crates/yag-template-format",
     "crates/yag-template-lsp",
     "crates/yag-template-syntax",
     "cmd/exportdefs",

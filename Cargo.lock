@@ -1256,6 +1256,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "yag-template-format"
+version = "0.1.0"
+dependencies = [
+ "yag-template-syntax",
+]
+
+[[package]]
 name = "yag-template-lsp"
 version = "0.2.6"
 dependencies = [
