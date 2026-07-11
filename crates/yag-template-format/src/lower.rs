@@ -4,6 +4,7 @@
 //! separate from the later expression-layout stage. Trim, comments, and
 //! multi-line actions consequently remain source-verbatim here.
 
+use std::cell::RefCell;
 use std::ops::Range;
 
 use yag_template_syntax::ast::{
@@ -14,19 +15,32 @@ use yag_template_syntax::{SyntaxKind, SyntaxNode};
 
 use crate::doc::Doc;
 use crate::region::{LayoutPolicy, LinePlan};
-use crate::{DelimiterPadding, FormatOptions};
+use crate::{DanglingValuePolicy, DelimiterPadding, FormatDiagnostic, FormatDiagnosticKind, FormatOptions, LayoutKind};
 
-pub(super) fn lower(root: &SyntaxNode, source: &str, options: &FormatOptions, plan: &LinePlan) -> Doc {
+pub(super) fn lower(
+    root: &SyntaxNode,
+    source: &str,
+    options: &FormatOptions,
+    plan: &LinePlan,
+) -> (Doc, Vec<FormatDiagnostic>) {
     let Some(root) = Root::cast(root.clone()) else {
-        return Doc::verbatim(source);
+        return (Doc::verbatim(source), Vec::new());
     };
-    Lowerer { source, options, plan }.root(root)
+    let lowerer = Lowerer {
+        source,
+        options,
+        plan,
+        diagnostics: RefCell::new(Vec::new()),
+    };
+    let doc = lowerer.root(root);
+    (doc, lowerer.diagnostics.into_inner())
 }
 
 struct Lowerer<'a> {
     source: &'a str,
     options: &'a FormatOptions,
     plan: &'a LinePlan,
+    diagnostics: RefCell<Vec<FormatDiagnostic>>,
 }
 
 impl Lowerer<'_> {
@@ -353,7 +367,7 @@ impl Lowerer<'_> {
         match expr {
             Expr::FuncCall(call) => call.func_name().map_or_else(
                 || self.verbatim(&call),
-                |name| self.call(Doc::text(name.get()), call.args().map(|arg| self.expr(arg))),
+                |name| self.function_call(name.get(), call.args().map(|arg| self.expr(arg))),
             ),
             Expr::ExprCall(call) => call.callee().map_or_else(
                 || self.verbatim(&call),
@@ -419,8 +433,29 @@ impl Lowerer<'_> {
         }
     }
 
-    fn call(&self, callee: Doc, args: impl Iterator<Item = Doc>) -> Doc {
+    fn function_call(&self, name: &str, args: impl Iterator<Item = Doc>) -> Doc {
         let args = args.collect::<Vec<_>>();
+        match self.options.function_layouts.by_name.get(name) {
+            Some(LayoutKind::KeyValuePairs { dangling_value }) if args.len() % 2 == 0 => {
+                self.key_value_call(Doc::text(name), args)
+            }
+            Some(LayoutKind::KeyValuePairs { dangling_value }) => {
+                self.diagnostics.borrow_mut().push(FormatDiagnostic {
+                    kind: FormatDiagnosticKind::OddKeyValueArgumentCount,
+                    message: format!("key-value function `{name}` received an odd number of arguments"),
+                });
+                match dangling_value {
+                    DanglingValuePolicy::PreserveCallLayout | DanglingValuePolicy::Error => {
+                        self.call(Doc::text(name), args)
+                    }
+                }
+            }
+            Some(LayoutKind::Call) | None => self.call(Doc::text(name), args),
+        }
+    }
+
+    fn call(&self, callee: Doc, args: impl IntoIterator<Item = Doc>) -> Doc {
+        let args = args.into_iter().collect::<Vec<_>>();
         if args.is_empty() {
             return callee;
         }
@@ -430,6 +465,16 @@ impl Lowerer<'_> {
                 self.options.continuation_indent,
                 Doc::concat(args.into_iter().flat_map(|arg| [Doc::SoftLine, arg])),
             ),
+        ]))
+    }
+
+    fn key_value_call(&self, callee: Doc, args: Vec<Doc>) -> Doc {
+        let rows = args
+            .chunks_exact(2)
+            .flat_map(|pair| [Doc::SoftLine, pair[0].clone(), Doc::text(" "), pair[1].clone()]);
+        Doc::group(Doc::concat([
+            callee,
+            Doc::nest(self.options.continuation_indent, Doc::concat(rows)),
         ]))
     }
 

@@ -4,7 +4,7 @@
 //! format delimiter padding, parsed block indentation, and ordinary expression
 //! layout; specialized function layouts remain for later stages.
 
-use std::collections::BTreeSet;
+use std::collections::{BTreeMap, BTreeSet};
 
 use yag_template_syntax::SyntaxNode;
 
@@ -28,6 +28,47 @@ pub enum DelimiterPadding {
     Spaces,
 }
 
+/// Layout dispatch table for calls with known syntactic callees.
+#[derive(Debug, Clone, Eq, PartialEq)]
+pub struct FunctionLayouts {
+    pub by_name: BTreeMap<String, LayoutKind>,
+}
+
+impl Default for FunctionLayouts {
+    fn default() -> Self {
+        Self {
+            by_name: BTreeMap::from([
+                (
+                    "dict".to_owned(),
+                    LayoutKind::KeyValuePairs {
+                        dangling_value: DanglingValuePolicy::PreserveCallLayout,
+                    },
+                ),
+                (
+                    "sdict".to_owned(),
+                    LayoutKind::KeyValuePairs {
+                        dangling_value: DanglingValuePolicy::PreserveCallLayout,
+                    },
+                ),
+            ]),
+        }
+    }
+}
+
+/// A configured function's document layout.
+#[derive(Debug, Clone, Copy, Eq, PartialEq)]
+pub enum LayoutKind {
+    Call,
+    KeyValuePairs { dangling_value: DanglingValuePolicy },
+}
+
+/// How a key/value layout handles an unmatched final argument.
+#[derive(Debug, Clone, Copy, Eq, PartialEq)]
+pub enum DanglingValuePolicy {
+    PreserveCallLayout,
+    Error,
+}
+
 /// Formatter configuration.
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct FormatOptions {
@@ -35,6 +76,7 @@ pub struct FormatOptions {
     pub continuation_indent: Indent,
     pub max_width: usize,
     pub delimiter_padding: DelimiterPadding,
+    pub function_layouts: FunctionLayouts,
 }
 
 impl Default for FormatOptions {
@@ -44,6 +86,7 @@ impl Default for FormatOptions {
             continuation_indent: Indent::Spaces(2),
             max_width: 100,
             delimiter_padding: DelimiterPadding::None,
+            function_layouts: FunctionLayouts::default(),
         }
     }
 }
@@ -55,6 +98,7 @@ pub enum FormatDiagnosticKind {
     /// Formatting changed non-margin whitespace inside literal template text.
     /// The output remains valid, but the change may alter rendered content.
     LiteralWhitespaceChanged,
+    OddKeyValueArgumentCount,
 }
 
 #[derive(Debug, Clone, Eq, PartialEq)]
@@ -86,12 +130,15 @@ pub fn format(source: &str, options: &FormatOptions) -> FormatResult {
         let root = SyntaxNode::new_root(parsed.root.clone());
         let line_plan = region::classify(&root, source);
         let protected_textual_lines = line_plan.protected_textual_line_mask();
-        let text = doc::render(lower::lower(&root, source, options, &line_plan), options.max_width);
+        let (doc, lowering_diagnostics) = lower::lower(&root, source, options, &line_plan);
+        diagnostics.extend(lowering_diagnostics);
+        let text = doc::render(doc, options.max_width);
         // A source check preserves diagnostics for protected lines after an
         // earlier flexible expression adds output lines. The unbounded render
         // also catches delimiter padding that makes an otherwise fitting line
         // exceed the limit.
-        let protected_line_text = doc::render(lower::lower(&root, source, options, &line_plan), usize::MAX);
+        let (protected_doc, _) = lower::lower(&root, source, options, &line_plan);
+        let protected_line_text = doc::render(protected_doc, usize::MAX);
         let mut protected_over_width = source
             .split('\n')
             .enumerate()
@@ -139,6 +186,7 @@ mod tests {
                 continuation_indent: Indent::Spaces(2),
                 max_width: 100,
                 delimiter_padding: DelimiterPadding::None,
+                function_layouts: FunctionLayouts::default(),
             }
         );
     }
