@@ -52,7 +52,8 @@ pub enum ActionOrText {
 }
 
 define_ast_enum! {
-    pub enum Action {
+pub enum Action {
+        Comment(CommentAction),
         TemplateDefinition(TemplateDefinition),
         TemplateBlock(TemplateBlock),
         TemplateInvocation(TemplateInvocation),
@@ -67,6 +68,11 @@ define_ast_enum! {
         ExprAction(ExprAction),
     }
 }
+
+define_ast_node! {
+    pub struct CommentAction;
+}
+define_delim_accessors!(CommentAction);
 
 define_ast_node! {
     pub struct ActionList;

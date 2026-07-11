@@ -130,7 +130,7 @@ impl ScopeAnalyzer {
             Action::With(with_action) => self.analyze_with_action(with_action),
             Action::Range(range_loop) => self.analyze_range_loop(range_loop),
             Action::While(while_loop) => self.analyze_while_loop(while_loop),
-            Action::Break(_) | Action::Continue(_) => {}
+            Action::Comment(_) | Action::Break(_) | Action::Continue(_) => {}
             Action::TryCatch(try_catch) => self.analyze_try_catch_action(try_catch),
             Action::ExprAction(expr_action) => self.analyze_expr_action(expr_action),
         }

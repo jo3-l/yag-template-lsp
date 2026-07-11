@@ -1,15 +1,15 @@
 //! A formatter for YAG templates.
 //!
-//! This public surface deliberately remains conservative: valid templates are
-//! unchanged until AST lowering is introduced in later milestones. The region
-//! classifier may still report protected lines that exceed the configured
-//! width. Invalid input is always returned verbatim.
+//! Invalid input is always returned verbatim. The current lowering stage
+//! formats only ordinary delimiter padding; blocks and expressions retain
+//! their source layout until their dedicated formatter stages.
 
 use yag_template_syntax::SyntaxNode;
 
-#[allow(dead_code)]
+#[allow(dead_code)] // Expression and block lowering use the remaining variants in later milestones.
 mod doc;
 mod line_index;
+mod lower;
 mod region;
 
 /// Indentation used for template blocks or expression continuations.
@@ -69,10 +69,7 @@ pub struct FormatResult {
 
 /// Format `source` according to `options`.
 ///
-/// The formatter intentionally returns valid input unchanged until AST
-/// lowering is introduced. It still parses every input and classifies valid
-/// source so callers receive parse and protected-over-width diagnostics without
-/// risking an edit.
+/// Parse, classify, lower, and render `source` according to `options`.
 pub fn format(source: &str, options: &FormatOptions) -> FormatResult {
     let parsed = yag_template_syntax::parser::parse(source);
     let mut diagnostics = parsed
@@ -84,11 +81,12 @@ pub fn format(source: &str, options: &FormatOptions) -> FormatResult {
         })
         .collect::<Vec<_>>();
     if parsed.errors.is_empty() {
-        let protected_textual_lines =
-            region::protected_textual_line_mask(&SyntaxNode::new_root(parsed.root.clone()), source);
+        let root = SyntaxNode::new_root(parsed.root.clone());
+        let line_plan = region::classify(&root, source);
+        let protected_textual_lines = line_plan.protected_textual_line_mask();
+        let text = doc::render(lower::lower(&root, source, options, &line_plan), options.max_width);
         diagnostics.extend(
-            source
-                .split('\n')
+            text.split('\n')
                 .enumerate()
                 .filter(|(line, text)| {
                     protected_textual_lines[*line]
@@ -102,6 +100,7 @@ pub fn format(source: &str, options: &FormatOptions) -> FormatResult {
                     ),
                 }),
         );
+        return FormatResult { text, diagnostics };
     }
     FormatResult {
         text: source.to_owned(),
@@ -127,10 +126,10 @@ mod tests {
     }
 
     #[test]
-    fn valid_source_is_unchanged() {
+    fn valid_source_is_lowered_conservatively() {
         let source = "{{  if .Enabled }}\n{{ .Name }}\n{{ end }}";
         let result = format(source, &FormatOptions::default());
-        assert_eq!(result.text, source);
+        assert_eq!(result.text, "{{if .Enabled}}\n{{.Name}}\n{{end}}");
         assert!(result.diagnostics.is_empty());
     }
 

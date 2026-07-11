@@ -22,12 +22,16 @@ pub(super) enum Doc {
     /// For example, `Group(Text("hello") + SoftLine + Text("world"))`
     /// becomes:
     ///
-    ///     hello world
+    /// ```text
+    /// hello world
+    /// ```
     ///
     /// when it fits, or two lines:
     ///
-    ///     hello
-    ///     world
+    /// ```text
+    /// hello
+    /// world
+    /// ```
     ///
     /// when it does not.
     Group(Box<Doc>),
@@ -36,12 +40,16 @@ pub(super) enum Doc {
     /// example, nesting `SoftLine + Text("world")` by two under `hello`
     /// produces:
     ///
-    ///     hello world
+    /// ```text
+    /// hello world
+    /// ```
     ///
     /// when flat, and
     ///
-    ///     hello
-    ///       world
+    /// ```text
+    /// hello
+    ///   world
+    /// ```
     ///
     /// when broken.
     Nest(usize, Box<Doc>),

@@ -86,11 +86,6 @@ pub(super) fn classify(root: &SyntaxNode, source: &str) -> LinePlan {
     LineClassifier::new(source).classify(root)
 }
 
-/// Convenience entry point for the current diagnostic consumer.
-pub(super) fn protected_textual_line_mask(root: &SyntaxNode, source: &str) -> Vec<bool> {
-    classify(root, source).protected_textual_line_mask()
-}
-
 struct LineClassifier {
     line_index: LineIndex,
     policies: BTreeMap<usize, LayoutPolicy>,
@@ -208,9 +203,11 @@ impl LineClassifier {
                     };
                 self.mark_range(Some(action), policy);
             }
-            action @ (Action::TemplateInvocation(_) | Action::Return(_) | Action::Break(_) | Action::Continue(_)) => {
-                self.mark_range(Some(action), LayoutPolicy::Flexible)
-            }
+            action @ (Action::Comment(_)
+            | Action::TemplateInvocation(_)
+            | Action::Return(_)
+            | Action::Break(_)
+            | Action::Continue(_)) => self.mark_range(Some(action), LayoutPolicy::Flexible),
         }
     }
 

@@ -4,16 +4,16 @@ use support::assert_formats_preserving_fingerprint;
 use yag_template_format::{FormatDiagnosticKind, FormatOptions, format};
 
 #[test]
-fn region_preserves_literal_bytes_and_protected_line_counts() {
-    for source in [
-        "Hello, {{  .User.Username  }}!",
-        "- **User:** {{  .User.Username  }}",
-        "Use `{{  .Command  }}` here.",
-        "{{  .First  }}{{  .Second  }}",
-        "   \n  {{  .Value  }}\n\t\n",
+fn protected_regions_preserve_literal_boundaries_and_line_counts() {
+    for (source, expected) in [
+        ("Hello, {{  .User.Username  }}!", "Hello, {{.User.Username}}!"),
+        ("- **User:** {{  .User.Username  }}", "- **User:** {{.User.Username}}"),
+        ("Use `{{  .Command  }}` here.", "Use `{{.Command}}` here."),
+        ("{{  .First  }}{{  .Second  }}", "{{.First}}{{.Second}}"),
+        ("   \n  {{  .Value  }}\n\t\n", "   \n  {{.Value}}\n\t\n"),
     ] {
         let result = format(source, &FormatOptions::default());
-        assert_eq!(result.text, source, "protected region changed");
+        assert_eq!(result.text, expected, "unexpected protected-region layout");
         assert_eq!(
             result.text.lines().count(),
             source.lines().count(),
@@ -31,7 +31,10 @@ fn region_reports_but_does_not_reflow_protected_textual_overwidth_lines() {
         ..FormatOptions::default()
     };
     let result = format(source, &options);
-    assert_eq!(result.text, source);
+    assert_eq!(
+        result.text,
+        "Hello, {{.User.Username}}! This literal line is intentionally too long."
+    );
     assert!(
         result
             .diagnostics
