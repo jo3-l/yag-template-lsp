@@ -412,6 +412,10 @@ impl TryCatchAction {
     pub fn catch_body(&self) -> Option<ActionList> {
         self.syntax.matching_children().nth(1)
     }
+
+    pub fn end_clause(&self) -> Option<EndClause> {
+        self.syntax.last_matching_child()
+    }
 }
 
 define_ast_node! {
