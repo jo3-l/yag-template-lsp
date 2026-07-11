@@ -58,7 +58,7 @@ pub struct RightDelim {
 
 impl AstToken for RightDelim {
     fn can_cast(kind: SyntaxKind) -> bool {
-        matches!(kind, SyntaxKind::RightDelim | SyntaxKind::TrimmedLeftDelim)
+        matches!(kind, SyntaxKind::RightDelim | SyntaxKind::TrimmedRightDelim)
     }
 
     fn cast(syntax: SyntaxToken) -> Option<Self>
