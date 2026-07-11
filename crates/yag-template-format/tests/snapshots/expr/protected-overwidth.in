@@ -1,0 +1,4 @@
+---
+max_width: 4
+---
+Hello {{ .Very.Long.Field }}!

@@ -1,0 +1,7 @@
+{{if .Outer}}
+  {{with .Inner}}
+    value
+  {{else}}
+    empty
+  {{end}}
+{{end}}

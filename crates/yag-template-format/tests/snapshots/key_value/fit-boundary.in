@@ -1,0 +1,4 @@
+---
+max_width: 28
+---
+{{dict "a" "one" "b" "two"}}

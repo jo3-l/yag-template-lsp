@@ -1,0 +1,5 @@
+---
+delimiter_padding: spaces
+---
+Hello, {{.User.Name}}!
+{{$value := .User.Name}}

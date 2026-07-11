@@ -1,0 +1,10 @@
+---
+indent: { spaces: 2 }
+---
+{{if .Outer}}
+{{with .Inner}}
+value
+{{else}}
+empty
+{{end}}
+{{end}}

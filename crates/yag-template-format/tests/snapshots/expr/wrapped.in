@@ -1,0 +1,6 @@
+---
+max_width: 12
+continuation_indent: { spaces: 2 }
+---
+{{print .A .B .C}}
+{{.Value | first | second}}

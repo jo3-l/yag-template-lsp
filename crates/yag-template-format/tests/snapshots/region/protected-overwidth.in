@@ -1,0 +1,4 @@
+---
+max_width: 20
+---
+Hello, {{ .User.Username }}! This literal line is intentionally too long.

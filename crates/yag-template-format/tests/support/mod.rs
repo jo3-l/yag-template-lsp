@@ -1,4 +1,4 @@
-use yag_template_format::{FormatDiagnosticKind, FormatOptions, format};
+use yag_template_format::{FormatDiagnosticKind, FormatOptions, FormatResult, format};
 use yag_template_syntax::ast::{Action, AstNode, Expr};
 use yag_template_syntax::{SyntaxElement, SyntaxKind, SyntaxNode};
 
@@ -44,7 +44,7 @@ fn fingerprint_node(node: SyntaxNode, source: &str) -> TemplateFingerprint {
                 None
             }
             (_, SyntaxElement::Token(token)) if token.kind() == SyntaxKind::Text => {
-                let layout = literal_text_layout(token.text(), token_start(&token), token_end(&token), source);
+                let layout = literal_text_layout(token.text(), token_start(token), token_end(token), source);
                 (!layout.content.is_empty() || !layout.inline_prefix.is_empty() || !layout.inline_suffix.is_empty())
                     .then_some(TemplateFingerprint::Text {
                         content: layout.content,
@@ -215,9 +215,14 @@ fn byte_offset(position: impl Into<u32>) -> usize {
 
 /// The preservation contract every valid formatter fixture uses from this
 /// milestone onward.
+#[allow(dead_code)]
 pub fn assert_formats_preserving_fingerprint(source: &str, options: &FormatOptions) {
-    let input_fingerprint = fingerprint(source);
     let formatted = format(source, options);
+    assert_format_result_preserving_fingerprint(source, options, &formatted);
+}
+
+pub fn assert_format_result_preserving_fingerprint(source: &str, options: &FormatOptions, formatted: &FormatResult) {
+    let input_fingerprint = fingerprint(source);
     assert!(
         formatted
             .diagnostics

@@ -1,0 +1,4 @@
+Hello {{if .Show}}bar{{else}}baz{{end}}
+{{- if .Show -}}
+  trimmed body
+{{- end -}}

@@ -1,0 +1,8 @@
+---
+delimiter_padding: spaces
+---
+{{/* comment */}}
+{{- $value := .User -}}
+{{
+  .User
+}}

@@ -1,0 +1,2 @@
+{{$embed := (sdict "title" "Example" "description" "A template")}}
+{{dict "name" .User.Username}}

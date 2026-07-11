@@ -1,0 +1,8 @@
+---
+max_width: 14
+continuation_indent: { spaces: 2 }
+---
+{{$value := print (printf "%s" .Name)}}
+{{if print .A .B .C}}
+body
+{{end}}

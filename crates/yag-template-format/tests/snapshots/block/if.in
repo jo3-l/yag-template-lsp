@@ -1,0 +1,6 @@
+{{ if .Show }}
+  bar baz  
+Hello {{ .Name }}
+{{ else }}
+  fallback  
+{{ end }}

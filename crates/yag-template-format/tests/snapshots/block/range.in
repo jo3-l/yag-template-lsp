@@ -1,0 +1,5 @@
+{{range .Items}}
+item
+{{else}}
+none
+{{end}}

@@ -1,0 +1,7 @@
+{{print
+  .A
+  .B
+  .C}}
+{{.Value
+  | first
+  | second}}

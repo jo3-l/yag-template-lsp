@@ -1,0 +1,2 @@
+Hello, {{ .User.Name }}!
+{{ $value := .User.Name }}
