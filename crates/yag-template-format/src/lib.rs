@@ -4,6 +4,9 @@
 //! formatting a valid template is a no-op until AST lowering is introduced in
 //! later milestones. Invalid input is also returned verbatim.
 
+#[allow(dead_code)]
+mod doc;
+
 /// Indentation used for template blocks or expression continuations.
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
 pub enum Indent {

@@ -10,7 +10,10 @@ fn fingerprint_ignores_action_whitespace_and_normal_delimiter_padding() {
 
 #[test]
 fn fingerprint_preserves_pipeline_order() {
-    assert_ne!(fingerprint("{{.Value | first | second}}"), fingerprint("{{.Value | second | first}}"));
+    assert_ne!(
+        fingerprint("{{.Value | first | second}}"),
+        fingerprint("{{.Value | second | first}}")
+    );
 }
 
 #[test]
@@ -52,8 +55,11 @@ fn inventory_fixtures_reparse_preserve_fingerprint_and_are_idempotent() {
         "compressed.tmpl",
         "key-value-calls.tmpl",
     ] {
-        let source = std::fs::read_to_string(format!("{}/tests/fixtures/inventory/{fixture}", env!("CARGO_MANIFEST_DIR")))
-            .unwrap_or_else(|error| panic!("could not read {fixture}: {error}"));
+        let source = std::fs::read_to_string(format!(
+            "{}/tests/fixtures/inventory/{fixture}",
+            env!("CARGO_MANIFEST_DIR")
+        ))
+        .unwrap_or_else(|error| panic!("could not read {fixture}: {error}"));
         assert_formats_preserving_fingerprint(&source, &FormatOptions::default());
     }
 }

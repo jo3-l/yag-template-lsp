@@ -1,4 +1,4 @@
-use yag_template_format::{format, FormatOptions};
+use yag_template_format::{FormatOptions, format};
 use yag_template_syntax::{SyntaxElement, SyntaxKind, SyntaxNode};
 
 /// Owned, test-only representation of the parts of a template that formatting
@@ -50,8 +50,19 @@ fn fingerprint_node(node: SyntaxNode) -> TemplateFingerprint {
 pub fn assert_formats_preserving_fingerprint(source: &str, options: &FormatOptions) {
     let input_fingerprint = fingerprint(source);
     let formatted = format(source, options);
-    assert!(formatted.diagnostics.is_empty(), "format diagnostics: {:?}", formatted.diagnostics);
+    assert!(
+        formatted.diagnostics.is_empty(),
+        "format diagnostics: {:?}",
+        formatted.diagnostics
+    );
     let output_fingerprint = fingerprint(&formatted.text);
-    assert_eq!(output_fingerprint, input_fingerprint, "formatter changed semantic template shape");
-    assert_eq!(format(&formatted.text, options).text, formatted.text, "formatter is not idempotent");
+    assert_eq!(
+        output_fingerprint, input_fingerprint,
+        "formatter changed semantic template shape"
+    );
+    assert_eq!(
+        format(&formatted.text, options).text,
+        formatted.text,
+        "formatter is not idempotent"
+    );
 }
