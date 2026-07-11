@@ -1,8 +1,10 @@
 //! A formatter for YAG templates.
 //!
-//! Invalid input is always returned verbatim. The current lowering stage
-//! formats only ordinary delimiter padding; blocks and expressions retain
-//! their source layout until their dedicated formatter stages.
+//! Invalid input is always returned verbatim. The current lowering stages
+//! format delimiter padding, parsed block indentation, and ordinary expression
+//! layout; specialized function layouts remain for later stages.
+
+use std::collections::BTreeSet;
 
 use yag_template_syntax::SyntaxNode;
 
@@ -85,21 +87,37 @@ pub fn format(source: &str, options: &FormatOptions) -> FormatResult {
         let line_plan = region::classify(&root, source);
         let protected_textual_lines = line_plan.protected_textual_line_mask();
         let text = doc::render(lower::lower(&root, source, options, &line_plan), options.max_width);
-        diagnostics.extend(
-            text.split('\n')
+        // A source check preserves diagnostics for protected lines after an
+        // earlier flexible expression adds output lines. The unbounded render
+        // also catches delimiter padding that makes an otherwise fitting line
+        // exceed the limit.
+        let protected_line_text = doc::render(lower::lower(&root, source, options, &line_plan), usize::MAX);
+        let mut protected_over_width = source
+            .split('\n')
+            .enumerate()
+            .filter(|(line, text)| {
+                protected_textual_lines.get(*line).copied().unwrap_or(false)
+                    && text.strip_suffix('\r').unwrap_or(text).chars().count() > options.max_width
+            })
+            .map(|(line, _)| line)
+            .collect::<BTreeSet<_>>();
+        protected_over_width.extend(
+            protected_line_text
+                .split('\n')
                 .enumerate()
                 .filter(|(line, text)| {
-                    protected_textual_lines[*line]
+                    protected_textual_lines.get(*line).copied().unwrap_or(false)
                         && text.strip_suffix('\r').unwrap_or(text).chars().count() > options.max_width
                 })
-                .map(|(line, _)| FormatDiagnostic {
-                    kind: FormatDiagnosticKind::ProtectedOverWidthLine,
-                    message: format!(
-                        "protected-textual template region on line {} exceeds the configured width",
-                        line + 1
-                    ),
-                }),
+                .map(|(line, _)| line),
         );
+        diagnostics.extend(protected_over_width.into_iter().map(|line| FormatDiagnostic {
+            kind: FormatDiagnosticKind::ProtectedOverWidthLine,
+            message: format!(
+                "protected-textual template region on line {} exceeds the configured width",
+                line + 1
+            ),
+        }));
         return FormatResult { text, diagnostics };
     }
     FormatResult {

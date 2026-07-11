@@ -77,6 +77,22 @@ impl Doc {
     pub(super) fn nest(indent: Indent, doc: Doc) -> Self {
         Self::Nest(indent, Box::new(doc))
     }
+
+    /// Convert conditional layout to a single flat line. Hard lines and
+    /// embedded source newlines cannot safely be flattened.
+    pub(super) fn flatten(self) -> Option<Self> {
+        match self {
+            Self::Text(text) | Self::Verbatim(text) => (!text.contains('\n')).then_some(Self::Text(text)),
+            Self::Concat(parts) => parts
+                .into_iter()
+                .map(Self::flatten)
+                .collect::<Option<Vec<_>>>()
+                .map(Self::Concat),
+            Self::Line => None,
+            Self::SoftLine => Some(Self::text(" ")),
+            Self::Group(doc) | Self::Nest(_, doc) => doc.flatten(),
+        }
+    }
 }
 
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
@@ -171,11 +187,10 @@ fn fits(width: usize, mut commands: Vec<Command>) -> bool {
         };
         match doc {
             Doc::Text(text) | Doc::Verbatim(text) => {
-                if let Some((_, tail)) = text.rsplit_once('\n') {
-                    remaining = width as isize - tail.chars().count() as isize;
-                } else {
-                    remaining -= text.chars().count() as isize;
+                if text.contains('\n') {
+                    return true;
                 }
+                remaining -= text.chars().count() as isize;
             }
             Doc::Concat(parts) => push_parts(&mut commands, &indent, mode, parts),
             Doc::Line => return true,
@@ -228,5 +243,14 @@ mod tests {
             Doc::nest(Indent::Tabs, Doc::concat([Doc::Line, Doc::text("body")])),
         ]);
         assert_eq!(render(doc, 100), "header\n\tbody");
+    }
+
+    #[test]
+    fn flatten_converts_soft_lines_and_refuses_hard_lines() {
+        assert_eq!(
+            Doc::concat([Doc::text("left"), Doc::SoftLine, Doc::text("right")]).flatten(),
+            Some(Doc::concat([Doc::text("left"), Doc::text(" "), Doc::text("right")]))
+        );
+        assert_eq!(Doc::Line.flatten(), None);
     }
 }

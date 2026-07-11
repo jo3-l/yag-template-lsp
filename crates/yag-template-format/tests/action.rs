@@ -6,7 +6,7 @@ use yag_template_format::{DelimiterPadding, FormatDiagnosticKind, FormatOptions,
 #[test]
 fn formats_ordinary_actions_and_clauses_with_no_delimiter_padding() {
     let source = "{{  $value := .User.Name  }}\n{{ if  .Enabled }}{{ template \"card\" . }}{{ else if .Admin }}{{return .User}}{{else}}{{end}}";
-    let expected = "{{$value := .User.Name}}\n{{if  .Enabled}}{{template \"card\" .}}{{else if .Admin}}{{return .User}}{{else}}{{end}}";
+    let expected = "{{$value := .User.Name}}\n{{if .Enabled}}{{template \"card\" .}}{{else if .Admin}}{{return .User}}{{else}}{{end}}";
     let options = FormatOptions::default();
 
     assert_eq!(format(source, &options).text, expected);

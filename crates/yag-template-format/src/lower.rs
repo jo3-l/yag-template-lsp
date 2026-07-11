@@ -7,13 +7,13 @@
 use std::ops::Range;
 
 use yag_template_syntax::ast::{
-    Action, ActionList, ActionOrText, AstNode, AstToken, CommentAction, Root, TemplateBlock, TemplateDefinition,
-    TryCatchAction,
+    Action, ActionList, ActionOrText, AstNode, AstToken, CommentAction, Expr, ExprAction, Root, TemplateBlock,
+    TemplateDefinition, TryCatchAction,
 };
 use yag_template_syntax::{SyntaxKind, SyntaxNode};
 
 use crate::doc::Doc;
-use crate::region::LinePlan;
+use crate::region::{LayoutPolicy, LinePlan};
 use crate::{DelimiterPadding, FormatOptions};
 
 pub(super) fn lower(root: &SyntaxNode, source: &str, options: &FormatOptions, plan: &LinePlan) -> Doc {
@@ -56,12 +56,15 @@ impl Lowerer<'_> {
             Action::While(action) => self.while_action(action),
             Action::TryCatch(action) => self.try_catch_action(action),
             Action::Comment(action) => self.comment(action),
-            action @ (Action::TemplateInvocation(_)
-            | Action::Return(_)
-            | Action::Break(_)
-            | Action::Continue(_)
-            | Action::ExprAction(_)) => self.delimited(action),
+            Action::TemplateInvocation(action) => self.delimited_expr(action.clone(), action.context_data()),
+            Action::Return(action) => self.delimited_expr(action.clone(), action.expr()),
+            Action::ExprAction(action) => self.expr_action(action),
+            action @ (Action::Break(_) | Action::Continue(_)) => self.delimited(action),
         }
+    }
+
+    fn expr_action(&self, action: ExprAction) -> Doc {
+        self.delimited_expr(action.clone(), action.expr())
     }
 
     fn comment(&self, action: CommentAction) -> Doc {
@@ -86,7 +89,9 @@ impl Lowerer<'_> {
         self.compound(
             &action,
             [
-                action.clause().map(|clause| self.delimited(clause)),
+                action
+                    .clause()
+                    .map(|clause| self.delimited_expr(clause.clone(), clause.context_data())),
                 action.template_body().map(|body| self.body(body)),
                 action.end_clause().map(|clause| self.delimited(clause)),
             ],
@@ -95,11 +100,17 @@ impl Lowerer<'_> {
 
     fn if_action(&self, action: yag_template_syntax::ast::IfAction) -> Doc {
         let mut parts = vec![
-            action.clause().map(|clause| self.delimited(clause)),
+            action
+                .clause()
+                .map(|clause| self.delimited_expr(clause.clone(), clause.condition())),
             action.body().map(|body| self.body(body)),
         ];
         for branch in action.else_branches() {
-            parts.push(branch.clause().map(|clause| self.delimited(clause)));
+            parts.push(
+                branch
+                    .clause()
+                    .map(|clause| self.delimited_expr(clause.clone(), clause.condition())),
+            );
             parts.push(branch.body().map(|body| self.body(body)));
         }
         parts.push(action.end_clause().map(|clause| self.delimited(clause)));
@@ -108,11 +119,17 @@ impl Lowerer<'_> {
 
     fn with_action(&self, action: yag_template_syntax::ast::WithAction) -> Doc {
         let mut parts = vec![
-            action.clause().map(|clause| self.delimited(clause)),
+            action
+                .clause()
+                .map(|clause| self.delimited_expr(clause.clone(), clause.condition())),
             action.body().map(|body| self.body(body)),
         ];
         for branch in action.else_branches() {
-            parts.push(branch.clause().map(|clause| self.delimited(clause)));
+            parts.push(
+                branch
+                    .clause()
+                    .map(|clause| self.delimited_expr(clause.clone(), clause.condition())),
+            );
             parts.push(branch.body().map(|body| self.body(body)));
         }
         parts.push(action.end_clause().map(|clause| self.delimited(clause)));
@@ -123,11 +140,15 @@ impl Lowerer<'_> {
         self.compound(
             &action,
             [
-                action.clause().map(|clause| self.delimited(clause)),
-                action.body().map(|body| self.body(body)),
                 action
-                    .else_branch()
-                    .and_then(|branch| branch.clause().map(|clause| self.delimited(clause))),
+                    .clause()
+                    .map(|clause| self.delimited_expr(clause.clone(), clause.expr())),
+                action.body().map(|body| self.body(body)),
+                action.else_branch().and_then(|branch| {
+                    branch
+                        .clause()
+                        .map(|clause| self.delimited_expr(clause.clone(), clause.condition()))
+                }),
                 action
                     .else_branch()
                     .and_then(|branch| branch.body().map(|body| self.body(body))),
@@ -140,11 +161,15 @@ impl Lowerer<'_> {
         self.compound(
             &action,
             [
-                action.clause().map(|clause| self.delimited(clause)),
-                action.body().map(|body| self.body(body)),
                 action
-                    .else_branch()
-                    .and_then(|branch| branch.clause().map(|clause| self.delimited(clause))),
+                    .clause()
+                    .map(|clause| self.delimited_expr(clause.clone(), clause.condition())),
+                action.body().map(|body| self.body(body)),
+                action.else_branch().and_then(|branch| {
+                    branch
+                        .clause()
+                        .map(|clause| self.delimited_expr(clause.clone(), clause.condition()))
+                }),
                 action
                     .else_branch()
                     .and_then(|branch| branch.body().map(|body| self.body(body))),
@@ -232,46 +257,195 @@ impl Lowerer<'_> {
 
     fn delimited<N: AstNode>(&self, node: N) -> Doc {
         let range = source_range(&node);
-        let source = &self.source[range.clone()];
-        if self.plan.range_contains_protected_line(range) && source.contains('\n') {
-            return Doc::verbatim(source);
-        }
+        let Some((left_end, right_start)) = self.delimiter_body_range(&node) else {
+            return self.verbatim(&node);
+        };
+        self.delimited_body(
+            node,
+            range,
+            left_end,
+            right_start,
+            Doc::verbatim(self.source[left_end..right_start].trim()),
+        )
+    }
 
-        let Some(left) = node.syntax().first_token() else {
-            return Doc::verbatim(source);
+    fn delimited_expr<N: AstNode>(&self, node: N, expr: Option<Expr>) -> Doc {
+        let Some(expr) = expr else {
+            return self.delimited(node);
         };
-        let Some(right) = node.syntax().last_token() else {
-            return Doc::verbatim(source);
+        let range = source_range(&node);
+        let Some((left_end, right_start)) = self.delimiter_body_range(&node) else {
+            return self.verbatim(&node);
         };
+        let expr_range = source_range(&expr);
+        let prefix = self.source[left_end..expr_range.start].trim();
+        let suffix = self.source[expr_range.end..right_start].trim();
+        let expression = self.expr(expr);
+        let mut tail = vec![Doc::SoftLine, expression];
+        if !suffix.is_empty() {
+            tail.extend([Doc::SoftLine, Doc::text(suffix)]);
+        }
+        let body = if prefix.is_empty() {
+            tail.remove(0);
+            Doc::group(Doc::concat(tail))
+        } else {
+            Doc::group(Doc::concat([
+                Doc::text(prefix),
+                Doc::nest(self.options.continuation_indent, Doc::concat(tail)),
+            ]))
+        };
+        self.delimited_body(node, range, left_end, right_start, body)
+    }
+
+    fn delimiter_body_range<N: AstNode>(&self, node: &N) -> Option<(usize, usize)> {
+        let left = node.syntax().first_token()?;
+        let right = node.syntax().last_token()?;
         if !matches!(left.kind(), SyntaxKind::LeftDelim | SyntaxKind::TrimmedLeftDelim)
             || !matches!(right.kind(), SyntaxKind::RightDelim | SyntaxKind::TrimmedRightDelim)
         {
+            return None;
+        }
+        Some((
+            byte_offset(left.text_range().end()),
+            byte_offset(right.text_range().start()),
+        ))
+    }
+
+    fn delimited_body<N: AstNode>(
+        &self,
+        node: N,
+        range: Range<usize>,
+        left_end: usize,
+        right_start: usize,
+        body: Doc,
+    ) -> Doc {
+        let source = &self.source[range.clone()];
+        let left = &self.source[range.start..left_end];
+        let right = &self.source[right_start..range.end];
+        if self.plan.range_contains_protected_line(range.clone()) && source.contains('\n') {
             return Doc::verbatim(source);
         }
 
         // Preserve trim spellings exactly. In particular, `{{- .Value -}}`
         // has whitespace required by the trim-marker grammar.
-        if matches!(left.kind(), SyntaxKind::TrimmedLeftDelim)
-            || matches!(right.kind(), SyntaxKind::TrimmedRightDelim)
-            || source.contains('\n')
-        {
+        if left.contains('-') || right.contains('-') || source.contains('\n') {
             return Doc::verbatim(source);
         }
-
-        let left_end = byte_offset(left.text_range().end());
-        let right_start = byte_offset(right.text_range().start());
-        let body = self.source[left_end..right_start].trim();
         let padding = match self.options.delimiter_padding {
             DelimiterPadding::None => "",
             DelimiterPadding::Spaces => " ",
         };
-        Doc::concat([
-            Doc::text(left.text()),
+        let doc = Doc::concat([
+            Doc::text(left),
             Doc::text(padding),
-            Doc::verbatim(body),
+            body,
             Doc::text(padding),
-            Doc::text(right.text()),
-        ])
+            Doc::text(right),
+        ]);
+        if self.plan.policy_at_offset(range.start) == LayoutPolicy::Protected {
+            doc.flatten().unwrap_or_else(|| self.verbatim(&node))
+        } else {
+            Doc::group(doc)
+        }
+    }
+
+    fn expr(&self, expr: Expr) -> Doc {
+        match expr {
+            Expr::FuncCall(call) => call.func_name().map_or_else(
+                || self.verbatim(&call),
+                |name| self.call(Doc::text(name.get()), call.args().map(|arg| self.expr(arg))),
+            ),
+            Expr::ExprCall(call) => call.callee().map_or_else(
+                || self.verbatim(&call),
+                |callee| self.call(self.expr(callee), call.args().map(|arg| self.expr(arg))),
+            ),
+            Expr::Parenthesized(parenthesized) => parenthesized.inner_expr().map_or_else(
+                || self.verbatim(&parenthesized),
+                |inner| Doc::concat([Doc::text("("), self.expr(inner), Doc::text(")")]),
+            ),
+            Expr::Pipeline(pipeline) => pipeline.init_expr().map_or_else(
+                || self.verbatim(&pipeline),
+                |init| {
+                    let mut parts = vec![self.expr(init)];
+                    for stage in pipeline.stages() {
+                        let Some(call) = stage.call_expr() else {
+                            return self.verbatim(&pipeline);
+                        };
+                        parts.extend([Doc::SoftLine, Doc::text("| "), self.expr(call)]);
+                    }
+                    Doc::group(Doc::concat([
+                        parts.remove(0),
+                        Doc::nest(self.options.continuation_indent, Doc::concat(parts)),
+                    ]))
+                },
+            ),
+            Expr::ContextAccess(access) => self.verbatim(&access),
+            Expr::ContextFieldChain(chain) => Doc::text(
+                chain
+                    .fields()
+                    .map(|field| field.syntax().text().to_owned())
+                    .collect::<String>(),
+            ),
+            Expr::ExprFieldChain(chain) => chain.base_expr().map_or_else(
+                || self.verbatim(&chain),
+                |base| {
+                    Doc::concat([
+                        self.expr(base),
+                        Doc::text(
+                            chain
+                                .fields()
+                                .map(|field| field.syntax().text().to_owned())
+                                .collect::<String>(),
+                        ),
+                    ])
+                },
+            ),
+            Expr::VarAccess(access) => access
+                .var()
+                .map_or_else(|| self.verbatim(&access), |var| Doc::text(var.name())),
+            Expr::VarDecl(decl) => self.assignment(
+                &decl,
+                ":=",
+                decl.var().map(|var| var.name().to_owned()),
+                decl.initializer(),
+            ),
+            Expr::VarAssign(assign) => self.assignment(
+                &assign,
+                "=",
+                assign.var().map(|var| var.name().to_owned()),
+                assign.assign_expr(),
+            ),
+            Expr::Literal(literal) => self.verbatim(&literal),
+        }
+    }
+
+    fn call(&self, callee: Doc, args: impl Iterator<Item = Doc>) -> Doc {
+        let args = args.collect::<Vec<_>>();
+        if args.is_empty() {
+            return callee;
+        }
+        Doc::group(Doc::concat([
+            callee,
+            Doc::nest(
+                self.options.continuation_indent,
+                Doc::concat(args.into_iter().flat_map(|arg| [Doc::SoftLine, arg])),
+            ),
+        ]))
+    }
+
+    fn assignment<N: AstNode>(&self, node: &N, operator: &str, variable: Option<String>, value: Option<Expr>) -> Doc {
+        match (variable, value) {
+            (Some(variable), Some(value)) => Doc::group(Doc::concat([
+                Doc::text(variable),
+                Doc::text(" "),
+                Doc::text(operator),
+                Doc::nest(
+                    self.options.continuation_indent,
+                    Doc::concat([Doc::SoftLine, self.expr(value)]),
+                ),
+            ])),
+            _ => self.verbatim(node),
+        }
     }
 
     fn verbatim<N: AstNode>(&self, node: &N) -> Doc {
