@@ -109,11 +109,12 @@ pub fn format(source: &str, options: &FormatOptions) -> FormatResult {
         let line_plan = classification::classify(&root, source);
         let doc = lower::lower(&root, source, options, &line_plan);
         let text = pretty::render(doc, options.max_width);
-        return FormatResult { text, diagnostics };
-    }
-    FormatResult {
-        text: source.to_owned(),
-        diagnostics,
+        FormatResult { text, diagnostics }
+    } else {
+        FormatResult {
+            text: source.to_owned(),
+            diagnostics,
+        }
     }
 }
 
