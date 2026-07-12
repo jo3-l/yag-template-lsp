@@ -264,10 +264,107 @@ impl Formatter<'_> {
 }
 
 fn allows_compact(action: &impl AstNode) -> AllowCompact {
-    // Existing physical newlines stay structural rather than participating in reflow.
-    if action.syntax().text().contains_char('\n') {
-        AllowCompact::No
-    } else {
+    if Action::cast(action.syntax().clone()).is_some_and(is_compact_action) {
         AllowCompact::Yes
+    } else {
+        AllowCompact::No
+    }
+}
+
+/// Whether a typed action can share a compact compound layout with its
+/// enclosing clause. This is based only on the action tree: formatter-owned
+/// whitespace introduced while reflowing an expression cannot change it on a
+/// later pass.
+fn is_compact_action(action: Action) -> bool {
+    match action {
+        Action::Comment(action) => !action.syntax().text().contains_char('\n'),
+        Action::TemplateDefinition(action) => action.template_body().is_some_and(is_compact_body),
+        Action::TemplateBlock(action) => action.template_body().is_some_and(is_compact_body),
+        Action::If(action) => {
+            action.body().is_some_and(is_compact_body)
+                && action
+                    .else_branches()
+                    .all(|branch| branch.body().is_some_and(is_compact_body))
+        }
+        Action::With(action) => {
+            action.body().is_some_and(is_compact_body)
+                && action
+                    .else_branches()
+                    .all(|branch| branch.body().is_some_and(is_compact_body))
+        }
+        Action::Range(action) => {
+            action.body().is_some_and(is_compact_body)
+                && action
+                    .else_branch()
+                    .is_none_or(|branch| branch.body().is_some_and(is_compact_body))
+        }
+        Action::While(action) => {
+            action.body().is_some_and(is_compact_body)
+                && action
+                    .else_branch()
+                    .is_none_or(|branch| branch.body().is_some_and(is_compact_body))
+        }
+        Action::TryCatch(action) => {
+            action.try_body().is_some_and(is_compact_body) && action.catch_body().is_some_and(is_compact_body)
+        }
+        Action::TemplateInvocation(_)
+        | Action::Return(_)
+        | Action::Break(_)
+        | Action::Continue(_)
+        | Action::ExprAction(_) => true,
+    }
+}
+
+/// A body is compact when it contains at most one compact action and no
+/// literal content. Whitespace is deliberately ignored: it is either an
+/// existing structural line or formatter-owned layout whitespace.
+fn is_compact_body(body: yag_template_syntax::ast::ActionList) -> bool {
+    let mut action = None;
+    for element in body.actions_with_text() {
+        match element {
+            yag_template_syntax::ast::ActionOrText::Action(next) => {
+                if action.replace(next).is_some() {
+                    return false;
+                }
+            }
+            yag_template_syntax::ast::ActionOrText::Text(text) if text.get().chars().all(char::is_whitespace) => {}
+            yag_template_syntax::ast::ActionOrText::Text(_) => return false,
+        }
+    }
+    action.is_none_or(is_compact_action)
+}
+
+#[cfg(test)]
+mod tests {
+    use yag_template_syntax::SyntaxNode;
+    use yag_template_syntax::ast::{AstNode, Root};
+
+    use super::{AllowCompact, allows_compact};
+
+    fn compactness(source: &str) -> AllowCompact {
+        let parsed = yag_template_syntax::parser::parse(source);
+        assert!(parsed.errors.is_empty(), "source did not parse: {:?}", parsed.errors);
+        let root = Root::cast(SyntaxNode::new_root(parsed.root)).unwrap();
+        allows_compact(&root.actions().next().unwrap())
+    }
+
+    #[test]
+    fn compound_compactness_follows_direct_body_actions_recursively() {
+        assert_eq!(
+            compactness("{{if .Enabled}} {{ $name := .Name }} {{end}}"),
+            AllowCompact::Yes
+        );
+        assert_eq!(
+            compactness("{{if .Enabled}} {{ $name := .Name }} {{ $value := .Value }} {{end}}"),
+            AllowCompact::No
+        );
+        assert_eq!(
+            compactness("{{if .Enabled}} {{ $name := .Name }} {{else}} {{ $value := .Value }} {{end}}"),
+            AllowCompact::Yes
+        );
+        assert_eq!(
+            compactness("{{range .Items}}{{if .Enabled}}{{ $name := .Name}}{{ $value := .Value}}{{end}}{{end}}"),
+            AllowCompact::No
+        );
     }
 }

@@ -1,0 +1,6 @@
+{{ range .Items }}
+	{{ if .Enabled }}
+		{{ $name := .Name }}
+		{{ $value := .Value }}
+	{{ end }}
+{{ end }}

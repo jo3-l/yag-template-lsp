@@ -1,0 +1,3 @@
+{{ if .Outer }}
+	{{ if .Inner }}
+		{{ .Name }}{{ $seen := 1 }}{{ end }}{{ end }}
