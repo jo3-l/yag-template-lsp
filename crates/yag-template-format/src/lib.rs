@@ -1,6 +1,6 @@
 //! A formatter for YAG templates.
 //!
-//! Invalid input is always returned verbatim. The current lowering stages
+//! Invalid input is always returned unchanged. The current lowering stages
 //! format delimiter padding, parsed block indentation, and ordinary expression
 //! layout; specialized function layouts remain for later stages.
 
@@ -8,11 +8,12 @@ use std::collections::{BTreeMap, BTreeSet};
 
 use yag_template_syntax::SyntaxNode;
 
+mod classification;
 #[allow(dead_code)] // Expression and block lowering use the remaining variants in later milestones.
 mod doc;
 mod line_index;
 mod lower;
-mod region;
+mod rules;
 
 /// Indentation used for template blocks or expression continuations.
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
@@ -128,7 +129,7 @@ pub fn format(source: &str, options: &FormatOptions) -> FormatResult {
         .collect::<Vec<_>>();
     if parsed.errors.is_empty() {
         let root = SyntaxNode::new_root(parsed.root.clone());
-        let line_plan = region::classify(&root, source);
+        let line_plan = classification::classify(&root, source);
         let protected_textual_lines = line_plan.protected_textual_line_mask();
         let (doc, lowering_diagnostics) = lower::lower(&root, source, options, &line_plan);
         diagnostics.extend(lowering_diagnostics);

@@ -1,15 +1,10 @@
 //! Resolve formatter ownership for each logical source line.
-//!
-//! This module deliberately stores only a sparse line plan. Later AST-to-Doc
-//! lowering will walk the already-parsed `Root` and `ActionList` nodes with
-//! `actions_with_text()` and query this plan; it never needs to reparse source
-//! or retain a second hierarchy of elements here.
 
 use std::collections::BTreeMap;
 use std::ops::Range;
 
 use yag_template_syntax::SyntaxNode;
-use yag_template_syntax::ast::{Action, AstNode, Expr};
+use yag_template_syntax::ast::{Action, ActionList, AstNode, Expr};
 
 use crate::line_index::LineIndex;
 
@@ -23,12 +18,12 @@ pub(super) enum LayoutPolicy {
     Protected,
     /// The line has no direct action. Its literal content is preserved, while
     /// leading/trailing line whitespace may become structural indentation.
-    Verbatim,
+    Literal,
 }
 
 /// Sparse, source-wide layout ownership derived from the typed syntax tree.
 ///
-/// Missing entries are `Verbatim`; only lines containing a direct action are
+/// Missing entries are `Literal`; only lines containing a direct action are
 /// stored. This keeps nested blocks cheap while leaving lowering free to query
 /// a policy for any source line or action range.
 #[derive(Debug)]
@@ -40,7 +35,7 @@ pub(super) struct LinePlan {
 impl LinePlan {
     /// Return the resolved policy for one physical source line.
     pub(super) fn policy_for_line(&self, line: usize) -> LayoutPolicy {
-        self.policies.get(&line).copied().unwrap_or(LayoutPolicy::Verbatim)
+        self.policies.get(&line).copied().unwrap_or(LayoutPolicy::Literal)
     }
 
     /// Return the policy for the source line containing `offset`.
@@ -114,84 +109,66 @@ impl LineClassifier {
         }
     }
 
+    fn visit_body(&mut self, maybe_body: Option<ActionList>) {
+        if let Some(body) = maybe_body {
+            self.visit_sequence(body.syntax());
+        }
+    }
+
     fn visit_action(&mut self, action: Action) {
         match action {
             Action::TemplateDefinition(action) => {
-                self.mark_range(action.clause(), LayoutPolicy::Flexible);
-                if let Some(body) = action.template_body() {
-                    self.visit_sequence(body.syntax());
-                }
-                self.mark_range(action.end_clause(), LayoutPolicy::Flexible);
+                self.mark_flexible(action.clause());
+                self.visit_body(action.template_body());
+                self.mark_flexible(action.end_clause());
             }
             Action::TemplateBlock(action) => {
-                self.mark_range(action.clause(), LayoutPolicy::Flexible);
-                if let Some(body) = action.template_body() {
-                    self.visit_sequence(body.syntax());
-                }
-                self.mark_range(action.end_clause(), LayoutPolicy::Flexible);
+                self.mark_flexible(action.clause());
+                self.visit_body(action.template_body());
+                self.mark_flexible(action.end_clause());
             }
             Action::If(action) => {
-                self.mark_range(action.clause(), LayoutPolicy::Flexible);
-                if let Some(body) = action.body() {
-                    self.visit_sequence(body.syntax());
-                }
+                self.mark_flexible(action.clause());
+                self.visit_body(action.body());
                 for branch in action.else_branches() {
-                    self.mark_range(branch.clause(), LayoutPolicy::Flexible);
-                    if let Some(body) = branch.body() {
-                        self.visit_sequence(body.syntax());
-                    }
+                    self.mark_flexible(branch.clause());
+                    self.visit_body(branch.body());
                 }
-                self.mark_range(action.end_clause(), LayoutPolicy::Flexible);
+                self.mark_flexible(action.end_clause());
             }
             Action::With(action) => {
-                self.mark_range(action.clause(), LayoutPolicy::Flexible);
-                if let Some(body) = action.body() {
-                    self.visit_sequence(body.syntax());
-                }
+                self.mark_flexible(action.clause());
+                self.visit_body(action.body());
                 for branch in action.else_branches() {
-                    self.mark_range(branch.clause(), LayoutPolicy::Flexible);
-                    if let Some(body) = branch.body() {
-                        self.visit_sequence(body.syntax());
-                    }
+                    self.mark_flexible(branch.clause());
+                    self.visit_body(branch.body());
                 }
-                self.mark_range(action.end_clause(), LayoutPolicy::Flexible);
+                self.mark_flexible(action.end_clause());
             }
             Action::Range(action) => {
-                self.mark_range(action.clause(), LayoutPolicy::Flexible);
-                if let Some(body) = action.body() {
-                    self.visit_sequence(body.syntax());
-                }
+                self.mark_flexible(action.clause());
+                self.visit_body(action.body());
                 if let Some(branch) = action.else_branch() {
-                    self.mark_range(branch.clause(), LayoutPolicy::Flexible);
-                    if let Some(body) = branch.body() {
-                        self.visit_sequence(body.syntax());
-                    }
+                    self.mark_flexible(branch.clause());
+                    self.visit_body(branch.body());
                 }
-                self.mark_range(action.end_clause(), LayoutPolicy::Flexible);
+                self.mark_flexible(action.end_clause());
             }
             Action::While(action) => {
-                self.mark_range(action.clause(), LayoutPolicy::Flexible);
-                if let Some(body) = action.body() {
-                    self.visit_sequence(body.syntax());
-                }
+                self.mark_flexible(action.clause());
+                self.visit_body(action.body());
                 if let Some(branch) = action.else_branch() {
-                    self.mark_range(branch.clause(), LayoutPolicy::Flexible);
-                    if let Some(body) = branch.body() {
-                        self.visit_sequence(body.syntax());
-                    }
+                    self.mark_flexible(branch.clause());
+                    self.visit_body(branch.body());
                 }
-                self.mark_range(action.end_clause(), LayoutPolicy::Flexible);
+                self.mark_flexible(action.end_clause());
             }
             Action::TryCatch(action) => {
-                self.mark_range(action.try_clause(), LayoutPolicy::Flexible);
-                if let Some(body) = action.try_body() {
-                    self.visit_sequence(body.syntax());
-                }
-                self.mark_range(action.catch_clause(), LayoutPolicy::Flexible);
-                if let Some(body) = action.catch_body() {
-                    self.visit_sequence(body.syntax());
-                }
-                self.mark_range(action.end_clause(), LayoutPolicy::Flexible);
+                self.mark_flexible(action.try_clause());
+                self.visit_body(action.try_body());
+                self.mark_flexible(action.catch_clause());
+                self.visit_body(action.catch_body());
+                self.mark_flexible(action.end_clause());
             }
             Action::ExprAction(action) => {
                 let range = source_range(&action);
@@ -207,8 +184,12 @@ impl LineClassifier {
             | Action::TemplateInvocation(_)
             | Action::Return(_)
             | Action::Break(_)
-            | Action::Continue(_)) => self.mark_range(Some(action), LayoutPolicy::Flexible),
+            | Action::Continue(_)) => self.mark_flexible(Some(action)),
         }
+    }
+
+    fn mark_flexible(&mut self, node: Option<impl AstNode>) {
+        self.mark_range(node, LayoutPolicy::Flexible);
     }
 
     fn mark_range(&mut self, node: Option<impl AstNode>, policy: LayoutPolicy) {
@@ -279,7 +260,7 @@ mod tests {
     fn motivating_examples_resolve_to_the_expected_line_policies() {
         assert_eq!(policies("A {{$b}} C"), vec![LayoutPolicy::Protected]);
         assert_eq!(policies("{{$x := 1}} {{$y := 2}}"), vec![LayoutPolicy::Flexible]);
-        assert_eq!(policies("ordinary prose"), vec![LayoutPolicy::Verbatim]);
+        assert_eq!(policies("ordinary prose"), vec![LayoutPolicy::Literal]);
         assert_eq!(policies("A {{add 1 1}} C"), vec![LayoutPolicy::Flexible]);
     }
 
@@ -312,7 +293,7 @@ mod tests {
                 LayoutPolicy::Flexible,
                 LayoutPolicy::Flexible,
                 LayoutPolicy::Flexible,
-                LayoutPolicy::Verbatim,
+                LayoutPolicy::Literal,
             ]
         );
     }
@@ -324,7 +305,7 @@ mod tests {
             policies(source),
             vec![
                 LayoutPolicy::Flexible,
-                LayoutPolicy::Verbatim,
+                LayoutPolicy::Literal,
                 LayoutPolicy::Protected,
                 LayoutPolicy::Flexible,
                 LayoutPolicy::Flexible,
@@ -338,19 +319,19 @@ mod tests {
         for (source, expected) in [
             (
                 "{{define \"name\"}}\nbody\n{{end}}",
-                vec![LayoutPolicy::Flexible, LayoutPolicy::Verbatim, LayoutPolicy::Flexible],
+                vec![LayoutPolicy::Flexible, LayoutPolicy::Literal, LayoutPolicy::Flexible],
             ),
             (
                 "{{block \"name\" .}}\nbody\n{{end}}",
-                vec![LayoutPolicy::Flexible, LayoutPolicy::Verbatim, LayoutPolicy::Flexible],
+                vec![LayoutPolicy::Flexible, LayoutPolicy::Literal, LayoutPolicy::Flexible],
             ),
             (
                 "{{if .Foo}}\nbody\n{{else}}\nother\n{{end}}",
                 vec![
                     LayoutPolicy::Flexible,
-                    LayoutPolicy::Verbatim,
+                    LayoutPolicy::Literal,
                     LayoutPolicy::Flexible,
-                    LayoutPolicy::Verbatim,
+                    LayoutPolicy::Literal,
                     LayoutPolicy::Flexible,
                 ],
             ),
@@ -358,9 +339,9 @@ mod tests {
                 "{{with .Foo}}\nbody\n{{else}}\nother\n{{end}}",
                 vec![
                     LayoutPolicy::Flexible,
-                    LayoutPolicy::Verbatim,
+                    LayoutPolicy::Literal,
                     LayoutPolicy::Flexible,
-                    LayoutPolicy::Verbatim,
+                    LayoutPolicy::Literal,
                     LayoutPolicy::Flexible,
                 ],
             ),
@@ -368,9 +349,9 @@ mod tests {
                 "{{range .Foo}}\nbody\n{{else}}\nother\n{{end}}",
                 vec![
                     LayoutPolicy::Flexible,
-                    LayoutPolicy::Verbatim,
+                    LayoutPolicy::Literal,
                     LayoutPolicy::Flexible,
-                    LayoutPolicy::Verbatim,
+                    LayoutPolicy::Literal,
                     LayoutPolicy::Flexible,
                 ],
             ),
@@ -378,9 +359,9 @@ mod tests {
                 "{{while .Foo}}\nbody\n{{else}}\nother\n{{end}}",
                 vec![
                     LayoutPolicy::Flexible,
-                    LayoutPolicy::Verbatim,
+                    LayoutPolicy::Literal,
                     LayoutPolicy::Flexible,
-                    LayoutPolicy::Verbatim,
+                    LayoutPolicy::Literal,
                     LayoutPolicy::Flexible,
                 ],
             ),
@@ -388,9 +369,9 @@ mod tests {
                 "{{try}}\nbody\n{{catch}}\nother\n{{end}}",
                 vec![
                     LayoutPolicy::Flexible,
-                    LayoutPolicy::Verbatim,
+                    LayoutPolicy::Literal,
                     LayoutPolicy::Flexible,
-                    LayoutPolicy::Verbatim,
+                    LayoutPolicy::Literal,
                     LayoutPolicy::Flexible,
                 ],
             ),
@@ -408,7 +389,7 @@ mod tests {
     }
 
     #[test]
-    fn cross_line_actions_can_detect_a_protected_boundary_for_verbatim_fallback() {
+    fn cross_line_actions_can_detect_a_protected_boundary_for_original_source_fallback() {
         let source = "{{add\n  1\n}}{{.Value}}";
         assert!(plan(source).range_contains_protected_line(0.."{{add\n  1\n}}".len()));
     }

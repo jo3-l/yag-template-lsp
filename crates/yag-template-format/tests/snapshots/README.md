@@ -11,6 +11,10 @@ Supported front-matter fields are `max_width`, `indent`,
 Omitted fields use the formatter defaults. Function layouts are deliberately
 not configurable in fixtures.
 
-Run `YAG_UPDATE_SNAPSHOTS=1 cargo test -p yag-template-format --test
-format_snapshots` to create or update snapshots. Ordinary test runs never
-modify them.
+Run
+
+```
+YAG_UPDATE_SNAPSHOTS=1 cargo test -p yag-template-format --test format_snapshots
+```
+
+to create or update snapshots. Ordinary test runs never modify them.

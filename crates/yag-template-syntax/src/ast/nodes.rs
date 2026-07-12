@@ -630,3 +630,36 @@ impl Literal {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::{Action, AstNode, AstToken, Root};
+    use crate::{SyntaxNode, parser};
+
+    fn expr_action(source: &str) -> super::ExprAction {
+        let parsed = parser::parse(source);
+        assert!(parsed.errors.is_empty(), "source did not parse: {:?}", parsed.errors);
+        let root = Root::cast(SyntaxNode::new_root(parsed.root)).unwrap();
+        match root.actions().next().unwrap() {
+            Action::ExprAction(action) => action,
+            action => panic!("expected expression action, got {action:?}"),
+        }
+    }
+
+    #[test]
+    fn generated_delims_return_left_then_right_for_ordinary_and_trimmed_actions() {
+        let ordinary = expr_action("{{ .Value }}");
+        let (left, right) = ordinary.delims().unwrap();
+        assert_eq!(left.syntax().text(), "{{");
+        assert_eq!(right.syntax().text(), "}}");
+        assert!(!left.has_trim_marker());
+        assert!(!right.has_trim_marker());
+
+        let trimmed = expr_action("{{- .Value -}}");
+        let (left, right) = trimmed.delims().unwrap();
+        assert_eq!(left.syntax().text(), "{{- ");
+        assert_eq!(right.syntax().text(), " -}}");
+        assert!(left.has_trim_marker());
+        assert!(right.has_trim_marker());
+    }
+}

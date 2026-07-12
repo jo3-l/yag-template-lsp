@@ -1,21 +1,17 @@
-//! AST-to-document lowering for the formatter's conservative early stages.
+//! AST-to-document lowering and source-layout ownership.
 //!
-//! Ordinary delimiter padding and parsed block indentation are intentionally
-//! separate from the later expression-layout stage. Trim, comments, and
-//! multi-line actions consequently remain source-verbatim here.
+//! `Formatter` owns the formatting inputs and diagnostics, but never stores
+//! partially built documents. Typed rules return complete fragments, allowing
+//! a failed rule to discard its work and preserve the original action source.
 
-use std::cell::RefCell;
 use std::ops::Range;
 
-use yag_template_syntax::ast::{
-    Action, ActionList, ActionOrText, AstNode, AstToken, CommentAction, Expr, ExprAction, Root, TemplateBlock,
-    TemplateDefinition, TryCatchAction,
-};
-use yag_template_syntax::{SyntaxKind, SyntaxNode};
+use yag_template_syntax::SyntaxNode;
+use yag_template_syntax::ast::{ActionList, ActionOrText, AstNode, AstToken, LeftDelim, RightDelim, Root};
 
-use crate::doc::Doc;
-use crate::region::{LayoutPolicy, LinePlan};
-use crate::{DanglingValuePolicy, DelimiterPadding, FormatDiagnostic, FormatDiagnosticKind, FormatOptions, LayoutKind};
+use crate::classification::{LayoutPolicy, LinePlan};
+use crate::doc::{Doc, concat, group, line, nest, text};
+use crate::{DelimiterPadding, FormatDiagnostic, FormatOptions, LayoutKind};
 
 pub(super) fn lower(
     root: &SyntaxNode,
@@ -24,48 +20,132 @@ pub(super) fn lower(
     plan: &LinePlan,
 ) -> (Doc, Vec<FormatDiagnostic>) {
     let Some(root) = Root::cast(root.clone()) else {
-        return (Doc::verbatim(source), Vec::new());
+        return (text(source), Vec::new());
     };
-    let lowerer = Lowerer {
-        source,
-        options,
-        plan,
-        diagnostics: RefCell::new(Vec::new()),
-    };
-    let doc = lowerer.root(root);
-    (doc, lowerer.diagnostics.into_inner())
+    let mut formatter = Formatter::new(source, options, plan);
+    let doc = formatter.sequence(root.actions_with_text(), None);
+    (doc, formatter.diagnostics)
 }
 
-struct Lowerer<'a> {
+/// Stateful services shared by typed rules.
+///
+/// The formatter owns source/configuration access and diagnostics only.
+/// Document fragments remain return values, so no failed rule can leak partial
+/// output into its caller.
+pub(crate) struct Formatter<'a> {
     source: &'a str,
     options: &'a FormatOptions,
     plan: &'a LinePlan,
-    diagnostics: RefCell<Vec<FormatDiagnostic>>,
+    diagnostics: Vec<FormatDiagnostic>,
 }
 
-impl Lowerer<'_> {
-    fn root(&self, root: Root) -> Doc {
-        self.sequence(root.actions_with_text(), None)
+impl<'a> Formatter<'a> {
+    fn new(source: &'a str, options: &'a FormatOptions, plan: &'a LinePlan) -> Self {
+        Self {
+            source,
+            options,
+            plan,
+            diagnostics: Vec::new(),
+        }
     }
 
-    fn action_list(&self, action_list: ActionList, normalize_margins: bool) -> Doc {
-        let range = source_range(&action_list);
-        self.sequence(action_list.actions_with_text(), normalize_margins.then_some(range.end))
+    pub(crate) fn report(&mut self, diagnostic: FormatDiagnostic) {
+        self.diagnostics.push(diagnostic);
     }
 
-    fn sequence(&self, elements: impl Iterator<Item = ActionOrText>, sequence_end: Option<usize>) -> Doc {
+    pub(crate) fn function_layout(&self, name: &str) -> Option<LayoutKind> {
+        self.options.function_layouts.by_name.get(name).copied()
+    }
+
+    pub(crate) fn continuation(&self, doc: Doc) -> Doc {
+        nest(self.options.continuation_indent, doc)
+    }
+
+    /// Wrap an explicit pair of typed action delimiters around `body`.
+    pub(crate) fn delimited(&self, (left, right): (LeftDelim, RightDelim), body: Doc) -> Option<Doc> {
+        let left_range = left.text_range();
+        let right_range = right.text_range();
+        let range = byte_offset(left_range.start())..byte_offset(right_range.end());
+        let left_end = byte_offset(left_range.end());
+        let right_start = byte_offset(right_range.start());
+        let original = &self.source[range.clone()];
+        if self.plan.range_contains_protected_line(range.clone()) && original.contains('\n') {
+            return Some(text(original));
+        }
+
+        // Preserve a multi-line action's interior layout, but still normalize
+        // horizontal padding immediately inside ordinary delimiters. This
+        // keeps a source-preserved body from opting out of delimiter options.
+        if original.contains('\n') {
+            let body = format_multiline_delimited_body(
+                &self.source[left_end..right_start],
+                left.has_trim_marker(),
+                right.has_trim_marker(),
+                self.options.delimiter_padding,
+            );
+            let mut action = String::with_capacity(original.len());
+            action.push_str(&self.source[range.start..left_end]);
+            action.push_str(&body);
+            action.push_str(&self.source[right_start..range.end]);
+            return Some(text(action));
+        }
+
+        let padding = match self.options.delimiter_padding {
+            DelimiterPadding::None => "",
+            DelimiterPadding::Spaces => " ",
+        };
+        let left_padding = if left.has_trim_marker() { "" } else { padding };
+        let right_padding = if right.has_trim_marker() { "" } else { padding };
+        let doc = concat([
+            text(&self.source[range.start..left_end]),
+            // A trim marker's token includes its grammar-required space, so
+            // delimiter padding applies only to its ordinary counterpart.
+            text(left_padding),
+            body,
+            text(right_padding),
+            text(&self.source[right_start..range.end]),
+        ]);
+        if self.policy_at_offset(range.start) == LayoutPolicy::Protected {
+            doc.flatten()
+        } else {
+            Some(group(doc))
+        }
+    }
+
+    /// Format a typed compound body. A final source newline belongs to the
+    /// surrounding block boundary, so it aligns the following `else`, `catch`,
+    /// or `end` with the header.
+    pub(crate) fn body(&mut self, body: ActionList) -> Doc {
+        let range = source_range(&body);
+        let sequence_end = range.end;
+        let has_terminal_newline = ends_with_line_break_after_margin(&self.source[range]);
+        let content = nest(
+            self.options.indent,
+            self.sequence(body.actions_with_text(), Some(sequence_end)),
+        );
+        if has_terminal_newline {
+            concat([content, line()])
+        } else {
+            content
+        }
+    }
+
+    /// Format a direct root/body sequence. It owns structural action separation
+    /// and literal-text physical margins, which are source relationships rather
+    /// than properties of a single syntax node.
+    fn sequence(&mut self, elements: impl Iterator<Item = ActionOrText>, sequence_end: Option<usize>) -> Doc {
         let elements = elements.collect::<Vec<_>>();
-        let mut parts = Vec::new();
+        let mut documents = Vec::new();
         for (index, element) in elements.iter().cloned().enumerate() {
             match element {
                 ActionOrText::Action(action) => {
                     if index > 0
                         && matches!(elements[index - 1], ActionOrText::Action(_))
-                        && self.plan.policy_at_offset(source_range(&action).start) == LayoutPolicy::Flexible
+                        && self.policy_at_offset(source_range(&action).start) == LayoutPolicy::Flexible
                     {
-                        parts.push(Doc::Line);
+                        documents.push(line());
                     }
-                    parts.push(self.action(action));
+                    documents.push(self.action(action));
                 }
                 ActionOrText::Text(text) => {
                     let separates_flexible_actions = !text.get().contains('\n')
@@ -74,197 +154,37 @@ impl Lowerer<'_> {
                         && index + 1 < elements.len()
                         && matches!(elements[index - 1], ActionOrText::Action(_))
                         && matches!(elements[index + 1], ActionOrText::Action(_))
-                        && self.plan.policy_at_offset(byte_offset(text.text_range().start())) == LayoutPolicy::Flexible;
+                        && self.policy_at_offset(byte_offset(text.text_range().start())) == LayoutPolicy::Flexible;
                     if separates_flexible_actions {
-                        parts.push(Doc::Line);
+                        documents.push(line());
                     } else {
-                        parts.push(self.text(text, sequence_end));
+                        documents.push(self.literal_text(text, sequence_end));
                     }
                 }
             }
         }
-        Doc::concat(parts)
-    }
-
-    fn action(&self, action: Action) -> Doc {
-        match action {
-            Action::TemplateDefinition(action) => self.template_definition(action),
-            Action::TemplateBlock(action) => self.template_block(action),
-            Action::If(action) => self.if_action(action),
-            Action::With(action) => self.with_action(action),
-            Action::Range(action) => self.range_action(action),
-            Action::While(action) => self.while_action(action),
-            Action::TryCatch(action) => self.try_catch_action(action),
-            Action::Comment(action) => self.comment(action),
-            Action::TemplateInvocation(action) => self.delimited_expr(action.clone(), action.context_data()),
-            Action::Return(action) => self.delimited_expr(action.clone(), action.expr()),
-            Action::ExprAction(action) => self.expr_action(action),
-            action @ (Action::Break(_) | Action::Continue(_)) => self.delimited(action),
-        }
-    }
-
-    fn expr_action(&self, action: ExprAction) -> Doc {
-        self.delimited_expr(action.clone(), action.expr())
-    }
-
-    fn comment(&self, action: CommentAction) -> Doc {
-        // Go template comments require the comment marker to remain adjacent
-        // to the opening delimiter. Keep comments exact under both padding
-        // modes rather than accidentally producing a non-portable spelling.
-        self.verbatim(&action)
-    }
-
-    fn template_definition(&self, action: TemplateDefinition) -> Doc {
-        self.compound(
-            &action,
-            [
-                action.clause().map(|clause| self.delimited(clause)),
-                action.template_body().map(|body| self.body(body)),
-                action.end_clause().map(|clause| self.delimited(clause)),
-            ],
-        )
-    }
-
-    fn template_block(&self, action: TemplateBlock) -> Doc {
-        self.compound(
-            &action,
-            [
-                action
-                    .clause()
-                    .map(|clause| self.delimited_expr(clause.clone(), clause.context_data())),
-                action.template_body().map(|body| self.body(body)),
-                action.end_clause().map(|clause| self.delimited(clause)),
-            ],
-        )
-    }
-
-    fn if_action(&self, action: yag_template_syntax::ast::IfAction) -> Doc {
-        let mut parts = vec![
-            action
-                .clause()
-                .map(|clause| self.delimited_expr(clause.clone(), clause.condition())),
-            action.body().map(|body| self.body(body)),
-        ];
-        for branch in action.else_branches() {
-            parts.push(
-                branch
-                    .clause()
-                    .map(|clause| self.delimited_expr(clause.clone(), clause.condition())),
-            );
-            parts.push(branch.body().map(|body| self.body(body)));
-        }
-        parts.push(action.end_clause().map(|clause| self.delimited(clause)));
-        self.compound(&action, parts)
-    }
-
-    fn with_action(&self, action: yag_template_syntax::ast::WithAction) -> Doc {
-        let mut parts = vec![
-            action
-                .clause()
-                .map(|clause| self.delimited_expr(clause.clone(), clause.condition())),
-            action.body().map(|body| self.body(body)),
-        ];
-        for branch in action.else_branches() {
-            parts.push(
-                branch
-                    .clause()
-                    .map(|clause| self.delimited_expr(clause.clone(), clause.condition())),
-            );
-            parts.push(branch.body().map(|body| self.body(body)));
-        }
-        parts.push(action.end_clause().map(|clause| self.delimited(clause)));
-        self.compound(&action, parts)
-    }
-
-    fn range_action(&self, action: yag_template_syntax::ast::RangeLoop) -> Doc {
-        self.compound(
-            &action,
-            [
-                action
-                    .clause()
-                    .map(|clause| self.delimited_expr(clause.clone(), clause.expr())),
-                action.body().map(|body| self.body(body)),
-                action.else_branch().and_then(|branch| {
-                    branch
-                        .clause()
-                        .map(|clause| self.delimited_expr(clause.clone(), clause.condition()))
-                }),
-                action
-                    .else_branch()
-                    .and_then(|branch| branch.body().map(|body| self.body(body))),
-                action.end_clause().map(|clause| self.delimited(clause)),
-            ],
-        )
-    }
-
-    fn while_action(&self, action: yag_template_syntax::ast::WhileLoop) -> Doc {
-        self.compound(
-            &action,
-            [
-                action
-                    .clause()
-                    .map(|clause| self.delimited_expr(clause.clone(), clause.condition())),
-                action.body().map(|body| self.body(body)),
-                action.else_branch().and_then(|branch| {
-                    branch
-                        .clause()
-                        .map(|clause| self.delimited_expr(clause.clone(), clause.condition()))
-                }),
-                action
-                    .else_branch()
-                    .and_then(|branch| branch.body().map(|body| self.body(body))),
-                action.end_clause().map(|clause| self.delimited(clause)),
-            ],
-        )
-    }
-
-    fn try_catch_action(&self, action: TryCatchAction) -> Doc {
-        self.compound(
-            &action,
-            [
-                action.try_clause().map(|clause| self.delimited(clause)),
-                action.try_body().map(|body| self.body(body)),
-                action.catch_clause().map(|clause| self.delimited(clause)),
-                action.catch_body().map(|body| self.body(body)),
-                action.end_clause().map(|clause| self.delimited(clause)),
-            ],
-        )
-    }
-
-    /// Lower a typed compound body. A final source newline belongs to the
-    /// surrounding block boundary, so it is emitted after the nested body and
-    /// aligns the following `else`, `catch`, or `end` with the header.
-    fn body(&self, body: ActionList) -> Doc {
-        let range = source_range(&body);
-        let has_terminal_newline = ends_with_line_break_after_margin(&self.source[range]);
-        let content = self.action_list(body, true);
-        let content = Doc::nest(self.options.indent, content);
-        if has_terminal_newline {
-            Doc::concat([content, Doc::Line])
-        } else {
-            content
-        }
+        concat(documents)
     }
 
     /// Preserve literal content while letting block layout own physical-line
     /// margins. This never strips whitespace at an action/text boundary on a
     /// shared source line; it only removes whitespace before a source newline
     /// or after one.
-    fn text(&self, text: yag_template_syntax::ast::Text, sequence_end: Option<usize>) -> Doc {
-        let range = text.text_range();
+    fn literal_text(&self, literal: yag_template_syntax::ast::Text, sequence_end: Option<usize>) -> Doc {
+        let range = literal.text_range();
         let start = byte_offset(range.start());
         let end = byte_offset(range.end());
         let Some(sequence_end) = sequence_end else {
-            return Doc::verbatim(text.get());
+            return text(literal.get());
         };
 
+        let mut documents = Vec::new();
         let mut at_line_start = start == 0 || self.source.as_bytes()[start - 1] == b'\n';
-        let mut parts = Vec::new();
         let mut consumed = 0;
         let terminal_newline_end = (end == sequence_end)
-            .then(|| final_line_break_end(text.get()))
+            .then(|| final_line_break_end(literal.get()))
             .flatten();
-        for segment in text.get().split_inclusive('\n') {
+        for segment in literal.get().split_inclusive('\n') {
             consumed += segment.len();
             let has_newline = segment.ends_with('\n');
             let mut content = segment.strip_suffix('\n').unwrap_or(segment);
@@ -275,253 +195,61 @@ impl Lowerer<'_> {
                 content = content.trim_end_matches(char::is_whitespace);
             }
             if !content.is_empty() {
-                parts.push(Doc::verbatim(content));
+                documents.push(text(content));
             }
             if has_newline {
                 let terminal_newline = terminal_newline_end == Some(consumed);
                 if !terminal_newline {
-                    parts.push(Doc::Line);
+                    documents.push(line());
                 }
                 at_line_start = true;
             } else {
                 at_line_start = false;
             }
         }
-        Doc::concat(parts)
+        concat(documents)
     }
 
-    fn compound<N: AstNode>(&self, action: &N, parts: impl IntoIterator<Item = Option<Doc>>) -> Doc {
-        let parts = parts.into_iter().collect::<Option<Vec<_>>>();
-        parts.map_or_else(|| self.verbatim(action), Doc::concat)
+    fn policy_at_offset(&self, offset: usize) -> LayoutPolicy {
+        self.plan.policy_at_offset(offset)
     }
+}
 
-    fn delimited<N: AstNode>(&self, node: N) -> Doc {
-        let range = source_range(&node);
-        let Some((left_end, right_start)) = self.delimiter_body_range(&node) else {
-            return self.verbatim(&node);
-        };
-        self.delimited_body(
-            node,
-            range,
-            left_end,
-            right_start,
-            Doc::verbatim(self.source[left_end..right_start].trim()),
-        )
+/// Normalize only same-line whitespace adjacent to the delimiters of a
+/// source-preserved multi-line action. Newline-led and newline-terminated
+/// bodies retain their existing vertical layout.
+fn format_multiline_delimited_body(
+    body: &str,
+    left_has_trim_marker: bool,
+    right_has_trim_marker: bool,
+    delimiter_padding: DelimiterPadding,
+) -> String {
+    let body = body.trim_start_matches(is_horizontal_whitespace);
+    let starts_on_same_line = !starts_with_line_break(body);
+    let body = body.trim_end_matches(is_horizontal_whitespace);
+    let ends_on_same_line = !body.ends_with('\n');
+    let padding = match delimiter_padding {
+        DelimiterPadding::None => "",
+        DelimiterPadding::Spaces => " ",
+    };
+
+    let mut formatted = String::with_capacity(body.len() + 2);
+    if starts_on_same_line && !left_has_trim_marker {
+        formatted.push_str(padding);
     }
-
-    fn delimited_expr<N: AstNode>(&self, node: N, expr: Option<Expr>) -> Doc {
-        let Some(expr) = expr else {
-            return self.delimited(node);
-        };
-        let range = source_range(&node);
-        let Some((left_end, right_start)) = self.delimiter_body_range(&node) else {
-            return self.verbatim(&node);
-        };
-        let expr_range = source_range(&expr);
-        let prefix = self.source[left_end..expr_range.start].trim();
-        let suffix = self.source[expr_range.end..right_start].trim();
-        let expression = self.expr(expr);
-        let mut tail = vec![Doc::SoftLine, expression];
-        if !suffix.is_empty() {
-            tail.extend([Doc::SoftLine, Doc::text(suffix)]);
-        }
-        let body = if prefix.is_empty() {
-            tail.remove(0);
-            Doc::group(Doc::concat(tail))
-        } else {
-            Doc::group(Doc::concat([
-                Doc::text(prefix),
-                Doc::nest(self.options.continuation_indent, Doc::concat(tail)),
-            ]))
-        };
-        self.delimited_body(node, range, left_end, right_start, body)
+    formatted.push_str(body);
+    if ends_on_same_line && !right_has_trim_marker {
+        formatted.push_str(padding);
     }
+    formatted
+}
 
-    fn delimiter_body_range<N: AstNode>(&self, node: &N) -> Option<(usize, usize)> {
-        let left = node.syntax().first_token()?;
-        let right = node.syntax().last_token()?;
-        if !matches!(left.kind(), SyntaxKind::LeftDelim | SyntaxKind::TrimmedLeftDelim)
-            || !matches!(right.kind(), SyntaxKind::RightDelim | SyntaxKind::TrimmedRightDelim)
-        {
-            return None;
-        }
-        Some((
-            byte_offset(left.text_range().end()),
-            byte_offset(right.text_range().start()),
-        ))
-    }
+fn is_horizontal_whitespace(character: char) -> bool {
+    matches!(character, ' ' | '\t')
+}
 
-    fn delimited_body<N: AstNode>(
-        &self,
-        node: N,
-        range: Range<usize>,
-        left_end: usize,
-        right_start: usize,
-        body: Doc,
-    ) -> Doc {
-        let source = &self.source[range.clone()];
-        let left = &self.source[range.start..left_end];
-        let right = &self.source[right_start..range.end];
-        if self.plan.range_contains_protected_line(range.clone()) && source.contains('\n') {
-            return Doc::verbatim(source);
-        }
-
-        // Preserve trim spellings exactly. In particular, `{{- .Value -}}`
-        // has whitespace required by the trim-marker grammar.
-        if left.contains('-') || right.contains('-') || source.contains('\n') {
-            return Doc::verbatim(source);
-        }
-        let padding = match self.options.delimiter_padding {
-            DelimiterPadding::None => "",
-            DelimiterPadding::Spaces => " ",
-        };
-        let doc = Doc::concat([
-            Doc::text(left),
-            Doc::text(padding),
-            body,
-            Doc::text(padding),
-            Doc::text(right),
-        ]);
-        if self.plan.policy_at_offset(range.start) == LayoutPolicy::Protected {
-            doc.flatten().unwrap_or_else(|| self.verbatim(&node))
-        } else {
-            Doc::group(doc)
-        }
-    }
-
-    fn expr(&self, expr: Expr) -> Doc {
-        match expr {
-            Expr::FuncCall(call) => call.func_name().map_or_else(
-                || self.verbatim(&call),
-                |name| self.function_call(name.get(), call.args().map(|arg| self.expr(arg))),
-            ),
-            Expr::ExprCall(call) => call.callee().map_or_else(
-                || self.verbatim(&call),
-                |callee| self.call(self.expr(callee), call.args().map(|arg| self.expr(arg))),
-            ),
-            Expr::Parenthesized(parenthesized) => parenthesized.inner_expr().map_or_else(
-                || self.verbatim(&parenthesized),
-                |inner| Doc::concat([Doc::text("("), self.expr(inner), Doc::text(")")]),
-            ),
-            Expr::Pipeline(pipeline) => pipeline.init_expr().map_or_else(
-                || self.verbatim(&pipeline),
-                |init| {
-                    let mut parts = vec![self.expr(init)];
-                    for stage in pipeline.stages() {
-                        let Some(call) = stage.call_expr() else {
-                            return self.verbatim(&pipeline);
-                        };
-                        parts.extend([Doc::SoftLine, Doc::text("| "), self.expr(call)]);
-                    }
-                    Doc::group(Doc::concat([
-                        parts.remove(0),
-                        Doc::nest(self.options.continuation_indent, Doc::concat(parts)),
-                    ]))
-                },
-            ),
-            Expr::ContextAccess(access) => self.verbatim(&access),
-            Expr::ContextFieldChain(chain) => Doc::text(
-                chain
-                    .fields()
-                    .map(|field| field.syntax().text().to_owned())
-                    .collect::<String>(),
-            ),
-            Expr::ExprFieldChain(chain) => chain.base_expr().map_or_else(
-                || self.verbatim(&chain),
-                |base| {
-                    Doc::concat([
-                        self.expr(base),
-                        Doc::text(
-                            chain
-                                .fields()
-                                .map(|field| field.syntax().text().to_owned())
-                                .collect::<String>(),
-                        ),
-                    ])
-                },
-            ),
-            Expr::VarAccess(access) => access
-                .var()
-                .map_or_else(|| self.verbatim(&access), |var| Doc::text(var.name())),
-            Expr::VarDecl(decl) => self.assignment(
-                &decl,
-                ":=",
-                decl.var().map(|var| var.name().to_owned()),
-                decl.initializer(),
-            ),
-            Expr::VarAssign(assign) => self.assignment(
-                &assign,
-                "=",
-                assign.var().map(|var| var.name().to_owned()),
-                assign.assign_expr(),
-            ),
-            Expr::Literal(literal) => self.verbatim(&literal),
-        }
-    }
-
-    fn function_call(&self, name: &str, args: impl Iterator<Item = Doc>) -> Doc {
-        let args = args.collect::<Vec<_>>();
-        match self.options.function_layouts.by_name.get(name) {
-            Some(LayoutKind::KeyValuePairs { dangling_value }) if args.len() % 2 == 0 => {
-                self.key_value_call(Doc::text(name), args)
-            }
-            Some(LayoutKind::KeyValuePairs { dangling_value }) => {
-                self.diagnostics.borrow_mut().push(FormatDiagnostic {
-                    kind: FormatDiagnosticKind::OddKeyValueArgumentCount,
-                    message: format!("key-value function `{name}` received an odd number of arguments"),
-                });
-                match dangling_value {
-                    DanglingValuePolicy::PreserveCallLayout | DanglingValuePolicy::Error => {
-                        self.call(Doc::text(name), args)
-                    }
-                }
-            }
-            Some(LayoutKind::Call) | None => self.call(Doc::text(name), args),
-        }
-    }
-
-    fn call(&self, callee: Doc, args: impl IntoIterator<Item = Doc>) -> Doc {
-        let args = args.into_iter().collect::<Vec<_>>();
-        if args.is_empty() {
-            return callee;
-        }
-        Doc::group(Doc::concat([
-            callee,
-            Doc::nest(
-                self.options.continuation_indent,
-                Doc::concat(args.into_iter().flat_map(|arg| [Doc::SoftLine, arg])),
-            ),
-        ]))
-    }
-
-    fn key_value_call(&self, callee: Doc, args: Vec<Doc>) -> Doc {
-        let rows = args
-            .chunks_exact(2)
-            .flat_map(|pair| [Doc::SoftLine, pair[0].clone(), Doc::text(" "), pair[1].clone()]);
-        Doc::group(Doc::concat([
-            callee,
-            Doc::nest(self.options.continuation_indent, Doc::concat(rows)),
-        ]))
-    }
-
-    fn assignment<N: AstNode>(&self, node: &N, operator: &str, variable: Option<String>, value: Option<Expr>) -> Doc {
-        match (variable, value) {
-            (Some(variable), Some(value)) => Doc::group(Doc::concat([
-                Doc::text(variable),
-                Doc::text(" "),
-                Doc::text(operator),
-                Doc::nest(
-                    self.options.continuation_indent,
-                    Doc::concat([Doc::SoftLine, self.expr(value)]),
-                ),
-            ])),
-            _ => self.verbatim(node),
-        }
-    }
-
-    fn verbatim<N: AstNode>(&self, node: &N) -> Doc {
-        Doc::verbatim(&self.source[source_range(node)])
-    }
+fn starts_with_line_break(text: &str) -> bool {
+    text.starts_with('\n') || text.starts_with("\r\n")
 }
 
 fn source_range(node: &impl AstNode) -> Range<usize> {
@@ -542,4 +270,55 @@ fn ends_with_line_break_after_margin(text: &str) -> bool {
 fn final_line_break_end(text: &str) -> Option<usize> {
     let without_margin = text.trim_end_matches(|character: char| character != '\n' && character.is_whitespace());
     without_margin.ends_with('\n').then_some(without_margin.len())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::doc;
+
+    fn lower_text(source: &str) -> String {
+        let parsed = yag_template_syntax::parser::parse(source);
+        let root = SyntaxNode::new_root(parsed.root);
+        let plan = crate::classification::classify(&root, source);
+        let (doc, _) = lower(&root, source, &FormatOptions::default(), &plan);
+        doc::render(doc, FormatOptions::default().max_width)
+    }
+
+    #[test]
+    fn while_rules_write_header_body_else_and_end_in_order() {
+        assert_eq!(
+            lower_text("{{ while .Ready }}\nbody\n{{ else }}\nfallback\n{{ end }}"),
+            "{{while .Ready}}\n\tbody\n{{else}}\n\tfallback\n{{end}}"
+        );
+        assert_eq!(
+            lower_text("{{ while .Ready }}\nbody\n{{ end }}"),
+            "{{while .Ready}}\n\tbody\n{{end}}"
+        );
+    }
+
+    #[test]
+    fn if_range_and_try_rules_write_typed_clauses_in_order() {
+        assert_eq!(
+            lower_text("{{ if .First }}\none\n{{ else if .Second }}\ntwo\n{{ else }}\nother\n{{ end }}",),
+            "{{if .First}}\n\tone\n{{else if .Second}}\n\ttwo\n{{else}}\n\tother\n{{end}}"
+        );
+        assert_eq!(
+            lower_text("{{ range $key, $value := .Items }}\nitem\n{{ else }}\nempty\n{{ end }}"),
+            "{{range $key, $value := .Items}}\n\titem\n{{else}}\n\tempty\n{{end}}"
+        );
+        assert_eq!(
+            lower_text("{{ try }}\nwork\n{{ catch }}\nrecover\n{{ end }}"),
+            "{{try}}\n\twork\n{{catch}}\n\trecover\n{{end}}"
+        );
+    }
+
+    #[test]
+    fn failed_rule_emits_only_the_original_action() {
+        // The parser recovers a `WhileLoop` with no condition. Calling the
+        // lowerer directly exercises the rule fallback path that `format()`
+        // normally avoids by returning parse-invalid input unchanged.
+        let source = "before {{while }}partial body{{end}} after";
+        assert_eq!(lower_text(source), source);
+    }
 }
