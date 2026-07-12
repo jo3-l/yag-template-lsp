@@ -3,7 +3,7 @@ use std::io::{self, Read, Write};
 use std::path::PathBuf;
 
 use clap::{Parser, ValueEnum};
-use yag_template_format::{DelimiterPadding, FormatDiagnosticKind, FormatOptions, Indent, LayoutKind};
+use yag_template_format::{DelimiterPadding, FormatDiagnosticKind, FormatOptions, Indent};
 
 #[derive(Debug, Parser)]
 #[command(name = "yagfmt", about = "Format YAG templates")]
@@ -14,9 +14,6 @@ struct Args {
     /// Rewrite explicitly named, valid files in place.
     #[arg(long, conflicts_with = "check")]
     write: bool,
-    /// Associate stdin with a path for editor integrations. Stdin is never written.
-    #[arg(long, value_name = "PATH")]
-    stdin_filepath: Option<PathBuf>,
     /// Maximum line width. Defaults to the formatter's configured default.
     #[arg(long)]
     width: Option<usize>,
@@ -29,9 +26,6 @@ struct Args {
     /// Padding inside ordinary action delimiters. Defaults to the formatter's configured default.
     #[arg(long, value_enum)]
     delimiter_padding: Option<PaddingArg>,
-    /// Add a function name that uses the key/value-pair layout.
-    #[arg(long = "key-value-function", value_name = "NAME")]
-    key_value_functions: Vec<String>,
     #[arg(value_name = "FILE")]
     files: Vec<PathBuf>,
 }
@@ -68,10 +62,6 @@ fn main() {
 }
 
 fn run(args: Args) -> i32 {
-    if args.stdin_filepath.is_some() && !args.files.is_empty() {
-        eprintln!("--stdin-filepath cannot be combined with file arguments");
-        return 2;
-    }
     if args.write && args.files.is_empty() {
         eprintln!("--write requires one or more explicit file paths; stdin is never written");
         return 2;
@@ -92,10 +82,6 @@ fn run(args: Args) -> i32 {
     if let Some(delimiter_padding) = args.delimiter_padding {
         options.delimiter_padding = delimiter_padding.into();
     }
-    for name in args.key_value_functions {
-        options.function_layouts.by_name.insert(name, LayoutKind::KeyValuePairs);
-    }
-
     if args.files.is_empty() {
         let mut source = String::new();
         if let Err(error) = io::stdin().read_to_string(&mut source) {
