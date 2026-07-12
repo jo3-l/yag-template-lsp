@@ -5,7 +5,7 @@ use yag_template_syntax::ast::{ActionList, ActionOrText, AstNode, AstToken, Left
 
 use crate::iterutil::iter_with_neighbors;
 use crate::line_protection::{LineProtection, ReflowPolicy};
-use crate::pretty::{Doc, concat, empty, group, group_with_tail, if_break, line, nest, soft_line, text};
+use crate::pretty::{AllowCompact, Doc, concat, empty, group, group_with_tail, if_break, line, nest, soft_line, text};
 use crate::{FormatOptions, LayoutKind};
 
 /// Lower a successfully parsed root into a renderable document.
@@ -25,19 +25,6 @@ pub(crate) struct Formatter<'a> {
     source: &'a str,
     options: &'a FormatOptions,
     protection: &'a LineProtection,
-}
-
-/// Whether a source sequence may render in the formatter's compact layout.
-#[derive(Debug, Clone, Copy, Eq, PartialEq)]
-pub(crate) enum AllowCompact {
-    Yes,
-    No,
-}
-
-impl AllowCompact {
-    pub(crate) fn is_allowed(self) -> bool {
-        matches!(self, Self::Yes)
-    }
 }
 
 /// How a sequence lowers its literal text tokens.
@@ -162,7 +149,7 @@ impl<'a> Formatter<'a> {
         allow_compact: AllowCompact,
         elements: &'b [ActionOrText],
     ) -> (bool, &'b [ActionOrText], bool) {
-        if !allow_compact.is_allowed() {
+        if matches!(allow_compact, AllowCompact::No) {
             return (false, elements, false);
         }
 
@@ -203,10 +190,9 @@ impl<'a> Formatter<'a> {
         context: SequenceContext,
         allow_compact: AllowCompact,
     ) -> LoweredSequence {
-        let action_separator = if allow_compact.is_allowed() {
-            soft_line()
-        } else {
-            line()
+        let action_separator = match allow_compact {
+            AllowCompact::Yes => soft_line(),
+            AllowCompact::No => line(),
         };
 
         let mut parts: Vec<Doc> = Vec::new();

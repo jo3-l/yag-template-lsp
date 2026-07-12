@@ -6,8 +6,8 @@ use yag_template_syntax::ast::{
 };
 
 use crate::LayoutKind;
-use crate::lower::{AllowCompact, Formatter};
-use crate::pretty::{Doc, concat, empty, join, soft_line, text, try_concat};
+use crate::lower::Formatter;
+use crate::pretty::{AllowCompact, Doc, concat, empty, join, soft_line, text, try_concat};
 
 impl Formatter<'_> {
     /// Format an action atomically. A rule that cannot construct a complete
@@ -72,7 +72,7 @@ impl Formatter<'_> {
                 self.body(action.template_body()?, allow_compact),
                 self.end_clause(&action.end_clause()?)?,
             ])
-            .group_if(allow_compact.is_allowed()),
+            .group_if(allow_compact),
         )
     }
 
@@ -90,7 +90,7 @@ impl Formatter<'_> {
                 self.body(action.template_body()?, allow_compact),
                 self.end_clause(&action.end_clause()?)?,
             ])
-            .group_if(allow_compact.is_allowed()),
+            .group_if(allow_compact),
         )
     }
 
@@ -104,7 +104,7 @@ impl Formatter<'_> {
                 self.else_branches(action.else_branches(), allow_compact)?,
                 self.end_clause(&action.end_clause()?)?,
             ])
-            .group_if(allow_compact.is_allowed()),
+            .group_if(allow_compact),
         )
     }
 
@@ -118,7 +118,7 @@ impl Formatter<'_> {
                 self.else_branches(action.else_branches(), allow_compact)?,
                 self.end_clause(&action.end_clause()?)?,
             ])
-            .group_if(allow_compact.is_allowed()),
+            .group_if(allow_compact),
         )
     }
 
@@ -161,7 +161,7 @@ impl Formatter<'_> {
                 else_branch,
                 self.end_clause(&action.end_clause()?)?,
             ])
-            .group_if(allow_compact.is_allowed()),
+            .group_if(allow_compact),
         )
     }
 
@@ -203,7 +203,7 @@ impl Formatter<'_> {
                 else_branch,
                 self.end_clause(&action.end_clause()?)?,
             ])
-            .group_if(allow_compact.is_allowed()),
+            .group_if(allow_compact),
         )
     }
 
@@ -217,7 +217,7 @@ impl Formatter<'_> {
                 self.body(action.catch_body()?, allow_compact),
                 self.end_clause(&action.end_clause()?)?,
             ])
-            .group_if(allow_compact.is_allowed()),
+            .group_if(allow_compact),
         )
     }
 

@@ -6,6 +6,13 @@ mod render;
 
 pub(super) use render::render;
 
+/// Whether a source sequence may render compactly on a single line.
+#[derive(Debug, Clone, Copy, Eq, PartialEq)]
+pub(crate) enum AllowCompact {
+    Yes,
+    No,
+}
+
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub(super) enum Doc {
     /// A run of output whose surrounding whitespace and line breaks belong to
@@ -67,8 +74,11 @@ pub(super) enum Doc {
 
 impl Doc {
     /// Wrap this document in a group when its parent decides compact layout.
-    pub(super) fn group_if(self, condition: bool) -> Self {
-        if condition { Self::Group(Box::new(self)) } else { self }
+    pub(super) fn group_if(self, allow_compact: AllowCompact) -> Self {
+        match allow_compact {
+            AllowCompact::Yes => Self::Group(Box::new(self)),
+            AllowCompact::No => self,
+        }
     }
 
     /// Convert conditional layout to a single flat line. Hard lines and
