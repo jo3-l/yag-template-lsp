@@ -103,7 +103,7 @@ impl Formatter<'_> {
 
 #[cfg(test)]
 mod tests {
-    use std::collections::BTreeMap;
+    use std::collections::HashMap;
 
     use crate::{FormatOptions, FunctionLayouts, LayoutKind, format};
 
@@ -112,7 +112,7 @@ mod tests {
         let options = FormatOptions {
             max_width: 18,
             function_layouts: FunctionLayouts {
-                by_name: BTreeMap::from([("metadata".to_owned(), LayoutKind::KeyValuePairs)]),
+                by_name: HashMap::from([("metadata".to_owned(), LayoutKind::KeyValuePairs)]),
             },
             ..FormatOptions::default()
         };

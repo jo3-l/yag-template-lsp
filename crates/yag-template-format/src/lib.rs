@@ -4,7 +4,7 @@
 //! format delimiter padding, parsed block indentation, and ordinary expression
 //! layout; specialized function layouts remain for later stages.
 
-use std::collections::{BTreeMap, BTreeSet};
+use std::collections::{BTreeSet, HashMap};
 
 use yag_template_syntax::SyntaxNode;
 
@@ -31,13 +31,13 @@ pub enum DelimiterPadding {
 /// Layout dispatch table for calls with known syntactic callees.
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct FunctionLayouts {
-    pub by_name: BTreeMap<String, LayoutKind>,
+    pub by_name: HashMap<String, LayoutKind>,
 }
 
 impl Default for FunctionLayouts {
     fn default() -> Self {
         Self {
-            by_name: BTreeMap::from([
+            by_name: HashMap::from([
                 ("dict".to_owned(), LayoutKind::KeyValuePairs),
                 ("sdict".to_owned(), LayoutKind::KeyValuePairs),
             ]),
