@@ -3,9 +3,7 @@ use std::io::{self, Read, Write};
 use std::path::PathBuf;
 
 use clap::{Parser, ValueEnum};
-use yag_template_format::{
-    DanglingValuePolicy, DelimiterPadding, FormatDiagnosticKind, FormatOptions, Indent, LayoutKind,
-};
+use yag_template_format::{DelimiterPadding, FormatDiagnosticKind, FormatOptions, Indent, LayoutKind};
 
 #[derive(Debug, Parser)]
 #[command(name = "yagfmt", about = "Format YAG templates")]
@@ -83,12 +81,7 @@ fn run(args: Args) -> i32 {
         ..FormatOptions::default()
     };
     for name in args.key_value_functions {
-        options.function_layouts.by_name.insert(
-            name,
-            LayoutKind::KeyValuePairs {
-                dangling_value: DanglingValuePolicy::PreserveCallLayout,
-            },
-        );
+        options.function_layouts.by_name.insert(name, LayoutKind::KeyValuePairs);
     }
 
     if args.files.is_empty() {

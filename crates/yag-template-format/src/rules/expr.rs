@@ -4,7 +4,7 @@ use yag_template_syntax::ast::{AstNode, AstToken, Expr, ExprCall, ExprFieldChain
 
 use crate::doc::{Doc, concat, group, soft_line, text, try_concat};
 use crate::lower::Formatter;
-use crate::{DanglingValuePolicy, FormatDiagnostic, FormatDiagnosticKind, LayoutKind};
+use crate::{FormatDiagnostic, FormatDiagnosticKind, LayoutKind};
 
 impl Formatter<'_> {
     /// Format an explicit expression variant as a document fragment.
@@ -60,17 +60,13 @@ impl Formatter<'_> {
 
     fn function_call(&mut self, name: &str, args: Vec<Doc>) -> Doc {
         match self.function_layout(name) {
-            Some(LayoutKind::KeyValuePairs { .. }) if args.len().is_multiple_of(2) => {
-                self.key_value_call(text(name), args)
-            }
-            Some(LayoutKind::KeyValuePairs { dangling_value }) => {
+            Some(LayoutKind::KeyValuePairs) if args.len().is_multiple_of(2) => self.key_value_call(text(name), args),
+            Some(LayoutKind::KeyValuePairs) => {
                 self.report(FormatDiagnostic {
                     kind: FormatDiagnosticKind::OddKeyValueArgumentCount,
                     message: format!("key-value function `{name}` received an odd number of arguments"),
                 });
-                match dangling_value {
-                    DanglingValuePolicy::PreserveCallLayout | DanglingValuePolicy::Error => self.call(text(name), args),
-                }
+                self.call(text(name), args)
             }
             Some(LayoutKind::Call) | None => self.call(text(name), args),
         }
@@ -109,19 +105,14 @@ impl Formatter<'_> {
 mod tests {
     use std::collections::BTreeMap;
 
-    use crate::{DanglingValuePolicy, FormatOptions, FunctionLayouts, LayoutKind, format};
+    use crate::{FormatOptions, FunctionLayouts, LayoutKind, format};
 
     #[test]
     fn configured_key_value_functions_dispatch_by_exact_name() {
         let options = FormatOptions {
             max_width: 18,
             function_layouts: FunctionLayouts {
-                by_name: BTreeMap::from([(
-                    "metadata".to_owned(),
-                    LayoutKind::KeyValuePairs {
-                        dangling_value: DanglingValuePolicy::PreserveCallLayout,
-                    },
-                )]),
+                by_name: BTreeMap::from([("metadata".to_owned(), LayoutKind::KeyValuePairs)]),
             },
             ..FormatOptions::default()
         };

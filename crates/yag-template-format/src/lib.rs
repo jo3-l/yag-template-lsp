@@ -38,18 +38,8 @@ impl Default for FunctionLayouts {
     fn default() -> Self {
         Self {
             by_name: BTreeMap::from([
-                (
-                    "dict".to_owned(),
-                    LayoutKind::KeyValuePairs {
-                        dangling_value: DanglingValuePolicy::PreserveCallLayout,
-                    },
-                ),
-                (
-                    "sdict".to_owned(),
-                    LayoutKind::KeyValuePairs {
-                        dangling_value: DanglingValuePolicy::PreserveCallLayout,
-                    },
-                ),
+                ("dict".to_owned(), LayoutKind::KeyValuePairs),
+                ("sdict".to_owned(), LayoutKind::KeyValuePairs),
             ]),
         }
     }
@@ -59,14 +49,7 @@ impl Default for FunctionLayouts {
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
 pub enum LayoutKind {
     Call,
-    KeyValuePairs { dangling_value: DanglingValuePolicy },
-}
-
-/// How a key/value layout handles an unmatched final argument.
-#[derive(Debug, Clone, Copy, Eq, PartialEq)]
-pub enum DanglingValuePolicy {
-    PreserveCallLayout,
-    Error,
+    KeyValuePairs,
 }
 
 /// Formatter configuration.
