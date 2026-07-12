@@ -102,8 +102,6 @@ pub struct FormatResult {
 }
 
 /// Format `source` according to `options`.
-///
-/// Parse, resolve line protection, lower, and render `source` according to `options`.
 pub fn format(source: &str, options: &FormatOptions) -> FormatResult {
     let parsed = yag_template_syntax::parser::parse(source);
     let diagnostics = parsed

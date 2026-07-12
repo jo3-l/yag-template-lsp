@@ -1,0 +1,3 @@
+[submodule "yagpdb-cc"]
+	path = crates/yag-template-format/tests/corpus/yagpdb-cc
+	url = https://github.com/yagpdb-cc/yagpdb-cc.git

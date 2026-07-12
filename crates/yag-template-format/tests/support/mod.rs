@@ -1,3 +1,5 @@
+use std::fmt::Display;
+
 use yag_template_format::{FormatDiagnosticKind, FormatOptions, FormatResult, format};
 use yag_template_syntax::{SyntaxElement, SyntaxKind, SyntaxNode};
 
@@ -91,24 +93,29 @@ fn byte_offset(position: impl Into<u32>) -> usize {
 }
 
 #[allow(dead_code)]
-pub fn assert_format_result_preserving_fingerprint(source: &str, options: &FormatOptions, formatted: &FormatResult) {
+pub fn assert_format_result_preserving_fingerprint(
+    source: &str,
+    options: &FormatOptions,
+    formatted: &FormatResult,
+    context: impl Display,
+) {
     let input_fingerprint = fingerprint(source);
     assert!(
         formatted
             .diagnostics
             .iter()
             .all(|diagnostic| diagnostic.kind != FormatDiagnosticKind::ParseError),
-        "formatter reported a parse error: {:?}",
+        "{context}: formatter reported a parse error: {:?}",
         formatted.diagnostics
     );
     let output_fingerprint = fingerprint(&formatted.text);
     assert_eq!(
         output_fingerprint, input_fingerprint,
-        "formatter changed semantic template shape"
+        "{context}: formatter changed semantic template shape"
     );
     assert_eq!(
         format(&formatted.text, options).text,
         formatted.text,
-        "formatter is not idempotent"
+        "{context}: formatter is not idempotent"
     );
 }

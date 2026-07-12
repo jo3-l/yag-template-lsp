@@ -52,7 +52,7 @@ fn formatter_fixtures_match_raw_snapshots() {
     for fixture_path in fixtures {
         let fixture = read_fixture(&fixture_path);
         let result = format(&fixture.source, &fixture.options);
-        assert_format_result_preserving_fingerprint(&fixture.source, &fixture.options, &result);
+        assert_format_result_preserving_fingerprint(&fixture.source, &fixture.options, &result, fixture_path.display());
         assert_raw_snapshot(&fixture_path, &result.text);
     }
 
