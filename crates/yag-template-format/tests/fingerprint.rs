@@ -36,6 +36,11 @@ fn fingerprint_preserves_literal_text() {
 }
 
 #[test]
+fn fingerprint_ignores_a_terminal_newline() {
+    assert_eq!(fingerprint("a"), fingerprint("a\n"));
+}
+
+#[test]
 fn fingerprint_ignores_literal_line_indentation() {
     assert_eq!(
         fingerprint("{{if .Foo}}\nbar baz\n{{end}}"),

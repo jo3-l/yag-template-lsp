@@ -118,7 +118,11 @@ pub fn format(source: &str, options: &FormatOptions) -> FormatResult {
         let root = SyntaxNode::new_root(parsed.root.clone());
         let line_protection = line_protection::resolve(&root, source);
         let doc = lower::lower(&root, source, options, &line_protection);
-        let text = pretty::render(doc, options.max_width);
+        let mut text = pretty::render(doc, options.max_width);
+        // Ensure trailing newline.
+        if !text.ends_with('\n') {
+            text.push('\n');
+        }
         FormatResult { text, diagnostics }
     } else {
         FormatResult {
@@ -142,5 +146,12 @@ mod tests {
         let result = format("A {{.V}}", &options);
 
         assert!(result.diagnostics.is_empty());
+    }
+
+    #[test]
+    fn formatting_adds_a_terminal_newline() {
+        let result = format("{{.Value}}", &FormatOptions::default());
+
+        assert_eq!(result.text, "{{ .Value }}\n");
     }
 }

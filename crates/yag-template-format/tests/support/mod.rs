@@ -57,7 +57,12 @@ fn fingerprint_node(node: SyntaxNode, source: &str) -> TemplateFingerprint {
 fn normalize_literal_text(text: &str, start: usize, end: usize, source: &str) -> String {
     let starts_line = start == 0 || source.as_bytes()[start - 1] == b'\n';
     let ends_line = end == source.len() || source.as_bytes()[end] == b'\n';
-    trim_line_margins(text, starts_line, ends_line)
+    let normalized = trim_line_margins(text, starts_line, ends_line);
+    if end == source.len() {
+        normalized.strip_suffix('\n').unwrap_or(&normalized).to_owned()
+    } else {
+        normalized
+    }
 }
 
 fn trim_line_margins(text: &str, mut starts_line: bool, ends_line: bool) -> String {
