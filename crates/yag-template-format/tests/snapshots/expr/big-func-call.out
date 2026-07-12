@@ -1,0 +1,5 @@
+{{ $out =
+	print
+		"All set! Every day at **"
+		($target.Format "15:04 UTC")
+		"** I will congratulate users if its their birthday." }}
