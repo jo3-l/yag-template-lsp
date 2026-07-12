@@ -7,10 +7,10 @@
 use std::ops::Range;
 
 use yag_template_syntax::SyntaxNode;
-use yag_template_syntax::ast::{ActionList, ActionOrText, AstNode, AstToken, LeftDelim, RightDelim, Root};
+use yag_template_syntax::ast::{Action, ActionList, ActionOrText, AstNode, AstToken, LeftDelim, RightDelim, Root};
 
 use crate::classification::{LayoutPolicy, LinePlan};
-use crate::pretty::{Doc, concat, empty, group, group_with_tail, if_break, line, nest, text};
+use crate::pretty::{Doc, concat, empty, group, group_with_tail, if_break, line, nest, soft_line, text};
 use crate::{DelimiterPadding, FormatOptions, LayoutKind};
 
 pub(super) fn lower(root: &SyntaxNode, source: &str, options: &FormatOptions, plan: &LinePlan) -> Doc {
@@ -121,19 +121,45 @@ impl<'a> Formatter<'a> {
     /// Format a typed compound body. A final source newline belongs to the
     /// surrounding block boundary, so it aligns the following `else`, `catch`,
     /// or `end` with the header.
-    pub(crate) fn body(&mut self, body: ActionList) -> Doc {
+    pub(crate) fn body(&mut self, body: ActionList, compact: bool) -> Doc {
         let range = source_range(&body);
         let sequence_end = range.end;
         let has_terminal_newline = ends_with_line_break_after_margin(&self.source[range]);
+        let elements = body.actions_with_text().collect::<Vec<_>>();
+        // A compact block owns whitespace-only boundaries around flexible body actions.
+        let leading_boundary = compact
+            && matches!(
+                elements.as_slice(),
+                [ActionOrText::Text(text), ActionOrText::Action(action), ..]
+                    if self.is_flexible_inline_separator(text.get(), action)
+            );
+        let trailing_boundary = compact
+            && matches!(
+                elements.as_slice(),
+                [.., ActionOrText::Action(action), ActionOrText::Text(text)]
+                    if self.is_flexible_inline_separator(text.get(), action)
+            );
+        let first = usize::from(leading_boundary);
+        let last = elements.len() - usize::from(trailing_boundary);
         let content = nest(
             self.options.indent,
-            self.sequence(body.actions_with_text(), Some(sequence_end)),
+            concat([
+                // These stay spaces while the enclosing compact block fits.
+                if leading_boundary { soft_line() } else { empty() },
+                self.sequence(elements[first..last].iter().cloned(), Some(sequence_end)),
+            ]),
         );
-        if has_terminal_newline {
-            concat([content, line()])
-        } else {
-            content
-        }
+        concat([
+            content,
+            if trailing_boundary { soft_line() } else { empty() },
+            if has_terminal_newline { line() } else { empty() },
+        ])
+    }
+
+    fn is_flexible_inline_separator(&self, text: &str, action: &Action) -> bool {
+        !text.contains('\n')
+            && text.chars().all(char::is_whitespace)
+            && self.policy_at_offset(source_range(action).start) == LayoutPolicy::Flexible
     }
 
     /// Format a direct root/body sequence. It owns structural action separation

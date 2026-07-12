@@ -59,57 +59,73 @@ impl Formatter<'_> {
     }
 
     fn template_definition(&mut self, action: &TemplateDefinition) -> Option<Doc> {
+        let compact = is_compact(action);
         let clause = action.clause()?;
-        Some(concat([
-            self.template_action(
-                clause.delims()?,
-                "define",
-                clause.template_name()?.syntax().text().to_string(),
-                None,
-            )?,
-            self.body(action.template_body()?),
-            self.end_clause(&action.end_clause()?)?,
-        ]))
+        Some(
+            concat([
+                self.template_action(
+                    clause.delims()?,
+                    "define",
+                    clause.template_name()?.syntax().text().to_string(),
+                    None,
+                )?,
+                self.body(action.template_body()?, compact),
+                self.end_clause(&action.end_clause()?)?,
+            ])
+            .group_if(compact),
+        )
     }
 
     fn template_block(&mut self, action: &TemplateBlock) -> Option<Doc> {
+        let compact = is_compact(action);
         let clause = action.clause()?;
-        Some(concat([
-            self.template_action(
-                clause.delims()?,
-                "block",
-                clause.template_name()?.syntax().text().to_string(),
-                clause.context_data(),
-            )?,
-            self.body(action.template_body()?),
-            self.end_clause(&action.end_clause()?)?,
-        ]))
+        Some(
+            concat([
+                self.template_action(
+                    clause.delims()?,
+                    "block",
+                    clause.template_name()?.syntax().text().to_string(),
+                    clause.context_data(),
+                )?,
+                self.body(action.template_body()?, compact),
+                self.end_clause(&action.end_clause()?)?,
+            ])
+            .group_if(compact),
+        )
     }
 
     fn if_action(&mut self, action: &IfAction) -> Option<Doc> {
+        let compact = is_compact(action);
         let clause = action.clause()?;
-        Some(concat([
-            self.keyword_with_expression(clause.delims()?, "if", clause.condition()?)?,
-            self.body(action.body()?),
-            self.else_branches(action.else_branches())?,
-            self.end_clause(&action.end_clause()?)?,
-        ]))
+        Some(
+            concat([
+                self.keyword_with_expression(clause.delims()?, "if", clause.condition()?)?,
+                self.body(action.body()?, compact),
+                self.else_branches(action.else_branches(), compact)?,
+                self.end_clause(&action.end_clause()?)?,
+            ])
+            .group_if(compact),
+        )
     }
 
     fn with_action(&mut self, action: &WithAction) -> Option<Doc> {
+        let compact = is_compact(action);
         let clause = action.clause()?;
-        Some(concat([
-            self.keyword_with_expression(clause.delims()?, "with", clause.condition()?)?,
-            self.body(action.body()?),
-            self.else_branches(action.else_branches())?,
-            self.end_clause(&action.end_clause()?)?,
-        ]))
+        Some(
+            concat([
+                self.keyword_with_expression(clause.delims()?, "with", clause.condition()?)?,
+                self.body(action.body()?, compact),
+                self.else_branches(action.else_branches(), compact)?,
+                self.end_clause(&action.end_clause()?)?,
+            ])
+            .group_if(compact),
+        )
     }
 
-    fn else_branches(&mut self, branches: impl Iterator<Item = ElseBranch>) -> Option<Doc> {
+    fn else_branches(&mut self, branches: impl Iterator<Item = ElseBranch>, compact: bool) -> Option<Doc> {
         try_concat(branches.map(|branch| {
             let clause = branch.clause()?;
-            Some(concat([self.else_clause(&clause)?, self.body(branch.body()?)]))
+            Some(concat([self.else_clause(&clause)?, self.body(branch.body()?, compact)]))
         }))
     }
 
@@ -123,19 +139,23 @@ impl Formatter<'_> {
     }
 
     fn range_action(&mut self, action: &RangeLoop) -> Option<Doc> {
+        let compact = is_compact(action);
         let clause = action.clause()?;
         let else_branch = if let Some(branch) = action.else_branch() {
             let clause = branch.clause()?;
-            concat([self.else_clause(&clause)?, self.body(branch.body()?)])
+            concat([self.else_clause(&clause)?, self.body(branch.body()?, compact)])
         } else {
             empty()
         };
-        Some(concat([
-            self.range_clause(&clause)?,
-            self.body(action.body()?),
-            else_branch,
-            self.end_clause(&action.end_clause()?)?,
-        ]))
+        Some(
+            concat([
+                self.range_clause(&clause)?,
+                self.body(action.body()?, compact),
+                else_branch,
+                self.end_clause(&action.end_clause()?)?,
+            ])
+            .group_if(compact),
+        )
     }
 
     fn range_clause(&mut self, clause: &RangeClause) -> Option<Doc> {
@@ -161,29 +181,37 @@ impl Formatter<'_> {
     }
 
     fn while_action(&mut self, action: &WhileLoop) -> Option<Doc> {
+        let compact = is_compact(action);
         let clause = action.clause()?;
         let else_branch = if let Some(branch) = action.else_branch() {
             let clause = branch.clause()?;
-            concat([self.else_clause(&clause)?, self.body(branch.body()?)])
+            concat([self.else_clause(&clause)?, self.body(branch.body()?, compact)])
         } else {
             empty()
         };
-        Some(concat([
-            self.keyword_with_expression(clause.delims()?, "while", clause.condition()?)?,
-            self.body(action.body()?),
-            else_branch,
-            self.end_clause(&action.end_clause()?)?,
-        ]))
+        Some(
+            concat([
+                self.keyword_with_expression(clause.delims()?, "while", clause.condition()?)?,
+                self.body(action.body()?, compact),
+                else_branch,
+                self.end_clause(&action.end_clause()?)?,
+            ])
+            .group_if(compact),
+        )
     }
 
     fn try_catch_action(&mut self, action: &TryCatchAction) -> Option<Doc> {
-        Some(concat([
-            self.keyword(action.try_clause()?.delims()?, "try")?,
-            self.body(action.try_body()?),
-            self.keyword(action.catch_clause()?.delims()?, "catch")?,
-            self.body(action.catch_body()?),
-            self.end_clause(&action.end_clause()?)?,
-        ]))
+        let compact = is_compact(action);
+        Some(
+            concat([
+                self.keyword(action.try_clause()?.delims()?, "try")?,
+                self.body(action.try_body()?, compact),
+                self.keyword(action.catch_clause()?.delims()?, "catch")?,
+                self.body(action.catch_body()?, compact),
+                self.end_clause(&action.end_clause()?)?,
+            ])
+            .group_if(compact),
+        )
     }
 
     fn end_clause(&self, clause: &EndClause) -> Option<Doc> {
@@ -226,4 +254,9 @@ impl Formatter<'_> {
         let expression = self.expr(expression)?;
         Some(self.continuation(concat([soft_line(), expression])))
     }
+}
+
+fn is_compact(action: &impl AstNode) -> bool {
+    // Existing physical newlines stay structural rather than participating in reflow.
+    !action.syntax().text().contains_char('\n')
 }

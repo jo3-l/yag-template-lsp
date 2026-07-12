@@ -66,6 +66,11 @@ pub(super) enum Doc {
 }
 
 impl Doc {
+    /// Wrap this document in a group when its parent decides compact layout.
+    pub(super) fn group_if(self, condition: bool) -> Self {
+        if condition { Self::Group(Box::new(self)) } else { self }
+    }
+
     /// Convert conditional layout to a single flat line. Hard lines and
     /// embedded newlines cannot safely be flattened.
     pub(super) fn flatten(self) -> Option<Self> {
