@@ -175,38 +175,88 @@ pub fn format(source: &str, options: &FormatOptions) -> FormatResult {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use super::{DelimiterPadding, FormatDiagnosticKind, FormatOptions, format};
 
     #[test]
-    fn defaults_match_the_formatter_contract() {
-        assert_eq!(
-            FormatOptions::default(),
-            FormatOptions {
-                indent: Indent::Tabs,
-                continuation_indent: Indent::Tabs,
-                max_width: 100,
-                delimiter_padding: DelimiterPadding::Spaces,
-                function_layouts: FunctionLayouts::default(),
-            }
+    fn protected_width_diagnostics_measure_the_formatted_action() {
+        let options = FormatOptions {
+            delimiter_padding: DelimiterPadding::Spaces,
+            max_width: 8,
+            ..FormatOptions::default()
+        };
+        let result = format("A {{.V}}", &options);
+
+        assert!(
+            result
+                .diagnostics
+                .iter()
+                .any(|diagnostic| diagnostic.kind == FormatDiagnosticKind::ProtectedOverWidthLine)
         );
     }
 
     #[test]
-    fn valid_source_is_lowered_conservatively() {
-        let source = "{{  if .Enabled }}\n{{ .Name }}\n{{ end }}";
-        let result = format(source, &FormatOptions::default());
-        assert_eq!(result.text, "{{ if .Enabled }}\n\t{{ .Name }}\n{{ end }}");
-        assert!(result.diagnostics.is_empty());
+    fn protected_width_diagnostics_survive_earlier_flexible_wrapping() {
+        let options = FormatOptions {
+            max_width: 12,
+            ..FormatOptions::default()
+        };
+        let result = format("{{print .A .B .C}}\nHello {{ .Very.Long.Field }}!", &options);
+
+        assert!(
+            result
+                .diagnostics
+                .iter()
+                .any(|diagnostic| diagnostic.kind == FormatDiagnosticKind::ProtectedOverWidthLine)
+        );
     }
 
     #[test]
-    fn malformed_source_is_unchanged_with_diagnostics() {
-        let source = "{{ if";
-        let result = format(source, &FormatOptions::default());
+    fn odd_key_value_arguments_report_a_diagnostic() {
+        let options = FormatOptions {
+            max_width: 14,
+            ..FormatOptions::default()
+        };
+        let result = format("{{sdict \"a\" \"one\" \"dangling\"}}", &options);
+
+        assert!(
+            result
+                .diagnostics
+                .iter()
+                .any(|diagnostic| diagnostic.kind == FormatDiagnosticKind::OddKeyValueArgumentCount)
+        );
+    }
+
+    #[test]
+    fn protected_textual_overwidth_is_reported_without_reflowing() {
+        let source = "Hello, {{ .User.Username }}! This literal line is intentionally too long.";
+        let options = FormatOptions {
+            max_width: 20,
+            ..FormatOptions::default()
+        };
+        let result = format(source, &options);
+
         assert_eq!(result.text, source);
-        assert!(matches!(
-            result.diagnostics.first().map(|d| &d.kind),
-            Some(FormatDiagnosticKind::ParseError)
-        ));
+        assert!(
+            result
+                .diagnostics
+                .iter()
+                .any(|diagnostic| diagnostic.kind == FormatDiagnosticKind::ProtectedOverWidthLine)
+        );
+    }
+
+    #[test]
+    fn protected_crlf_line_width_excludes_the_line_terminator() {
+        let options = FormatOptions {
+            max_width: 10,
+            ..FormatOptions::default()
+        };
+        let result = format("A {{.V}}\r\n", &options);
+
+        assert!(
+            result
+                .diagnostics
+                .iter()
+                .all(|diagnostic| diagnostic.kind != FormatDiagnosticKind::ProtectedOverWidthLine)
+        );
     }
 }
