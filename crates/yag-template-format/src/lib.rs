@@ -8,9 +8,9 @@ use std::collections::HashMap;
 
 use yag_template_syntax::SyntaxNode;
 
-mod classification;
 mod iterutil;
 mod line_index;
+mod line_protection;
 mod lower;
 mod pretty;
 mod rules;
@@ -103,7 +103,7 @@ pub struct FormatResult {
 
 /// Format `source` according to `options`.
 ///
-/// Parse, classify, lower, and render `source` according to `options`.
+/// Parse, resolve line protection, lower, and render `source` according to `options`.
 pub fn format(source: &str, options: &FormatOptions) -> FormatResult {
     let parsed = yag_template_syntax::parser::parse(source);
     let diagnostics = parsed
@@ -116,8 +116,8 @@ pub fn format(source: &str, options: &FormatOptions) -> FormatResult {
         .collect::<Vec<_>>();
     if parsed.errors.is_empty() {
         let root = SyntaxNode::new_root(parsed.root.clone());
-        let line_plan = classification::classify(&root, source);
-        let doc = lower::lower(&root, source, options, &line_plan);
+        let line_protection = line_protection::resolve(&root, source);
+        let doc = lower::lower(&root, source, options, &line_protection);
         let text = pretty::render(doc, options.max_width);
         FormatResult { text, diagnostics }
     } else {

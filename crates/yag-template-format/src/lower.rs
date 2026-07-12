@@ -3,17 +3,17 @@ use std::ops::Range;
 use yag_template_syntax::SyntaxNode;
 use yag_template_syntax::ast::{ActionList, ActionOrText, AstNode, AstToken, LeftDelim, RightDelim, Root, Text};
 
-use crate::classification::{LayoutPolicy, LinePlan};
 use crate::iterutil::iter_with_neighbors;
+use crate::line_protection::{LineProtection, ReflowPolicy};
 use crate::pretty::{Doc, concat, empty, group, group_with_tail, if_break, line, nest, soft_line, text};
 use crate::{FormatOptions, LayoutKind};
 
 /// Lower a successfully parsed root into a renderable document.
-pub(super) fn lower(root: &SyntaxNode, source: &str, options: &FormatOptions, plan: &LinePlan) -> Doc {
+pub(super) fn lower(root: &SyntaxNode, source: &str, options: &FormatOptions, protection: &LineProtection) -> Doc {
     let Some(root) = Root::cast(root.clone()) else {
         return text(source);
     };
-    let mut formatter = Formatter::new(source, options, plan);
+    let mut formatter = Formatter::new(source, options, protection);
     let elements = root.actions_with_text().collect::<Vec<_>>();
     formatter
         .sequence(&elements, SequenceContext::Root, AllowCompact::No)
@@ -24,7 +24,7 @@ pub(super) fn lower(root: &SyntaxNode, source: &str, options: &FormatOptions, pl
 pub(crate) struct Formatter<'a> {
     source: &'a str,
     options: &'a FormatOptions,
-    plan: &'a LinePlan,
+    protection: &'a LineProtection,
 }
 
 /// Whether a source sequence may render in the formatter's compact layout.
@@ -67,8 +67,12 @@ enum BodyTextFragment<'a> {
 
 impl<'a> Formatter<'a> {
     /// Build the context used for one lowering pass.
-    fn new(source: &'a str, options: &'a FormatOptions, plan: &'a LinePlan) -> Self {
-        Self { source, options, plan }
+    fn new(source: &'a str, options: &'a FormatOptions, protection: &'a LineProtection) -> Self {
+        Self {
+            source,
+            options,
+            protection,
+        }
     }
 
     pub(crate) fn function_layout(&self, name: &str) -> Option<LayoutKind> {
@@ -78,7 +82,7 @@ impl<'a> Formatter<'a> {
     /// Return whether sibling separators on the source line at `offset` may
     /// participate in reflow.
     fn is_flexible_line_at(&self, offset: usize) -> bool {
-        self.plan.policy_at_offset(offset) == LayoutPolicy::Flexible
+        self.protection.policy_at_offset(offset) == ReflowPolicy::Flexible
     }
 }
 
@@ -115,7 +119,7 @@ impl<'a> Formatter<'a> {
         ]);
 
         let left_offset = byte_offset(left_delim.text_range().start());
-        if self.plan.policy_at_offset(left_offset) == LayoutPolicy::Protected {
+        if self.protection.policy_at_offset(left_offset) == ReflowPolicy::Protected {
             doc.flatten()
         } else if break_before_close {
             Some(doc)
@@ -177,8 +181,8 @@ impl<'a> Formatter<'a> {
     /// Whether `text` can serve as an edge in a body that allows compact
     /// layout.
     ///
-    /// This uses the text token's source offset so it follows the line
-    /// classifier's final protected-versus-flexible decision.
+    /// This uses the text token's source offset so it follows the line protector's final
+    /// protected-versus-flexible decision.
     fn is_flexible_inline_whitespace(&self, text: &Text) -> bool {
         let s = text.get();
         let is_inline_whitespace = s.chars().all(|c| c != '\n' && c.is_whitespace());

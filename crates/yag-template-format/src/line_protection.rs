@@ -1,6 +1,5 @@
-//! Resolve formatter ownership for each logical source line.
+//! Resolve formatter reflow protection for each logical source line.
 
-use std::collections::BTreeMap;
 use std::ops::Range;
 
 use yag_template_syntax::ast::{Action, AstNode, Expr};
@@ -8,9 +7,9 @@ use yag_template_syntax::{SyntaxKind, SyntaxNode};
 
 use crate::line_index::LineIndex;
 
-/// How a logical source line participates in formatter layout.
+/// How a logical source line participates in formatter reflow.
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
-pub(super) enum LayoutPolicy {
+pub(super) enum ReflowPolicy {
     /// The formatter may freely rewrite whitespace between actions and text
     /// on this line.
     Flexible,
@@ -19,52 +18,47 @@ pub(super) enum LayoutPolicy {
     Protected,
 }
 
-/// Sparse, source-wide reflow freedom derived from the typed syntax tree.
-/// Missing entries are flexible.
+/// Source-wide line protection derived from the typed syntax tree.
 #[derive(Debug)]
-pub(super) struct LinePlan {
+pub(super) struct LineProtection {
     line_index: LineIndex,
-    policies: BTreeMap<usize, LayoutPolicy>,
+    policies: Vec<ReflowPolicy>,
 }
 
-impl LinePlan {
+impl LineProtection {
     /// Return the resolved policy for one physical source line.
-    pub(super) fn policy_for_line(&self, line: usize) -> LayoutPolicy {
-        self.policies.get(&line).copied().unwrap_or(LayoutPolicy::Flexible)
+    pub(super) fn policy_for_line(&self, line: usize) -> ReflowPolicy {
+        self.policies[line]
     }
 
     /// Return the policy for the source line containing `offset`.
-    pub(super) fn policy_at_offset(&self, offset: usize) -> LayoutPolicy {
+    pub(super) fn policy_at_offset(&self, offset: usize) -> ReflowPolicy {
         self.policy_for_line(self.line_index.line_for(offset))
     }
-
-    #[cfg(test)]
-    fn line_count(&self) -> usize {
-        self.line_index.len()
-    }
 }
 
-pub(super) fn classify(root: &SyntaxNode, source: &str) -> LinePlan {
-    LineClassifier::new(source).classify(root)
+pub(super) fn resolve(root: &SyntaxNode, source: &str) -> LineProtection {
+    LineProtector::new(source).protect(root)
 }
 
-struct LineClassifier {
+struct LineProtector {
     line_index: LineIndex,
-    policies: BTreeMap<usize, LayoutPolicy>,
+    policies: Vec<ReflowPolicy>,
 }
 
-impl LineClassifier {
+impl LineProtector {
     fn new(source: &str) -> Self {
+        let line_index = LineIndex::new(source);
         Self {
-            line_index: LineIndex::new(source),
-            policies: BTreeMap::new(),
+            policies: vec![ReflowPolicy::Flexible; line_index.len()],
+            line_index,
         }
     }
 
-    fn classify(mut self, root: &SyntaxNode) -> LinePlan {
+    fn protect(mut self, root: &SyntaxNode) -> LineProtection {
         self.protect_text_lines(root);
         self.protect_display_lines(root);
-        LinePlan {
+        LineProtection {
             line_index: self.line_index,
             policies: self.policies,
         }
@@ -109,7 +103,7 @@ impl LineClassifier {
     }
 
     fn protect_line(&mut self, line: usize) {
-        self.policies.insert(line, LayoutPolicy::Protected);
+        self.policies[line] = ReflowPolicy::Protected;
     }
 }
 
@@ -136,26 +130,25 @@ fn is_output_expression(expr: Expr) -> bool {
 mod tests {
     use yag_template_syntax::SyntaxNode;
 
-    use super::{LayoutPolicy, LinePlan, classify};
+    use super::{LineProtection, ReflowPolicy, resolve};
 
-    fn plan(source: &str) -> LinePlan {
+    fn protection(source: &str) -> LineProtection {
         let parsed = yag_template_syntax::parser::parse(source);
         assert!(parsed.errors.is_empty(), "source did not parse: {:?}", parsed.errors);
-        classify(&SyntaxNode::new_root(parsed.root), source)
+        resolve(&SyntaxNode::new_root(parsed.root), source)
     }
 
-    fn policies(source: &str) -> Vec<LayoutPolicy> {
-        let plan = plan(source);
-        (0..plan.line_count()).map(|line| plan.policy_for_line(line)).collect()
+    fn policies(source: &str) -> Vec<ReflowPolicy> {
+        protection(source).policies
     }
 
     #[test]
     fn motivating_examples_resolve_to_the_expected_line_policies() {
-        assert_eq!(policies("A {{$b}} C"), vec![LayoutPolicy::Protected]);
-        assert_eq!(policies("{{$b}} {{$c}}"), vec![LayoutPolicy::Protected]);
-        assert_eq!(policies("{{$x := 1}} {{$y := 2}}"), vec![LayoutPolicy::Flexible]);
-        assert_eq!(policies("ordinary prose"), vec![LayoutPolicy::Protected]);
-        assert_eq!(policies("A {{add 1 1}} C"), vec![LayoutPolicy::Protected]);
+        assert_eq!(policies("A {{$b}} C"), vec![ReflowPolicy::Protected]);
+        assert_eq!(policies("{{$b}} {{$c}}"), vec![ReflowPolicy::Protected]);
+        assert_eq!(policies("{{$x := 1}} {{$y := 2}}"), vec![ReflowPolicy::Flexible]);
+        assert_eq!(policies("ordinary prose"), vec![ReflowPolicy::Protected]);
+        assert_eq!(policies("A {{add 1 1}} C"), vec![ReflowPolicy::Protected]);
     }
 
     #[test]
@@ -167,16 +160,16 @@ mod tests {
             "{{$value.Name}}",
             "{{(.User.Name)}}",
         ] {
-            assert_eq!(policies(source), vec![LayoutPolicy::Protected], "{source}");
+            assert_eq!(policies(source), vec![ReflowPolicy::Protected], "{source}");
         }
         for source in ["{{$value := 1}}", "{{add 1 1}}", "{{$value | printf \"%v\"}}"] {
-            assert_eq!(policies(source), vec![LayoutPolicy::Flexible], "{source}");
+            assert_eq!(policies(source), vec![ReflowPolicy::Flexible], "{source}");
         }
     }
 
     #[test]
     fn protected_display_wins_when_actions_share_a_line() {
-        assert_eq!(policies("{{$value}} {{$other := 1}}"), vec![LayoutPolicy::Protected]);
+        assert_eq!(policies("{{$value}} {{$other := 1}}"), vec![ReflowPolicy::Protected]);
     }
 
     #[test]
@@ -184,26 +177,26 @@ mod tests {
         assert_eq!(
             policies("{{\n  .Value\n}}\n"),
             vec![
-                LayoutPolicy::Protected,
-                LayoutPolicy::Protected,
-                LayoutPolicy::Protected,
-                LayoutPolicy::Flexible,
+                ReflowPolicy::Protected,
+                ReflowPolicy::Protected,
+                ReflowPolicy::Protected,
+                ReflowPolicy::Flexible,
             ]
         );
     }
 
     #[test]
-    fn compound_bodies_classify_independently_of_their_boundaries() {
+    fn compound_bodies_resolve_independently_of_their_boundaries() {
         let source = "{{if .Show}}\nordinary prose\nA {{.User.Name}} C\n{{else}}\n{{$x := 1}} {{$y := 2}}\n{{end}}";
         assert_eq!(
             policies(source),
             vec![
-                LayoutPolicy::Flexible,
-                LayoutPolicy::Protected,
-                LayoutPolicy::Protected,
-                LayoutPolicy::Flexible,
-                LayoutPolicy::Flexible,
-                LayoutPolicy::Flexible,
+                ReflowPolicy::Flexible,
+                ReflowPolicy::Protected,
+                ReflowPolicy::Protected,
+                ReflowPolicy::Flexible,
+                ReflowPolicy::Flexible,
+                ReflowPolicy::Flexible,
             ]
         );
     }
@@ -213,60 +206,60 @@ mod tests {
         for (source, expected) in [
             (
                 "{{define \"name\"}}\nbody\n{{end}}",
-                vec![LayoutPolicy::Flexible, LayoutPolicy::Protected, LayoutPolicy::Flexible],
+                vec![ReflowPolicy::Flexible, ReflowPolicy::Protected, ReflowPolicy::Flexible],
             ),
             (
                 "{{block \"name\" .}}\nbody\n{{end}}",
-                vec![LayoutPolicy::Flexible, LayoutPolicy::Protected, LayoutPolicy::Flexible],
+                vec![ReflowPolicy::Flexible, ReflowPolicy::Protected, ReflowPolicy::Flexible],
             ),
             (
                 "{{if .Foo}}\nbody\n{{else}}\nother\n{{end}}",
                 vec![
-                    LayoutPolicy::Flexible,
-                    LayoutPolicy::Protected,
-                    LayoutPolicy::Flexible,
-                    LayoutPolicy::Protected,
-                    LayoutPolicy::Flexible,
+                    ReflowPolicy::Flexible,
+                    ReflowPolicy::Protected,
+                    ReflowPolicy::Flexible,
+                    ReflowPolicy::Protected,
+                    ReflowPolicy::Flexible,
                 ],
             ),
             (
                 "{{with .Foo}}\nbody\n{{else}}\nother\n{{end}}",
                 vec![
-                    LayoutPolicy::Flexible,
-                    LayoutPolicy::Protected,
-                    LayoutPolicy::Flexible,
-                    LayoutPolicy::Protected,
-                    LayoutPolicy::Flexible,
+                    ReflowPolicy::Flexible,
+                    ReflowPolicy::Protected,
+                    ReflowPolicy::Flexible,
+                    ReflowPolicy::Protected,
+                    ReflowPolicy::Flexible,
                 ],
             ),
             (
                 "{{range .Foo}}\nbody\n{{else}}\nother\n{{end}}",
                 vec![
-                    LayoutPolicy::Flexible,
-                    LayoutPolicy::Protected,
-                    LayoutPolicy::Flexible,
-                    LayoutPolicy::Protected,
-                    LayoutPolicy::Flexible,
+                    ReflowPolicy::Flexible,
+                    ReflowPolicy::Protected,
+                    ReflowPolicy::Flexible,
+                    ReflowPolicy::Protected,
+                    ReflowPolicy::Flexible,
                 ],
             ),
             (
                 "{{while .Foo}}\nbody\n{{else}}\nother\n{{end}}",
                 vec![
-                    LayoutPolicy::Flexible,
-                    LayoutPolicy::Protected,
-                    LayoutPolicy::Flexible,
-                    LayoutPolicy::Protected,
-                    LayoutPolicy::Flexible,
+                    ReflowPolicy::Flexible,
+                    ReflowPolicy::Protected,
+                    ReflowPolicy::Flexible,
+                    ReflowPolicy::Protected,
+                    ReflowPolicy::Flexible,
                 ],
             ),
             (
                 "{{try}}\nbody\n{{catch}}\nother\n{{end}}",
                 vec![
-                    LayoutPolicy::Flexible,
-                    LayoutPolicy::Protected,
-                    LayoutPolicy::Flexible,
-                    LayoutPolicy::Protected,
-                    LayoutPolicy::Flexible,
+                    ReflowPolicy::Flexible,
+                    ReflowPolicy::Protected,
+                    ReflowPolicy::Flexible,
+                    ReflowPolicy::Protected,
+                    ReflowPolicy::Flexible,
                 ],
             ),
         ] {
@@ -278,7 +271,7 @@ mod tests {
     fn display_actions_protect_their_physical_line() {
         assert_eq!(
             policies("{{if .Show}}{{.User}}{{else}}fallback{{end}}"),
-            vec![LayoutPolicy::Protected]
+            vec![ReflowPolicy::Protected]
         );
     }
 }

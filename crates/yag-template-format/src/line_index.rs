@@ -20,7 +20,6 @@ impl LineIndex {
         Self { starts }
     }
 
-    #[cfg(test)]
     pub(super) fn len(&self) -> usize {
         self.starts.len()
     }
