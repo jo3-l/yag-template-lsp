@@ -1,2 +1,2 @@
-{{print .A .B .C}}
-{{.Value | first | second}}
+{{ print .A .B .C }}
+{{ .Value | first | second }}

@@ -1,1 +1,1 @@
-{{.Value | toString | print}}
+{{ .Value | toString | print }}

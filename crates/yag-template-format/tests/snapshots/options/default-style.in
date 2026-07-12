@@ -1,0 +1,7 @@
+---
+max_width: 12
+---
+{{print .A .B .C}}
+{{if print .A .B .C}}
+body
+{{end}}

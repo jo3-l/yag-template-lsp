@@ -27,14 +27,4 @@ impl LineIndex {
     pub(super) fn line_for(&self, offset: usize) -> usize {
         self.starts.partition_point(|start| *start <= offset).saturating_sub(1)
     }
-
-    #[allow(dead_code)] // Used by later lowering when it splits direct text by line.
-    pub(super) fn start_of(&self, line: usize) -> usize {
-        self.starts[line]
-    }
-
-    #[allow(dead_code)] // Used by later lowering when it splits direct text by line.
-    pub(super) fn end_of(&self, line: usize, source_len: usize) -> usize {
-        self.starts.get(line + 1).copied().unwrap_or(source_len)
-    }
 }

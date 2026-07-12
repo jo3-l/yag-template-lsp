@@ -1,2 +1,2 @@
-{{$first := print "first" "value"}}
-{{$second := print "second" "value"}}
+{{ $first := print "first" "value" }}
+{{ $second := print "second" "value" }}

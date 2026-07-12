@@ -1,1 +1,1 @@
-- **User:** {{.User.Username}}
+- **User:** {{ .User.Username }}

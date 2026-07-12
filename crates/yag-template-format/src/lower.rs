@@ -289,11 +289,11 @@ mod tests {
     fn while_rules_write_header_body_else_and_end_in_order() {
         assert_eq!(
             lower_text("{{ while .Ready }}\nbody\n{{ else }}\nfallback\n{{ end }}"),
-            "{{while .Ready}}\n\tbody\n{{else}}\n\tfallback\n{{end}}"
+            "{{ while .Ready }}\n\tbody\n{{ else }}\n\tfallback\n{{ end }}"
         );
         assert_eq!(
             lower_text("{{ while .Ready }}\nbody\n{{ end }}"),
-            "{{while .Ready}}\n\tbody\n{{end}}"
+            "{{ while .Ready }}\n\tbody\n{{ end }}"
         );
     }
 
@@ -301,15 +301,15 @@ mod tests {
     fn if_range_and_try_rules_write_typed_clauses_in_order() {
         assert_eq!(
             lower_text("{{ if .First }}\none\n{{ else if .Second }}\ntwo\n{{ else }}\nother\n{{ end }}",),
-            "{{if .First}}\n\tone\n{{else if .Second}}\n\ttwo\n{{else}}\n\tother\n{{end}}"
+            "{{ if .First }}\n\tone\n{{ else if .Second }}\n\ttwo\n{{ else }}\n\tother\n{{ end }}"
         );
         assert_eq!(
             lower_text("{{ range $key, $value := .Items }}\nitem\n{{ else }}\nempty\n{{ end }}"),
-            "{{range $key, $value := .Items}}\n\titem\n{{else}}\n\tempty\n{{end}}"
+            "{{ range $key, $value := .Items }}\n\titem\n{{ else }}\n\tempty\n{{ end }}"
         );
         assert_eq!(
             lower_text("{{ try }}\nwork\n{{ catch }}\nrecover\n{{ end }}"),
-            "{{try}}\n\twork\n{{catch}}\n\trecover\n{{end}}"
+            "{{ try }}\n\twork\n{{ catch }}\n\trecover\n{{ end }}"
         );
     }
 

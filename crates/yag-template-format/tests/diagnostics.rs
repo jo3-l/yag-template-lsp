@@ -79,7 +79,7 @@ fn protected_textual_overwidth_is_reported_without_reflowing() {
 fn protected_crlf_line_width_excludes_the_line_terminator() {
     let source = "A {{.V}}\r\n";
     let options = FormatOptions {
-        max_width: 8,
+        max_width: 10,
         ..FormatOptions::default()
     };
     let result = format(source, &options);

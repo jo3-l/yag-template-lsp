@@ -1,4 +1,4 @@
-{{sdict
-  "a"
-  "one"
-  "dangling"}}
+{{ sdict
+	"a"
+	"one"
+	"dangling" }}

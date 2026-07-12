@@ -9,7 +9,6 @@ use std::collections::{BTreeMap, BTreeSet};
 use yag_template_syntax::SyntaxNode;
 
 mod classification;
-#[allow(dead_code)] // Expression and block lowering use the remaining variants in later milestones.
 mod doc;
 mod line_index;
 mod lower;
@@ -84,9 +83,9 @@ impl Default for FormatOptions {
     fn default() -> Self {
         Self {
             indent: Indent::Tabs,
-            continuation_indent: Indent::Spaces(2),
+            continuation_indent: Indent::Tabs,
             max_width: 100,
-            delimiter_padding: DelimiterPadding::None,
+            delimiter_padding: DelimiterPadding::Spaces,
             function_layouts: FunctionLayouts::default(),
         }
     }
@@ -184,9 +183,9 @@ mod tests {
             FormatOptions::default(),
             FormatOptions {
                 indent: Indent::Tabs,
-                continuation_indent: Indent::Spaces(2),
+                continuation_indent: Indent::Tabs,
                 max_width: 100,
-                delimiter_padding: DelimiterPadding::None,
+                delimiter_padding: DelimiterPadding::Spaces,
                 function_layouts: FunctionLayouts::default(),
             }
         );
@@ -196,7 +195,7 @@ mod tests {
     fn valid_source_is_lowered_conservatively() {
         let source = "{{  if .Enabled }}\n{{ .Name }}\n{{ end }}";
         let result = format(source, &FormatOptions::default());
-        assert_eq!(result.text, "{{if .Enabled}}\n\t{{.Name}}\n{{end}}");
+        assert_eq!(result.text, "{{ if .Enabled }}\n\t{{ .Name }}\n{{ end }}");
         assert!(result.diagnostics.is_empty());
     }
 

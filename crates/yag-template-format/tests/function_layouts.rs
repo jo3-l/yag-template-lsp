@@ -19,7 +19,7 @@ fn configured_key_value_functions_dispatch_by_exact_name() {
         ..FormatOptions::default()
     };
     let source = "{{metadata \"name\" (print .First .Last) \"active\" true}}";
-    let expected = "{{metadata\n  \"name\" (print\n    .First\n    .Last)\n  \"active\" true}}";
+    let expected = "{{ metadata\n\t\"name\" (print\n\t\t.First\n\t\t.Last)\n\t\"active\" true }}";
 
     assert_eq!(format(source, &options).text, expected);
     support::assert_formats_preserving_fingerprint(source, &options);

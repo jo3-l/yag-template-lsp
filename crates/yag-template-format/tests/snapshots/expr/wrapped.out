@@ -1,7 +1,7 @@
-{{print
+{{ print
   .A
   .B
-  .C}}
-{{.Value
+  .C }}
+{{ .Value
   | first
-  | second}}
+  | second }}

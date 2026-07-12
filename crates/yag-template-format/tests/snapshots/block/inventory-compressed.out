@@ -1,1 +1,1 @@
-{{try}}{{.Value}}{{catch}}{{"fallback"}}{{end}}
+{{ try }}{{ .Value }}{{ catch }}{{ "fallback" }}{{ end }}

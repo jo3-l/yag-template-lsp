@@ -1,5 +1,5 @@
-{{try}}
+{{ try }}
 	work
-{{catch}}
+{{ catch }}
 	recover
-{{end}}
+{{ end }}

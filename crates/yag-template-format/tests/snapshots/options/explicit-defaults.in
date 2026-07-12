@@ -2,6 +2,6 @@
 max_width: 100
 indent: tabs
 continuation_indent: tabs
-delimiter_padding: none
+delimiter_padding: spaces
 ---
 {{ .Value }}

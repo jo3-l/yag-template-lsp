@@ -1,2 +1,2 @@
-{{$value := .User.Name}}
-{{if .Enabled}}{{template "card" .}}{{else if .Admin}}{{return .User}}{{else}}{{end}}
+{{ $value := .User.Name }}
+{{ if .Enabled }}{{ template "card" . }}{{ else if .Admin }}{{ return .User }}{{ else }}{{ end }}
