@@ -8,6 +8,8 @@ use std::collections::HashMap;
 
 use yag_template_syntax::SyntaxNode;
 
+pub mod config;
+
 mod iterutil;
 mod line_index;
 mod line_protection;

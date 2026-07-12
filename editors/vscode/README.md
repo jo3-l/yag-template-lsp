@@ -13,6 +13,7 @@ Most basic LSP features are supported, notably:
 - code completion for variable and function names
 - hover documentation for functions
 - inlay hints for function parameter names
+- document formatting
 
 in addition to the following niceties:
 
@@ -23,3 +24,15 @@ in addition to the following niceties:
 - folding ranges
 
 More sophisticated type-aware code completion is on the roadmap as a long-term goal.
+
+## Formatting
+
+Use VS Code's **Format Document** command, or enable `editor.formatOnSave` for YAG files. Formatting uses the closest
+`yagfmt.toml` in the file's directory or an ancestor. The configuration file accepts these optional fields:
+
+```toml
+max_width = 100
+indent = "tabs" # or a positive number of spaces
+continuation_indent = "tabs" # or a positive number of spaces
+delimiter_padding = "spaces" # or "none"
+```

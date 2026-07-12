@@ -7,6 +7,7 @@ edition = "2024"
 yag-template-syntax = { path = "../yag-template-syntax" }
 yag-template-analysis = { path = "../yag-template-analysis" }
 yag-template-envdefs = { path = "../yag-template-envdefs" }
+yag-template-format = { path = "../yag-template-format" }
 anyhow = "1.0.86"
 dashmap = "5.5.3"
 tokio = { version = "1.17.0", features = ["full"] }

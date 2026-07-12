@@ -3,10 +3,11 @@ use std::sync::Arc;
 use tower_lsp::jsonrpc::{self, Result};
 use tower_lsp::lsp_types::{
     CompletionOptions, CompletionParams, CompletionResponse, DidChangeTextDocumentParams, DidCloseTextDocumentParams,
-    DidOpenTextDocumentParams, FoldingRange, FoldingRangeParams, FoldingRangeProviderCapability, GotoDefinitionParams,
-    GotoDefinitionResponse, Hover, HoverParams, HoverProviderCapability, InitializeParams, InitializeResult,
-    InitializedParams, InlayHint, InlayHintParams, Location, OneOf, ReferenceParams, RenameParams, ServerCapabilities,
-    ServerInfo, TextDocumentSyncCapability, TextDocumentSyncKind, WorkspaceEdit,
+    DidOpenTextDocumentParams, DocumentFormattingParams, FoldingRange, FoldingRangeParams,
+    FoldingRangeProviderCapability, GotoDefinitionParams, GotoDefinitionResponse, Hover, HoverParams,
+    HoverProviderCapability, InitializeParams, InitializeResult, InitializedParams, InlayHint, InlayHintParams,
+    Location, OneOf, ReferenceParams, RenameParams, ServerCapabilities, ServerInfo, TextDocumentSyncCapability,
+    TextDocumentSyncKind, TextEdit, WorkspaceEdit,
 };
 use tower_lsp::{Client, LanguageServer, async_trait};
 
@@ -31,31 +32,36 @@ macro_rules! try_handle {
     };
 }
 
+fn server_capabilities() -> ServerCapabilities {
+    let extra_completion_trigger_chars = vec!['$'];
+    let completion_trigger_chars: Vec<_> = ('a'..='z')
+        .chain('A'..='Z')
+        .chain(extra_completion_trigger_chars)
+        .map(|c| c.to_string())
+        .collect();
+
+    ServerCapabilities {
+        text_document_sync: Some(TextDocumentSyncCapability::Kind(TextDocumentSyncKind::FULL)),
+        completion_provider: Some(CompletionOptions {
+            trigger_characters: Some(completion_trigger_chars),
+            ..Default::default()
+        }),
+        folding_range_provider: Some(FoldingRangeProviderCapability::Simple(true)),
+        definition_provider: Some(OneOf::Left(true)),
+        hover_provider: Some(HoverProviderCapability::Simple(true)),
+        inlay_hint_provider: Some(OneOf::Left(true)),
+        references_provider: Some(OneOf::Left(true)),
+        rename_provider: Some(OneOf::Left(true)),
+        document_formatting_provider: Some(OneOf::Left(true)),
+        ..Default::default()
+    }
+}
+
 #[async_trait]
 impl LanguageServer for YagTemplateLanguageServer {
     async fn initialize(&self, _: InitializeParams) -> Result<InitializeResult> {
-        let extra_completion_trigger_chars = vec!['$'];
-        let completion_trigger_chars: Vec<_> = ('a'..='z')
-            .chain('A'..='Z')
-            .chain(extra_completion_trigger_chars)
-            .map(|c| c.to_string())
-            .collect();
-
         Ok(InitializeResult {
-            capabilities: ServerCapabilities {
-                text_document_sync: Some(TextDocumentSyncCapability::Kind(TextDocumentSyncKind::FULL)),
-                completion_provider: Some(CompletionOptions {
-                    trigger_characters: Some(completion_trigger_chars),
-                    ..Default::default()
-                }),
-                folding_range_provider: Some(FoldingRangeProviderCapability::Simple(true)),
-                definition_provider: Some(OneOf::Left(true)),
-                hover_provider: Some(HoverProviderCapability::Simple(true)),
-                inlay_hint_provider: Some(OneOf::Left(true)),
-                references_provider: Some(OneOf::Left(true)),
-                rename_provider: Some(OneOf::Left(true)),
-                ..Default::default()
-            },
+            capabilities: server_capabilities(),
             server_info: Some(ServerInfo {
                 name: "YAGPDB Template Language Server".into(),
                 version: Some(env!("CARGO_PKG_VERSION").into()),
@@ -81,6 +87,10 @@ impl LanguageServer for YagTemplateLanguageServer {
 
     async fn did_close(&self, params: DidCloseTextDocumentParams) {
         session::sync::on_document_close(&self.session, params).await;
+    }
+
+    async fn formatting(&self, params: DocumentFormattingParams) -> Result<Option<Vec<TextEdit>>> {
+        try_handle!(provider::formatting::format_document(&self.session, params))
     }
 
     async fn completion(&self, params: CompletionParams) -> Result<Option<CompletionResponse>> {

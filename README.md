@@ -17,6 +17,7 @@ Most basic LSP features are supported:
 - code completion for variable and function names
 - hover documentation for functions
 - inlay hints for function parameter names
+- document formatting
 
 in addition to the following niceties:
 
@@ -99,11 +100,11 @@ the following entries to your `settings.json` to show more:
 
 ```jsonc
 {
-	"yag-template-lsp.trace.server": "messages", // "trace" for all LSP interactions
-	"yag-template-lsp.server.extraEnv": {
-		// hide tower_lsp tracing logs (which are redundant with the above), but display everything else
-		"YAG_LSP_LOG": "tower_lsp::codec=info,trace"
-	}
+  "yag-template-lsp.trace.server": "messages", // "trace" for all LSP interactions
+  "yag-template-lsp.server.extraEnv": {
+    // hide tower_lsp tracing logs (which are redundant with the above), but display everything else
+    "YAG_LSP_LOG": "tower_lsp::codec=info,trace",
+  },
 }
 ```
 

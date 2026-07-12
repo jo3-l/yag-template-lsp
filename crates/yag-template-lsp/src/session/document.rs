@@ -12,6 +12,7 @@ use super::Session;
 
 pub(crate) struct Document {
     pub(crate) uri: Url,
+    pub(crate) source: String,
     pub(crate) parse: Parse,
     pub(crate) mapper: Mapper,
     pub(crate) analysis: Analysis,
@@ -23,6 +24,7 @@ impl Document {
         let root = SyntaxNode::new_root(parse.root.clone()).to::<ast::Root>();
         let document = Self {
             uri,
+            source: src.to_owned(),
             parse: parse.clone(),
             mapper: Mapper::new(src),
             analysis: yag_template_analysis::analyze(&sess.envdefs, root),
