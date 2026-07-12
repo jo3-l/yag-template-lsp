@@ -76,6 +76,6 @@ cargo test -p yag-template-format
 For any Rust change, the repository also requires:
 
 ```sh
-cargo fmt --all --check
+cargo +nightly fmt --all --check
 cargo clippy --workspace --all-targets
 ```

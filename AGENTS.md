@@ -29,7 +29,7 @@ Place Rust unit tests next to the code they exercise with `#[cfg(test)]` modules
 For every Rust code change, Codex must run `cargo fmt --all --check` and
 `cargo clippy --workspace --all-targets` before handoff, in addition to the
 focused tests for the change. If formatting is needed, run nightly
-`cargo fmt --all` and then repeat the check. Report any verifier that could
+`cargo +nightly fmt --all` and then repeat the check. Report any verifier that could
 not be run.
 
 ## Commit & Pull Request Guidelines

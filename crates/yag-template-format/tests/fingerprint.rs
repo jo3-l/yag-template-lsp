@@ -1,6 +1,6 @@
 mod support;
 
-use support::{fingerprint, has_internal_literal_whitespace_change};
+use support::fingerprint;
 
 #[test]
 fn fingerprint_ignores_action_whitespace_and_normal_delimiter_padding() {
@@ -60,44 +60,40 @@ fn fingerprint_preserves_inline_action_text_adjacency() {
 }
 
 #[test]
-fn fingerprint_ignores_whitespace_only_separators_between_flexible_actions() {
+fn fingerprint_ignores_whitespace_only_literal_spans() {
     assert_eq!(
         fingerprint("{{$first := 1}} {{$second := 2}}"),
         fingerprint("{{$first := 1}}\n{{$second := 2}}")
     );
-    assert_ne!(
+    assert_eq!(
         fingerprint("{{.First}} {{.Second}}"),
         fingerprint("{{.First}}\n{{.Second}}")
     );
 }
 
 #[test]
-fn fingerprint_ignores_block_body_edge_separators_for_flexible_actions() {
+fn fingerprint_ignores_whitespace_only_block_bodies() {
     assert_eq!(
         fingerprint("{{if .Foo}} {{call .Value}} {{end}}"),
         fingerprint("{{if .Foo}}\n\t{{call .Value}}\n{{end}}")
     );
-    assert_ne!(
+    assert_eq!(
         fingerprint("{{if .Foo}} {{.Value}} {{end}}"),
         fingerprint("{{if .Foo}}\n\t{{.Value}}\n{{end}}")
     );
-}
-
-#[test]
-fn fingerprint_ignores_a_whitespace_only_block_body() {
     assert_eq!(fingerprint("{{if .Foo}} {{end}}"), fingerprint("{{if .Foo}}\n{{end}}"));
 }
 
 #[test]
-fn internal_literal_whitespace_changes_are_detectable() {
-    assert!(has_internal_literal_whitespace_change(
-        "{{if .Foo}}\nbar baz\n{{end}}",
-        "{{if .Foo}}\nbar  baz\n{{end}}"
-    ));
-    assert!(!has_internal_literal_whitespace_change(
-        "{{if .Foo}}\nbar baz\n{{end}}",
-        "{{if .Foo}}\n  bar baz  \n{{end}}"
-    ));
+fn fingerprint_preserves_internal_literal_whitespace() {
+    assert_ne!(
+        fingerprint("{{if .Foo}}\nbar baz\n{{end}}"),
+        fingerprint("{{if .Foo}}\nbar  baz\n{{end}}")
+    );
+    assert_eq!(
+        fingerprint("{{if .Foo}}\nbar baz\n{{end}}"),
+        fingerprint("{{if .Foo}}\n  bar baz  \n{{end}}")
+    );
 }
 
 #[test]
