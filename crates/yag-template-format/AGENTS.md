@@ -9,8 +9,8 @@ actions. Keep formatting deterministic and idempotent.
 - Never rewrite literal non-whitespace content, identifiers, pipeline order,
   parentheses, or trim markers.
 - Block layout may normalize whitespace at a physical literal-text line's
-  margins. If a change affects whitespace between literal non-whitespace
-  characters, emit `LiteralWhitespaceChanged`.
+  margins, but must not change whitespace between literal non-whitespace
+  characters.
 - Parse-invalid input must be returned byte-for-byte unchanged with parse
   diagnostics. The CLI must never write that result.
 - Valid output must parse, preserve the test fingerprint, and be byte-identical
@@ -48,9 +48,8 @@ actions. Keep formatting deterministic and idempotent.
   continuation nesting for calls, pipelines, and parentheses rather than
   per-case width heuristics.
 - Resolve function layouts by exact syntactic callee name. Unknown names use
-  normal call layout; key/value calls break one ordered pair per row. Odd
-  key/value argument counts follow their configured policy and report the
-  diagnostic.
+  normal call layout; key/value calls break one ordered pair per row. Calls
+  with an odd argument count use normal call layout.
 
 ## Regression fixtures
 

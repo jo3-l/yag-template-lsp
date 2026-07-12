@@ -1,8 +1,8 @@
 //! AST-to-document lowering and source-layout ownership.
 //!
-//! `Formatter` owns the formatting inputs and diagnostics, but never stores
-//! partially built documents. Typed rules return complete fragments, allowing
-//! a failed rule to discard its work and preserve the original action source.
+//! `Formatter` owns the formatting inputs, but never stores partially built
+//! documents. Typed rules return complete fragments, allowing a failed rule to
+//! discard its work and preserve the original action source.
 
 use std::ops::Range;
 
@@ -11,46 +11,30 @@ use yag_template_syntax::ast::{ActionList, ActionOrText, AstNode, AstToken, Left
 
 use crate::classification::{LayoutPolicy, LinePlan};
 use crate::pretty::{Doc, concat, empty, group, group_with_tail, if_break, line, nest, text};
-use crate::{DelimiterPadding, FormatDiagnostic, FormatOptions, LayoutKind};
+use crate::{DelimiterPadding, FormatOptions, LayoutKind};
 
-pub(super) fn lower(
-    root: &SyntaxNode,
-    source: &str,
-    options: &FormatOptions,
-    plan: &LinePlan,
-) -> (Doc, Vec<FormatDiagnostic>) {
+pub(super) fn lower(root: &SyntaxNode, source: &str, options: &FormatOptions, plan: &LinePlan) -> Doc {
     let Some(root) = Root::cast(root.clone()) else {
-        return (text(source), Vec::new());
+        return text(source);
     };
     let mut formatter = Formatter::new(source, options, plan);
-    let doc = formatter.sequence(root.actions_with_text(), None);
-    (doc, formatter.diagnostics)
+    formatter.sequence(root.actions_with_text(), None)
 }
 
 /// Stateful services shared by typed rules.
 ///
-/// The formatter owns source/configuration access and diagnostics only.
+/// The formatter owns source/configuration access only.
 /// Document fragments remain return values, so no failed rule can leak partial
 /// output into its caller.
 pub(crate) struct Formatter<'a> {
     source: &'a str,
     options: &'a FormatOptions,
     plan: &'a LinePlan,
-    diagnostics: Vec<FormatDiagnostic>,
 }
 
 impl<'a> Formatter<'a> {
     fn new(source: &'a str, options: &'a FormatOptions, plan: &'a LinePlan) -> Self {
-        Self {
-            source,
-            options,
-            plan,
-            diagnostics: Vec::new(),
-        }
-    }
-
-    pub(crate) fn report(&mut self, diagnostic: FormatDiagnostic) {
-        self.diagnostics.push(diagnostic);
+        Self { source, options, plan }
     }
 
     pub(crate) fn function_layout(&self, name: &str) -> Option<LayoutKind> {

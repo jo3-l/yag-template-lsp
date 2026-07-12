@@ -97,5 +97,5 @@ fn layout_flags_apply_to_stdin() {
     let output = child.wait_with_output().unwrap();
 
     assert!(output.status.success());
-    assert_eq!(output.stdout, b"{{ metadata\n  \"a\" \"one\"\n  \"b\" \"two\" }}");
+    assert_eq!(output.stdout, b"{{ metadata\n  \"a\" \"one\"\n  \"b\" \"two\"\n}}");
 }

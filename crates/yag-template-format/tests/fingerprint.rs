@@ -72,7 +72,7 @@ fn fingerprint_ignores_whitespace_only_separators_between_flexible_actions() {
 }
 
 #[test]
-fn internal_literal_whitespace_changes_are_detectable_for_a_warning() {
+fn internal_literal_whitespace_changes_are_detectable() {
     assert!(has_internal_literal_whitespace_change(
         "{{if .Foo}}\nbar baz\n{{end}}",
         "{{if .Foo}}\nbar  baz\n{{end}}"

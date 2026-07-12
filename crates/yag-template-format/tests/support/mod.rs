@@ -97,8 +97,7 @@ fn qualifies_display_expr(expr: Expr) -> bool {
 }
 
 /// Whether formatting changed whitespace inside literal content, rather than
-/// only adding/removing indentation at the physical line margins. Such changes
-/// remain permitted, but later lowering must report `LiteralWhitespaceChanged`.
+/// only adding/removing indentation at the physical line margins.
 pub fn has_internal_literal_whitespace_change(before: &str, after: &str) -> bool {
     let before = literal_text_layouts(before);
     let after = literal_text_layouts(after);
@@ -236,16 +235,10 @@ pub fn assert_format_result_preserving_fingerprint(source: &str, options: &Forma
         output_fingerprint, input_fingerprint,
         "formatter changed semantic template shape"
     );
-    if has_internal_literal_whitespace_change(source, &formatted.text) {
-        assert!(
-            formatted
-                .diagnostics
-                .iter()
-                .any(|diagnostic| diagnostic.kind == FormatDiagnosticKind::LiteralWhitespaceChanged),
-            "formatter changed internal literal whitespace without a diagnostic: {:?}",
-            formatted.diagnostics
-        );
-    }
+    assert!(
+        !has_internal_literal_whitespace_change(source, &formatted.text),
+        "formatter changed internal literal whitespace"
+    );
     assert_eq!(
         format(&formatted.text, options).text,
         formatted.text,

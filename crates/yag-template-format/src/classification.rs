@@ -60,16 +60,6 @@ impl LinePlan {
             .any(|(_, policy)| *policy == LayoutPolicy::Protected)
     }
 
-    pub(super) fn protected_textual_line_mask(&self) -> Vec<bool> {
-        let mut protected = vec![false; self.line_index.len()];
-        for (&line, &policy) in &self.policies {
-            if policy == LayoutPolicy::Protected {
-                protected[line] = true;
-            }
-        }
-        protected
-    }
-
     #[cfg(test)]
     fn line_count(&self) -> usize {
         self.line_index.len()
@@ -392,11 +382,5 @@ mod tests {
     fn cross_line_actions_can_detect_a_protected_boundary_for_original_source_fallback() {
         let source = "{{add\n  1\n}}{{.Value}}";
         assert!(plan(source).range_contains_protected_line(0.."{{add\n  1\n}}".len()));
-    }
-
-    #[test]
-    fn diagnostic_mask_is_derived_from_the_same_plan() {
-        let plan = plan("prose\nA {{.Value}} C\n{{$x := 1}}");
-        assert_eq!(plan.protected_textual_line_mask(), vec![false, true, false]);
     }
 }

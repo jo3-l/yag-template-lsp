@@ -2,9 +2,9 @@
 
 use yag_template_syntax::ast::{AstNode, AstToken, Expr, ExprCall, ExprFieldChain, FuncCall, Pipeline};
 
+use crate::LayoutKind;
 use crate::lower::Formatter;
 use crate::pretty::{Doc, concat, group, soft_line, text, try_concat};
-use crate::{FormatDiagnostic, FormatDiagnosticKind, LayoutKind};
 
 impl Formatter<'_> {
     /// Format an explicit expression variant as a document fragment.
@@ -61,13 +61,7 @@ impl Formatter<'_> {
     fn function_call(&mut self, name: &str, args: Vec<Doc>) -> Doc {
         match self.function_layout(name) {
             Some(LayoutKind::KeyValuePairs) if args.len().is_multiple_of(2) => self.key_value_call(text(name), args),
-            Some(LayoutKind::KeyValuePairs) => {
-                self.report(FormatDiagnostic {
-                    kind: FormatDiagnosticKind::OddKeyValueArgumentCount,
-                    message: format!("key-value function `{name}` received an odd number of arguments"),
-                });
-                self.call(text(name), args)
-            }
+            Some(LayoutKind::KeyValuePairs) => self.call(text(name), args),
             Some(LayoutKind::Call) | None => self.call(text(name), args),
         }
     }
