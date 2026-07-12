@@ -117,7 +117,7 @@ mod tests {
             ..FormatOptions::default()
         };
         let source = "{{metadata \"name\" (print .First .Last) \"active\" true}}";
-        let expected = "{{ metadata\n\t\"name\" (print\n\t\t.First\n\t\t.Last)\n\t\"active\" true }}";
+        let expected = "{{ metadata\n\t\"name\" (print\n\t\t.First\n\t\t.Last)\n\t\"active\" true\n}}";
 
         assert_eq!(format(source, &options).text, expected);
     }

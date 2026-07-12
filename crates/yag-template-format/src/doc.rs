@@ -15,6 +15,9 @@ pub(super) enum Doc {
     /// A conditional line break: one space in a flat `Group`, or a newline in
     /// a broken group.
     SoftLine,
+    /// Select `broken` when enclosed by a broken `Group`, otherwise select
+    /// `flat`.
+    IfBreak { broken: Box<Doc>, flat: Box<Doc> },
     /// Attempt to render the enclosed document on the current line. The
     /// renderer selects flat or broken mode using its bounded `fits` probe.
     ///
@@ -34,6 +37,10 @@ pub(super) enum Doc {
     ///
     /// when it does not.
     Group(Box<Doc>),
+    /// Like [`Group`], but the layout decision is based only on `body` while
+    /// `tail` shares its selected mode. This lets a closing delimiter follow
+    /// the body's layout without making that delimiter affect wrapping.
+    GroupWithTail { body: Box<Doc>, tail: Box<Doc> },
     /// Add configured indentation to the indentation applied after line breaks in the enclosed
     /// document. It has no effect while the document remains flat. For
     /// example, nesting `SoftLine + Text("world")` by two under `hello`
@@ -67,7 +74,9 @@ impl Doc {
                 .map(Self::Concat),
             Self::Line => None,
             Self::SoftLine => Some(text(" ")),
+            Self::IfBreak { flat, .. } => flat.flatten(),
             Self::Group(doc) | Self::Nest(_, doc) => doc.flatten(),
+            Self::GroupWithTail { body, tail } => Some(concat([body.flatten()?, tail.flatten()?])),
         }
     }
 }
@@ -113,9 +122,25 @@ pub(super) fn soft_line() -> Doc {
     Doc::SoftLine
 }
 
+/// Choose a document based on the enclosing group's layout mode.
+pub(super) fn if_break(broken: Doc, flat: Doc) -> Doc {
+    Doc::IfBreak {
+        broken: Box::new(broken),
+        flat: Box::new(flat),
+    }
+}
+
 /// Attempt to render `doc` on one line before breaking it.
 pub(super) fn group(doc: Doc) -> Doc {
     Doc::Group(Box::new(doc))
+}
+
+/// Choose the layout from `body`, then render `tail` in that same layout.
+pub(super) fn group_with_tail(body: Doc, tail: Doc) -> Doc {
+    Doc::GroupWithTail {
+        body: Box::new(body),
+        tail: Box::new(tail),
+    }
 }
 
 /// Apply `indent` after line breaks inside `doc`.
@@ -163,6 +188,10 @@ pub(super) fn render(doc: Doc, width: usize) -> String {
                 column += 1;
             }
             Doc::SoftLine => append_line(&mut out, &mut column, &indent),
+            Doc::IfBreak { broken, flat } => {
+                let doc = if mode == Mode::Break { broken } else { flat };
+                commands.push(Command::new(indent, mode, *doc));
+            }
             Doc::Nest(extra, doc) => commands.push(Command::new(indented(&indent, extra), mode, *doc)),
             Doc::Group(doc) => {
                 // A group's decision belongs to that group. Looking through
@@ -175,6 +204,16 @@ pub(super) fn render(doc: Doc, width: usize) -> String {
                     Mode::Break
                 };
                 commands.push(Command::new(indent, mode, *doc));
+            }
+            Doc::GroupWithTail { body, tail } => {
+                let probe = vec![Command::new(&indent, Mode::Flat, (*body).clone())];
+                let mode = if fits(width.saturating_sub(column), probe) {
+                    Mode::Flat
+                } else {
+                    Mode::Break
+                };
+                commands.push(Command::new(indent.clone(), mode, *tail));
+                commands.push(Command::new(indent, mode, *body));
             }
         }
     }
@@ -226,8 +265,13 @@ fn fits(width: usize, mut commands: Vec<Command>) -> bool {
             Doc::Line => return true,
             Doc::SoftLine if mode == Mode::Flat => remaining -= 1,
             Doc::SoftLine => return true,
+            Doc::IfBreak { broken, flat } => {
+                let doc = if mode == Mode::Break { broken } else { flat };
+                commands.push(Command::new(indent, mode, *doc));
+            }
             Doc::Nest(extra, doc) => commands.push(Command::new(indented(&indent, extra), mode, *doc)),
             Doc::Group(doc) => commands.push(Command::new(indent, Mode::Flat, *doc)),
+            Doc::GroupWithTail { body, .. } => commands.push(Command::new(indent, Mode::Flat, *body)),
         }
     }
     false

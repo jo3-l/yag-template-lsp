@@ -3,4 +3,5 @@
 	"b" "two") }}
 {{ dict
 	"first" .User.First
-	"last" .User.Last }}
+	"last" .User.Last
+}}

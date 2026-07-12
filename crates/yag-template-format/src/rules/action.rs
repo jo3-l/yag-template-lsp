@@ -5,6 +5,7 @@ use yag_template_syntax::ast::{
     RightDelim, TemplateBlock, TemplateDefinition, TryCatchAction, WhileLoop, WithAction,
 };
 
+use crate::LayoutKind;
 use crate::doc::{Doc, concat, empty, join, soft_line, text, try_concat};
 use crate::lower::Formatter;
 
@@ -36,10 +37,25 @@ impl Formatter<'_> {
             Action::Continue(action) => self.keyword(action.delims()?, "continue"),
             Action::TryCatch(action) => self.try_catch_action(action),
             Action::ExprAction(action) => {
-                let body = self.expr(action.expr()?)?;
-                self.delimited(action.delims()?, body)
+                let expression = action.expr()?;
+                let break_before_close = self.is_top_level_key_value_call(&expression);
+                let body = self.expr(expression)?;
+                self.delimited_with_breaking_close(action.delims()?, body, break_before_close)
             }
         }
+    }
+
+    /// A key/value call is formatted as rows. When it is the whole action,
+    /// keep the action delimiter out of the final row without affecting
+    /// parenthesized or otherwise nested calls.
+    fn is_top_level_key_value_call(&self, expression: &Expr) -> bool {
+        let Expr::FuncCall(call) = expression else {
+            return false;
+        };
+        let Some(name) = call.func_name() else {
+            return false;
+        };
+        self.function_layout(name.get()) == Some(LayoutKind::KeyValuePairs) && call.args().count().is_multiple_of(2)
     }
 
     fn template_definition(&mut self, action: &TemplateDefinition) -> Option<Doc> {

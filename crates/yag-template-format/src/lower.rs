@@ -10,7 +10,7 @@ use yag_template_syntax::SyntaxNode;
 use yag_template_syntax::ast::{ActionList, ActionOrText, AstNode, AstToken, LeftDelim, RightDelim, Root};
 
 use crate::classification::{LayoutPolicy, LinePlan};
-use crate::doc::{Doc, concat, group, line, nest, text};
+use crate::doc::{Doc, concat, empty, group, group_with_tail, if_break, line, nest, text};
 use crate::{DelimiterPadding, FormatDiagnostic, FormatOptions, LayoutKind};
 
 pub(super) fn lower(
@@ -63,6 +63,17 @@ impl<'a> Formatter<'a> {
 
     /// Wrap an explicit pair of typed action delimiters around `body`.
     pub(crate) fn delimited(&self, (left, right): (LeftDelim, RightDelim), body: Doc) -> Option<Doc> {
+        self.delimited_with_breaking_close((left, right), body, false)
+    }
+
+    /// Wrap delimiters around a body whose closing delimiter should follow a
+    /// broken body on its own line.
+    pub(crate) fn delimited_with_breaking_close(
+        &self,
+        (left, right): (LeftDelim, RightDelim),
+        body: Doc,
+        break_before_close: bool,
+    ) -> Option<Doc> {
         let left_range = left.text_range();
         let right_range = right.text_range();
         let range = byte_offset(left_range.start())..byte_offset(right_range.end());
@@ -96,17 +107,28 @@ impl<'a> Formatter<'a> {
         };
         let left_padding = if left.has_trim_marker() { "" } else { padding };
         let right_padding = if right.has_trim_marker() { "" } else { padding };
+        let body = if break_before_close {
+            group_with_tail(body, if_break(line(), text(right_padding)))
+        } else {
+            body
+        };
         let doc = concat([
             text(&self.source[range.start..left_end]),
             // A trim marker's token includes its grammar-required space, so
             // delimiter padding applies only to its ordinary counterpart.
             text(left_padding),
             body,
-            text(right_padding),
+            if break_before_close {
+                empty()
+            } else {
+                text(right_padding)
+            },
             text(&self.source[right_start..range.end]),
         ]);
         if self.policy_at_offset(range.start) == LayoutPolicy::Protected {
             doc.flatten()
+        } else if break_before_close {
+            Some(doc)
         } else {
             Some(group(doc))
         }
