@@ -3,6 +3,7 @@ use std::io::{self, Read, Write};
 use std::path::PathBuf;
 
 use clap::{Parser, ValueEnum};
+use yag_template_format::config::ConfigResolver;
 use yag_template_format::{DelimiterPadding, FormatDiagnosticKind, FormatOptions, Indent};
 
 #[derive(Debug, Parser)]
@@ -14,16 +15,16 @@ struct Args {
     /// Rewrite explicitly named, valid files in place.
     #[arg(long, conflicts_with = "check")]
     write: bool,
-    /// Maximum line width. Defaults to the formatter's configured default.
+    /// Override the maximum line width from project configuration or formatter defaults.
     #[arg(long)]
     width: Option<usize>,
-    /// Block indentation. Defaults to the formatter's configured default.
+    /// Override block indentation from project configuration or formatter defaults.
     #[arg(long, value_parser = parse_indent)]
     indent: Option<Indent>,
-    /// Continuation indentation. Defaults to the formatter's configured default.
+    /// Override continuation indentation from project configuration or formatter defaults.
     #[arg(long, value_parser = parse_indent)]
     continuation_indent: Option<Indent>,
-    /// Padding inside ordinary action delimiters. Defaults to the formatter's configured default.
+    /// Override ordinary action delimiter padding from project configuration or formatter defaults.
     #[arg(long, value_enum)]
     delimiter_padding: Option<PaddingArg>,
     #[arg(value_name = "FILE")]
@@ -67,27 +68,14 @@ fn run(args: Args) -> i32 {
         return 2;
     }
 
-    // Keep formatter defaults in `FormatOptions`: CLI flags override them only
-    // when explicitly supplied.
-    let mut options = FormatOptions::default();
-    if let Some(width) = args.width {
-        options.max_width = width;
-    }
-    if let Some(indent) = args.indent {
-        options.indent = indent;
-    }
-    if let Some(continuation_indent) = args.continuation_indent {
-        options.continuation_indent = continuation_indent;
-    }
-    if let Some(delimiter_padding) = args.delimiter_padding {
-        options.delimiter_padding = delimiter_padding.into();
-    }
     if args.files.is_empty() {
         let mut source = String::new();
         if let Err(error) = io::stdin().read_to_string(&mut source) {
             eprintln!("failed to read stdin: {error}");
             return 2;
         }
+        let mut options = FormatOptions::default();
+        apply_cli_overrides(&mut options, &args);
         let result = yag_template_format::format(&source, &options);
         if let Err(error) = io::stdout().write_all(result.text.as_bytes()) {
             eprintln!("failed to write stdout: {error}");
@@ -96,9 +84,10 @@ fn run(args: Args) -> i32 {
         return if has_parse_error(&result.diagnostics) { 1 } else { 0 };
     }
 
+    let mut resolver = ConfigResolver::default();
     let mut failed = false;
-    for path in args.files {
-        let source = match fs::read_to_string(&path) {
+    for path in &args.files {
+        let source = match fs::read_to_string(path) {
             Ok(source) => source,
             Err(error) => {
                 eprintln!("{}: {error}", path.display());
@@ -106,6 +95,14 @@ fn run(args: Args) -> i32 {
                 continue;
             }
         };
+        let mut options = match resolver.resolve_options_for_file(path) {
+            Ok(options) => options,
+            Err(error) => {
+                eprintln!("could not load formatter configuration: {error}");
+                return 2;
+            }
+        };
+        apply_cli_overrides(&mut options, &args);
         let result = yag_template_format::format(&source, &options);
         let invalid = has_parse_error(&result.diagnostics);
         failed |= invalid;
@@ -113,7 +110,7 @@ fn run(args: Args) -> i32 {
         if args.write {
             if !invalid
                 && result.text != source
-                && let Err(error) = fs::write(&path, result.text)
+                && let Err(error) = fs::write(path, result.text)
             {
                 eprintln!("{}: {error}", path.display());
                 failed = true;
@@ -126,6 +123,21 @@ fn run(args: Args) -> i32 {
         }
     }
     if failed { 1 } else { 0 }
+}
+
+fn apply_cli_overrides(options: &mut FormatOptions, args: &Args) {
+    if let Some(width) = args.width {
+        options.max_width = width;
+    }
+    if let Some(indent) = args.indent {
+        options.indent = indent;
+    }
+    if let Some(continuation_indent) = args.continuation_indent {
+        options.continuation_indent = continuation_indent;
+    }
+    if let Some(delimiter_padding) = args.delimiter_padding {
+        options.delimiter_padding = delimiter_padding.into();
+    }
 }
 
 fn has_parse_error(diagnostics: &[yag_template_format::FormatDiagnostic]) -> bool {
