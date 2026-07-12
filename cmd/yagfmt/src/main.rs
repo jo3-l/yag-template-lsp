@@ -17,14 +17,18 @@ struct Args {
     /// Associate stdin with a path for editor integrations. Stdin is never written.
     #[arg(long, value_name = "PATH")]
     stdin_filepath: Option<PathBuf>,
-    #[arg(long, default_value_t = 100)]
-    width: usize,
-    #[arg(long, default_value = "tabs", value_parser = parse_indent)]
-    indent: Indent,
-    #[arg(long, default_value = "2", value_parser = parse_indent)]
-    continuation_indent: Indent,
-    #[arg(long, value_enum, default_value_t = PaddingArg::None)]
-    delimiter_padding: PaddingArg,
+    /// Maximum line width. Defaults to the formatter's configured default.
+    #[arg(long)]
+    width: Option<usize>,
+    /// Block indentation. Defaults to the formatter's configured default.
+    #[arg(long, value_parser = parse_indent)]
+    indent: Option<Indent>,
+    /// Continuation indentation. Defaults to the formatter's configured default.
+    #[arg(long, value_parser = parse_indent)]
+    continuation_indent: Option<Indent>,
+    /// Padding inside ordinary action delimiters. Defaults to the formatter's configured default.
+    #[arg(long, value_enum)]
+    delimiter_padding: Option<PaddingArg>,
     /// Add a function name that uses the key/value-pair layout.
     #[arg(long = "key-value-function", value_name = "NAME")]
     key_value_functions: Vec<String>,
@@ -73,13 +77,21 @@ fn run(args: Args) -> i32 {
         return 2;
     }
 
-    let mut options = FormatOptions {
-        indent: args.indent,
-        continuation_indent: args.continuation_indent,
-        max_width: args.width,
-        delimiter_padding: args.delimiter_padding.into(),
-        ..FormatOptions::default()
-    };
+    // Keep formatter defaults in `FormatOptions`: CLI flags override them only
+    // when explicitly supplied.
+    let mut options = FormatOptions::default();
+    if let Some(width) = args.width {
+        options.max_width = width;
+    }
+    if let Some(indent) = args.indent {
+        options.indent = indent;
+    }
+    if let Some(continuation_indent) = args.continuation_indent {
+        options.continuation_indent = continuation_indent;
+    }
+    if let Some(delimiter_padding) = args.delimiter_padding {
+        options.delimiter_padding = delimiter_padding.into();
+    }
     for name in args.key_value_functions {
         options.function_layouts.by_name.insert(name, LayoutKind::KeyValuePairs);
     }

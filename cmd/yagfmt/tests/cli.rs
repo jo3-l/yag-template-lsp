@@ -3,6 +3,8 @@ use std::io::Write;
 use std::path::PathBuf;
 use std::process::{Command, Stdio};
 
+use yag_template_format::{FormatOptions, format};
+
 fn command() -> Command {
     Command::new(env!("CARGO_BIN_EXE_yagfmt"))
 }
@@ -27,17 +29,28 @@ fn formats_stdin_to_stdout() {
     let output = child.wait_with_output().unwrap();
 
     assert!(output.status.success());
-    assert_eq!(output.stdout, b"Hello {{.Name}}");
+    assert_eq!(output.stdout, b"Hello {{ .Name }}");
+}
+
+#[test]
+fn default_options_come_from_the_formatter() {
+    let source = "{{if .Enabled}}\n{{dict \"alpha\" \"a long value that forces the formatter to choose multiline layout\" \"beta\" \"another long value that forces the formatter to choose multiline layout\"}}\n{{end}}";
+    let mut child = command().stdin(Stdio::piped()).stdout(Stdio::piped()).spawn().unwrap();
+    child.stdin.take().unwrap().write_all(source.as_bytes()).unwrap();
+    let output = child.wait_with_output().unwrap();
+
+    assert!(output.status.success());
+    assert_eq!(output.stdout, format(source, &FormatOptions::default()).text.as_bytes());
 }
 
 #[test]
 fn check_and_write_are_safe_for_explicit_valid_files() {
-    let path = temp_file("check-write", "{{ .Name }}");
+    let path = temp_file("check-write", "{{.Name}}");
 
     assert_eq!(command().arg("--check").arg(&path).status().unwrap().code(), Some(1));
-    assert_eq!(fs::read_to_string(&path).unwrap(), "{{ .Name }}");
-    assert!(command().arg("--write").arg(&path).status().unwrap().success());
     assert_eq!(fs::read_to_string(&path).unwrap(), "{{.Name}}");
+    assert!(command().arg("--write").arg(&path).status().unwrap().success());
+    assert_eq!(fs::read_to_string(&path).unwrap(), "{{ .Name }}");
     assert!(command().arg("--check").arg(&path).status().unwrap().success());
 }
 
@@ -66,6 +79,8 @@ fn layout_flags_apply_to_stdin() {
             "20",
             "--delimiter-padding",
             "spaces",
+            "--continuation-indent",
+            "2",
             "--key-value-function",
             "metadata",
         ])
