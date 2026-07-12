@@ -64,9 +64,10 @@ fn fingerprint_node(node: SyntaxNode, source: &str) -> TemplateFingerprint {
     }
 }
 
-/// Whitespace directly between flexible actions, or at the edge of a block
-/// body beside a flexible action, is formatter-owned. Display actions remain
-/// excluded because their surrounding literal spacing is output-facing.
+/// Whitespace directly between flexible actions, at the edge of a block body
+/// beside a flexible action, or in an otherwise empty block body is
+/// formatter-owned. Display actions remain excluded because their surrounding
+/// literal spacing is output-facing.
 fn formatter_owned_action_separator(
     parent_kind: SyntaxKind,
     children: &[SyntaxElement],
@@ -79,7 +80,8 @@ fn formatter_owned_action_separator(
             && is_flexible_action(&children[index - 1])
             && is_flexible_action(&children[index + 1]))
             || (parent_kind == SyntaxKind::ActionList
-                && ((index == 0 && children.get(1).is_some_and(is_flexible_action))
+                && (children.len() == 1
+                    || (index == 0 && children.get(1).is_some_and(is_flexible_action))
                     || (index + 1 == children.len() && index > 0 && is_flexible_action(&children[index - 1])))))
 }
 

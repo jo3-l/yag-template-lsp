@@ -3,29 +3,24 @@
 use std::collections::BTreeMap;
 use std::ops::Range;
 
-use yag_template_syntax::SyntaxNode;
-use yag_template_syntax::ast::{Action, ActionList, AstNode, Expr};
+use yag_template_syntax::ast::{Action, AstNode, Expr};
+use yag_template_syntax::{SyntaxKind, SyntaxNode};
 
 use crate::line_index::LineIndex;
 
 /// How a logical source line participates in formatter layout.
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
 pub(super) enum LayoutPolicy {
-    /// The formatter owns layout around actions on this line.
+    /// The formatter may freely rewrite whitespace between actions and text
+    /// on this line.
     Flexible,
-    /// Action/text adjacency on the line stays flat; a containing block may
-    /// still prefix it with indentation after an existing source newline.
+    /// The formatter must not rewrite whitespace between actions and text
+    /// on this line. It may still reformat internally within actions.
     Protected,
-    /// The line has no direct action. Its literal content is preserved, while
-    /// leading/trailing line whitespace may become structural indentation.
-    Literal,
 }
 
-/// Sparse, source-wide layout ownership derived from the typed syntax tree.
-///
-/// Missing entries are `Literal`; only lines containing a direct action are
-/// stored. This keeps nested blocks cheap while leaving lowering free to query
-/// a policy for any source line or action range.
+/// Sparse, source-wide reflow freedom derived from the typed syntax tree.
+/// Missing entries are flexible.
 #[derive(Debug)]
 pub(super) struct LinePlan {
     line_index: LineIndex,
@@ -35,11 +30,10 @@ pub(super) struct LinePlan {
 impl LinePlan {
     /// Return the resolved policy for one physical source line.
     pub(super) fn policy_for_line(&self, line: usize) -> LayoutPolicy {
-        self.policies.get(&line).copied().unwrap_or(LayoutPolicy::Literal)
+        self.policies.get(&line).copied().unwrap_or(LayoutPolicy::Flexible)
     }
 
     /// Return the policy for the source line containing `offset`.
-    #[allow(dead_code)] // Used by the later AST-to-Doc lowering pass.
     pub(super) fn policy_at_offset(&self, offset: usize) -> LayoutPolicy {
         self.policy_for_line(self.line_index.line_for(offset))
     }
@@ -50,7 +44,6 @@ impl LinePlan {
     }
 }
 
-/// Build a plan for a parsed, valid template.
 pub(super) fn classify(root: &SyntaxNode, source: &str) -> LinePlan {
     LineClassifier::new(source).classify(root)
 }
@@ -69,125 +62,54 @@ impl LineClassifier {
     }
 
     fn classify(mut self, root: &SyntaxNode) -> LinePlan {
-        self.visit_sequence(root);
+        self.protect_text_lines(root);
+        self.protect_display_lines(root);
         LinePlan {
             line_index: self.line_index,
             policies: self.policies,
         }
     }
 
-    /// Visit the direct actions in one root or action-list sequence.
-    fn visit_sequence(&mut self, node: &SyntaxNode) {
-        for action in node.children().filter_map(Action::cast) {
-            self.visit_action(action);
+    /// Literal non-whitespace protects its physical source line.
+    fn protect_text_lines(&mut self, root: &SyntaxNode) {
+        for token in root
+            .descendants_with_tokens()
+            .filter_map(|element| element.into_token())
+            .filter(|token| token.kind() == SyntaxKind::Text)
+        {
+            let start = byte_offset(token.text_range().start());
+            for (offset, c) in token.text().char_indices() {
+                if !c.is_whitespace() {
+                    self.protect_line(self.line_index.line_for(start + offset));
+                }
+            }
         }
     }
 
-    fn visit_body(&mut self, maybe_body: Option<ActionList>) {
-        if let Some(body) = maybe_body {
-            self.visit_sequence(body.syntax());
+    fn protect_display_lines(&mut self, root: &SyntaxNode) {
+        for action in root.descendants().filter_map(Action::cast) {
+            let Action::ExprAction(action) = action else {
+                continue;
+            };
+            if action.expr().is_some_and(is_output_expression) {
+                self.protect_range(source_range(&action));
+            }
         }
     }
 
-    fn visit_action(&mut self, action: Action) {
-        match action {
-            Action::TemplateDefinition(action) => {
-                self.mark_flexible(action.clause());
-                self.visit_body(action.template_body());
-                self.mark_flexible(action.end_clause());
-            }
-            Action::TemplateBlock(action) => {
-                self.mark_flexible(action.clause());
-                self.visit_body(action.template_body());
-                self.mark_flexible(action.end_clause());
-            }
-            Action::If(action) => {
-                self.mark_flexible(action.clause());
-                self.visit_body(action.body());
-                for branch in action.else_branches() {
-                    self.mark_flexible(branch.clause());
-                    self.visit_body(branch.body());
-                }
-                self.mark_flexible(action.end_clause());
-            }
-            Action::With(action) => {
-                self.mark_flexible(action.clause());
-                self.visit_body(action.body());
-                for branch in action.else_branches() {
-                    self.mark_flexible(branch.clause());
-                    self.visit_body(branch.body());
-                }
-                self.mark_flexible(action.end_clause());
-            }
-            Action::Range(action) => {
-                self.mark_flexible(action.clause());
-                self.visit_body(action.body());
-                if let Some(branch) = action.else_branch() {
-                    self.mark_flexible(branch.clause());
-                    self.visit_body(branch.body());
-                }
-                self.mark_flexible(action.end_clause());
-            }
-            Action::While(action) => {
-                self.mark_flexible(action.clause());
-                self.visit_body(action.body());
-                if let Some(branch) = action.else_branch() {
-                    self.mark_flexible(branch.clause());
-                    self.visit_body(branch.body());
-                }
-                self.mark_flexible(action.end_clause());
-            }
-            Action::TryCatch(action) => {
-                self.mark_flexible(action.try_clause());
-                self.visit_body(action.try_body());
-                self.mark_flexible(action.catch_clause());
-                self.visit_body(action.catch_body());
-                self.mark_flexible(action.end_clause());
-            }
-            Action::ExprAction(action) => {
-                let range = source_range(&action);
-                let policy =
-                    if action.expr().is_some_and(qualifies_display_expr) && is_single_line(&range, &self.line_index) {
-                        LayoutPolicy::Protected
-                    } else {
-                        LayoutPolicy::Flexible
-                    };
-                self.mark_range(Some(action), policy);
-            }
-            action @ (Action::Comment(_)
-            | Action::TemplateInvocation(_)
-            | Action::Return(_)
-            | Action::Break(_)
-            | Action::Continue(_)) => self.mark_flexible(Some(action)),
-        }
-    }
-
-    fn mark_flexible(&mut self, node: Option<impl AstNode>) {
-        self.mark_range(node, LayoutPolicy::Flexible);
-    }
-
-    fn mark_range(&mut self, node: Option<impl AstNode>, policy: LayoutPolicy) {
-        let Some(node) = node else {
-            return;
-        };
-        let range = source_range(&node);
+    fn protect_range(&mut self, range: Range<usize>) {
         if range.is_empty() {
             return;
         }
         let first_line = self.line_index.line_for(range.start);
         let last_line = self.line_index.line_for(range.end - 1);
         for line in first_line..=last_line {
-            self.policies
-                .entry(line)
-                .and_modify(|current| {
-                    // A display action protects its whole physical line,
-                    // even when it shares it with a flexible action.
-                    if policy == LayoutPolicy::Protected {
-                        *current = LayoutPolicy::Protected;
-                    }
-                })
-                .or_insert(policy);
+            self.protect_line(line);
         }
+    }
+
+    fn protect_line(&mut self, line: usize) {
+        self.policies.insert(line, LayoutPolicy::Protected);
     }
 }
 
@@ -200,17 +122,14 @@ fn byte_offset(position: impl Into<u32>) -> usize {
     position.into() as usize
 }
 
-fn qualifies_display_expr(expr: Expr) -> bool {
+/// Whether `expr` has a display-like shape that protects its physical line.
+/// Calls, pipelines, and assignments deliberately do not qualify.
+fn is_output_expression(expr: Expr) -> bool {
     match expr {
-        Expr::VarAccess(_) | Expr::ContextAccess(_) | Expr::ContextFieldChain(_) => true,
-        Expr::ExprFieldChain(chain) => chain.base_expr().is_some_and(qualifies_display_expr),
-        Expr::Parenthesized(parenthesized) => parenthesized.inner_expr().is_some_and(qualifies_display_expr),
+        Expr::VarAccess(_) | Expr::ContextAccess(_) | Expr::ContextFieldChain(_) | Expr::ExprFieldChain(_) => true,
+        Expr::Parenthesized(parenthesized) => parenthesized.inner_expr().is_some_and(is_output_expression),
         _ => false,
     }
-}
-
-fn is_single_line(range: &Range<usize>, line_index: &LineIndex) -> bool {
-    line_index.line_for(range.start) == line_index.line_for(range.end.saturating_sub(1))
 }
 
 #[cfg(test)]
@@ -233,9 +152,10 @@ mod tests {
     #[test]
     fn motivating_examples_resolve_to_the_expected_line_policies() {
         assert_eq!(policies("A {{$b}} C"), vec![LayoutPolicy::Protected]);
+        assert_eq!(policies("{{$b}} {{$c}}"), vec![LayoutPolicy::Protected]);
         assert_eq!(policies("{{$x := 1}} {{$y := 2}}"), vec![LayoutPolicy::Flexible]);
-        assert_eq!(policies("ordinary prose"), vec![LayoutPolicy::Literal]);
-        assert_eq!(policies("A {{add 1 1}} C"), vec![LayoutPolicy::Flexible]);
+        assert_eq!(policies("ordinary prose"), vec![LayoutPolicy::Protected]);
+        assert_eq!(policies("A {{add 1 1}} C"), vec![LayoutPolicy::Protected]);
     }
 
     #[test]
@@ -255,19 +175,19 @@ mod tests {
     }
 
     #[test]
-    fn protected_wins_when_actions_share_a_line() {
+    fn protected_display_wins_when_actions_share_a_line() {
         assert_eq!(policies("{{$value}} {{$other := 1}}"), vec![LayoutPolicy::Protected]);
     }
 
     #[test]
-    fn multi_line_actions_are_flexible_on_every_line_they_cross() {
+    fn display_actions_protect_every_line_they_cross() {
         assert_eq!(
             policies("{{\n  .Value\n}}\n"),
             vec![
+                LayoutPolicy::Protected,
+                LayoutPolicy::Protected,
+                LayoutPolicy::Protected,
                 LayoutPolicy::Flexible,
-                LayoutPolicy::Flexible,
-                LayoutPolicy::Flexible,
-                LayoutPolicy::Literal,
             ]
         );
     }
@@ -279,7 +199,7 @@ mod tests {
             policies(source),
             vec![
                 LayoutPolicy::Flexible,
-                LayoutPolicy::Literal,
+                LayoutPolicy::Protected,
                 LayoutPolicy::Protected,
                 LayoutPolicy::Flexible,
                 LayoutPolicy::Flexible,
@@ -289,23 +209,23 @@ mod tests {
     }
 
     #[test]
-    fn every_compound_action_marks_clauses_but_not_literal_bodies() {
+    fn compound_actions_leave_non_text_lines_flexible_and_protect_literal_bodies() {
         for (source, expected) in [
             (
                 "{{define \"name\"}}\nbody\n{{end}}",
-                vec![LayoutPolicy::Flexible, LayoutPolicy::Literal, LayoutPolicy::Flexible],
+                vec![LayoutPolicy::Flexible, LayoutPolicy::Protected, LayoutPolicy::Flexible],
             ),
             (
                 "{{block \"name\" .}}\nbody\n{{end}}",
-                vec![LayoutPolicy::Flexible, LayoutPolicy::Literal, LayoutPolicy::Flexible],
+                vec![LayoutPolicy::Flexible, LayoutPolicy::Protected, LayoutPolicy::Flexible],
             ),
             (
                 "{{if .Foo}}\nbody\n{{else}}\nother\n{{end}}",
                 vec![
                     LayoutPolicy::Flexible,
-                    LayoutPolicy::Literal,
+                    LayoutPolicy::Protected,
                     LayoutPolicy::Flexible,
-                    LayoutPolicy::Literal,
+                    LayoutPolicy::Protected,
                     LayoutPolicy::Flexible,
                 ],
             ),
@@ -313,9 +233,9 @@ mod tests {
                 "{{with .Foo}}\nbody\n{{else}}\nother\n{{end}}",
                 vec![
                     LayoutPolicy::Flexible,
-                    LayoutPolicy::Literal,
+                    LayoutPolicy::Protected,
                     LayoutPolicy::Flexible,
-                    LayoutPolicy::Literal,
+                    LayoutPolicy::Protected,
                     LayoutPolicy::Flexible,
                 ],
             ),
@@ -323,9 +243,9 @@ mod tests {
                 "{{range .Foo}}\nbody\n{{else}}\nother\n{{end}}",
                 vec![
                     LayoutPolicy::Flexible,
-                    LayoutPolicy::Literal,
+                    LayoutPolicy::Protected,
                     LayoutPolicy::Flexible,
-                    LayoutPolicy::Literal,
+                    LayoutPolicy::Protected,
                     LayoutPolicy::Flexible,
                 ],
             ),
@@ -333,9 +253,9 @@ mod tests {
                 "{{while .Foo}}\nbody\n{{else}}\nother\n{{end}}",
                 vec![
                     LayoutPolicy::Flexible,
-                    LayoutPolicy::Literal,
+                    LayoutPolicy::Protected,
                     LayoutPolicy::Flexible,
-                    LayoutPolicy::Literal,
+                    LayoutPolicy::Protected,
                     LayoutPolicy::Flexible,
                 ],
             ),
@@ -343,9 +263,9 @@ mod tests {
                 "{{try}}\nbody\n{{catch}}\nother\n{{end}}",
                 vec![
                     LayoutPolicy::Flexible,
-                    LayoutPolicy::Literal,
+                    LayoutPolicy::Protected,
                     LayoutPolicy::Flexible,
-                    LayoutPolicy::Literal,
+                    LayoutPolicy::Protected,
                     LayoutPolicy::Flexible,
                 ],
             ),
@@ -355,7 +275,7 @@ mod tests {
     }
 
     #[test]
-    fn nested_display_action_protects_a_shared_branch_clause_line() {
+    fn display_actions_protect_their_physical_line() {
         assert_eq!(
             policies("{{if .Show}}{{.User}}{{else}}fallback{{end}}"),
             vec![LayoutPolicy::Protected]

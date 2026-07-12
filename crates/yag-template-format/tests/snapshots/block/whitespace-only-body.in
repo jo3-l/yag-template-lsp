@@ -1,0 +1,4 @@
+---
+max_width: 24
+---
+{{if .ReallyLong}} {{end}}

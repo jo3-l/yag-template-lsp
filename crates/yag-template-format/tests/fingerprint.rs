@@ -84,6 +84,11 @@ fn fingerprint_ignores_block_body_edge_separators_for_flexible_actions() {
 }
 
 #[test]
+fn fingerprint_ignores_a_whitespace_only_block_body() {
+    assert_eq!(fingerprint("{{if .Foo}} {{end}}"), fingerprint("{{if .Foo}}\n{{end}}"));
+}
+
+#[test]
 fn internal_literal_whitespace_changes_are_detectable() {
     assert!(has_internal_literal_whitespace_change(
         "{{if .Foo}}\nbar baz\n{{end}}",

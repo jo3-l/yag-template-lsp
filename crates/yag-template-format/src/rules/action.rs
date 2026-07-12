@@ -6,7 +6,7 @@ use yag_template_syntax::ast::{
 };
 
 use crate::LayoutKind;
-use crate::lower::Formatter;
+use crate::lower::{AllowCompact, Formatter};
 use crate::pretty::{Doc, concat, empty, join, soft_line, text, try_concat};
 
 impl Formatter<'_> {
@@ -59,7 +59,7 @@ impl Formatter<'_> {
     }
 
     fn template_definition(&mut self, action: &TemplateDefinition) -> Option<Doc> {
-        let compact = is_compact(action);
+        let allow_compact = allows_compact(action);
         let clause = action.clause()?;
         Some(
             concat([
@@ -69,15 +69,15 @@ impl Formatter<'_> {
                     clause.template_name()?.syntax().text().to_string(),
                     None,
                 )?,
-                self.body(action.template_body()?, compact),
+                self.body(action.template_body()?, allow_compact),
                 self.end_clause(&action.end_clause()?)?,
             ])
-            .group_if(compact),
+            .group_if(allow_compact.is_allowed()),
         )
     }
 
     fn template_block(&mut self, action: &TemplateBlock) -> Option<Doc> {
-        let compact = is_compact(action);
+        let allow_compact = allows_compact(action);
         let clause = action.clause()?;
         Some(
             concat([
@@ -87,45 +87,52 @@ impl Formatter<'_> {
                     clause.template_name()?.syntax().text().to_string(),
                     clause.context_data(),
                 )?,
-                self.body(action.template_body()?, compact),
+                self.body(action.template_body()?, allow_compact),
                 self.end_clause(&action.end_clause()?)?,
             ])
-            .group_if(compact),
+            .group_if(allow_compact.is_allowed()),
         )
     }
 
     fn if_action(&mut self, action: &IfAction) -> Option<Doc> {
-        let compact = is_compact(action);
+        let allow_compact = allows_compact(action);
         let clause = action.clause()?;
         Some(
             concat([
                 self.keyword_with_expression(clause.delims()?, "if", clause.condition()?)?,
-                self.body(action.body()?, compact),
-                self.else_branches(action.else_branches(), compact)?,
+                self.body(action.body()?, allow_compact),
+                self.else_branches(action.else_branches(), allow_compact)?,
                 self.end_clause(&action.end_clause()?)?,
             ])
-            .group_if(compact),
+            .group_if(allow_compact.is_allowed()),
         )
     }
 
     fn with_action(&mut self, action: &WithAction) -> Option<Doc> {
-        let compact = is_compact(action);
+        let allow_compact = allows_compact(action);
         let clause = action.clause()?;
         Some(
             concat([
                 self.keyword_with_expression(clause.delims()?, "with", clause.condition()?)?,
-                self.body(action.body()?, compact),
-                self.else_branches(action.else_branches(), compact)?,
+                self.body(action.body()?, allow_compact),
+                self.else_branches(action.else_branches(), allow_compact)?,
                 self.end_clause(&action.end_clause()?)?,
             ])
-            .group_if(compact),
+            .group_if(allow_compact.is_allowed()),
         )
     }
 
-    fn else_branches(&mut self, branches: impl Iterator<Item = ElseBranch>, compact: bool) -> Option<Doc> {
+    fn else_branches(
+        &mut self,
+        branches: impl Iterator<Item = ElseBranch>,
+        allow_compact: AllowCompact,
+    ) -> Option<Doc> {
         try_concat(branches.map(|branch| {
             let clause = branch.clause()?;
-            Some(concat([self.else_clause(&clause)?, self.body(branch.body()?, compact)]))
+            Some(concat([
+                self.else_clause(&clause)?,
+                self.body(branch.body()?, allow_compact),
+            ]))
         }))
     }
 
@@ -139,22 +146,22 @@ impl Formatter<'_> {
     }
 
     fn range_action(&mut self, action: &RangeLoop) -> Option<Doc> {
-        let compact = is_compact(action);
+        let allow_compact = allows_compact(action);
         let clause = action.clause()?;
         let else_branch = if let Some(branch) = action.else_branch() {
             let clause = branch.clause()?;
-            concat([self.else_clause(&clause)?, self.body(branch.body()?, compact)])
+            concat([self.else_clause(&clause)?, self.body(branch.body()?, allow_compact)])
         } else {
             empty()
         };
         Some(
             concat([
                 self.range_clause(&clause)?,
-                self.body(action.body()?, compact),
+                self.body(action.body()?, allow_compact),
                 else_branch,
                 self.end_clause(&action.end_clause()?)?,
             ])
-            .group_if(compact),
+            .group_if(allow_compact.is_allowed()),
         )
     }
 
@@ -181,36 +188,36 @@ impl Formatter<'_> {
     }
 
     fn while_action(&mut self, action: &WhileLoop) -> Option<Doc> {
-        let compact = is_compact(action);
+        let allow_compact = allows_compact(action);
         let clause = action.clause()?;
         let else_branch = if let Some(branch) = action.else_branch() {
             let clause = branch.clause()?;
-            concat([self.else_clause(&clause)?, self.body(branch.body()?, compact)])
+            concat([self.else_clause(&clause)?, self.body(branch.body()?, allow_compact)])
         } else {
             empty()
         };
         Some(
             concat([
                 self.keyword_with_expression(clause.delims()?, "while", clause.condition()?)?,
-                self.body(action.body()?, compact),
+                self.body(action.body()?, allow_compact),
                 else_branch,
                 self.end_clause(&action.end_clause()?)?,
             ])
-            .group_if(compact),
+            .group_if(allow_compact.is_allowed()),
         )
     }
 
     fn try_catch_action(&mut self, action: &TryCatchAction) -> Option<Doc> {
-        let compact = is_compact(action);
+        let allow_compact = allows_compact(action);
         Some(
             concat([
                 self.keyword(action.try_clause()?.delims()?, "try")?,
-                self.body(action.try_body()?, compact),
+                self.body(action.try_body()?, allow_compact),
                 self.keyword(action.catch_clause()?.delims()?, "catch")?,
-                self.body(action.catch_body()?, compact),
+                self.body(action.catch_body()?, allow_compact),
                 self.end_clause(&action.end_clause()?)?,
             ])
-            .group_if(compact),
+            .group_if(allow_compact.is_allowed()),
         )
     }
 
@@ -256,7 +263,11 @@ impl Formatter<'_> {
     }
 }
 
-fn is_compact(action: &impl AstNode) -> bool {
+fn allows_compact(action: &impl AstNode) -> AllowCompact {
     // Existing physical newlines stay structural rather than participating in reflow.
-    !action.syntax().text().contains_char('\n')
+    if action.syntax().text().contains_char('\n') {
+        AllowCompact::No
+    } else {
+        AllowCompact::Yes
+    }
 }

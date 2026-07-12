@@ -9,6 +9,7 @@ use std::collections::HashMap;
 use yag_template_syntax::SyntaxNode;
 
 mod classification;
+mod iterutil;
 mod line_index;
 mod lower;
 mod pretty;
@@ -26,6 +27,15 @@ pub enum Indent {
 pub enum DelimiterPadding {
     None,
     Spaces,
+}
+
+impl DelimiterPadding {
+    fn as_str(self) -> &'static str {
+        match self {
+            DelimiterPadding::None => "",
+            DelimiterPadding::Spaces => " ",
+        }
+    }
 }
 
 /// Layout dispatch table for calls with known syntactic callees.
