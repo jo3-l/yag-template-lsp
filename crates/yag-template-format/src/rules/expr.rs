@@ -2,8 +2,8 @@
 
 use yag_template_syntax::ast::{AstNode, AstToken, Expr, ExprCall, ExprFieldChain, FuncCall, Pipeline};
 
-use crate::doc::{Doc, concat, group, soft_line, text, try_concat};
 use crate::lower::Formatter;
+use crate::pretty::{Doc, concat, group, soft_line, text, try_concat};
 use crate::{FormatDiagnostic, FormatDiagnosticKind, LayoutKind};
 
 impl Formatter<'_> {

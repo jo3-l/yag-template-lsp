@@ -10,7 +10,7 @@ use yag_template_syntax::SyntaxNode;
 use yag_template_syntax::ast::{ActionList, ActionOrText, AstNode, AstToken, LeftDelim, RightDelim, Root};
 
 use crate::classification::{LayoutPolicy, LinePlan};
-use crate::doc::{Doc, concat, empty, group, group_with_tail, if_break, line, nest, text};
+use crate::pretty::{Doc, concat, empty, group, group_with_tail, if_break, line, nest, text};
 use crate::{DelimiterPadding, FormatDiagnostic, FormatOptions, LayoutKind};
 
 pub(super) fn lower(

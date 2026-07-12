@@ -6,8 +6,8 @@ use yag_template_syntax::ast::{
 };
 
 use crate::LayoutKind;
-use crate::doc::{Doc, concat, empty, join, soft_line, text, try_concat};
 use crate::lower::Formatter;
+use crate::pretty::{Doc, concat, empty, join, soft_line, text, try_concat};
 
 impl Formatter<'_> {
     /// Format an action atomically. A rule that cannot construct a complete

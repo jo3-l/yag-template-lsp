@@ -9,9 +9,9 @@ use std::collections::{BTreeSet, HashMap};
 use yag_template_syntax::SyntaxNode;
 
 mod classification;
-mod doc;
 mod line_index;
 mod lower;
+mod pretty;
 mod rules;
 
 /// Indentation used for template blocks or expression continuations.
@@ -115,13 +115,13 @@ pub fn format(source: &str, options: &FormatOptions) -> FormatResult {
         let protected_textual_lines = line_plan.protected_textual_line_mask();
         let (doc, lowering_diagnostics) = lower::lower(&root, source, options, &line_plan);
         diagnostics.extend(lowering_diagnostics);
-        let text = doc::render(doc, options.max_width);
+        let text = pretty::render(doc, options.max_width);
         // A source check preserves diagnostics for protected lines after an
         // earlier flexible expression adds output lines. The unbounded render
         // also catches delimiter padding that makes an otherwise fitting line
         // exceed the limit.
         let (protected_doc, _) = lower::lower(&root, source, options, &line_plan);
-        let protected_line_text = doc::render(protected_doc, usize::MAX);
+        let protected_line_text = pretty::render(protected_doc, usize::MAX);
         let mut protected_over_width = source
             .split('\n')
             .enumerate()
