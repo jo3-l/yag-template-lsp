@@ -5,4 +5,5 @@
 //! fall back to its exact source without a partially written document.
 
 mod action;
+mod block;
 mod expr;
