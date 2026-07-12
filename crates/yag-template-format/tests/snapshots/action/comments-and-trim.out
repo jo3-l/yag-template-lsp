@@ -1,5 +1,3 @@
 {{/* comment */}}
 {{- $value := .User -}}
-{{
-  .User
-}}
+{{ .User }}

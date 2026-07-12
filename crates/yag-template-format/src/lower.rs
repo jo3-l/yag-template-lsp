@@ -1,18 +1,15 @@
-//! AST-to-document lowering and source-layout ownership.
-//!
-//! `Formatter` owns the formatting inputs, but never stores partially built
-//! documents. Typed rules return complete fragments, allowing a failed rule to
-//! discard its work and preserve the original action source.
-
 use std::ops::Range;
 
 use yag_template_syntax::SyntaxNode;
-use yag_template_syntax::ast::{Action, ActionList, ActionOrText, AstNode, AstToken, LeftDelim, RightDelim, Root};
+use yag_template_syntax::ast::{
+    Action, ActionList, ActionOrText, AstNode, AstToken, LeftDelim, RightDelim, Root, Text,
+};
 
 use crate::classification::{LayoutPolicy, LinePlan};
 use crate::pretty::{Doc, concat, empty, group, group_with_tail, if_break, line, nest, soft_line, text};
 use crate::{DelimiterPadding, FormatOptions, LayoutKind};
 
+/// Lower a successfully parsed root into a renderable document.
 pub(super) fn lower(root: &SyntaxNode, source: &str, options: &FormatOptions, plan: &LinePlan) -> Doc {
     let Some(root) = Root::cast(root.clone()) else {
         return text(source);
@@ -21,18 +18,36 @@ pub(super) fn lower(root: &SyntaxNode, source: &str, options: &FormatOptions, pl
     formatter.sequence(root.actions_with_text(), None)
 }
 
-/// Stateful services shared by typed rules.
-///
-/// The formatter owns source/configuration access only.
-/// Document fragments remain return values, so no failed rule can leak partial
-/// output into its caller.
+/// Formatting context shared by the typed AST rules.
 pub(crate) struct Formatter<'a> {
     source: &'a str,
     options: &'a FormatOptions,
     plan: &'a LinePlan,
 }
 
+/// Layout-owned whitespace at the two edges of a compact compound body.
+/// The surrounding group renders each edge as either a space or a line break.
+#[derive(Debug, Default, Clone, Copy)]
+struct BodyEdges {
+    leading_flexible: bool,
+    trailing_flexible: bool,
+}
+
+impl BodyEdges {
+    /// Iterate over body elements after removing layout-owned edge text.
+    ///
+    /// The removed text is represented by a [`soft_line`] in
+    /// [`Formatter::body`], so it is either restored as a space or rendered as
+    /// a structural line by the enclosing compact block group.
+    fn interior<'a>(self, elements: &'a [ActionOrText]) -> impl Iterator<Item = ActionOrText> + 'a {
+        let start = usize::from(self.leading_flexible);
+        let end = elements.len() - usize::from(self.trailing_flexible);
+        elements[start..end].iter().cloned()
+    }
+}
+
 impl<'a> Formatter<'a> {
+    /// Build the context used for one lowering pass.
     fn new(source: &'a str, options: &'a FormatOptions, plan: &'a LinePlan) -> Self {
         Self { source, options, plan }
     }
@@ -41,50 +56,34 @@ impl<'a> Formatter<'a> {
         self.options.function_layouts.by_name.get(name).copied()
     }
 
+    /// Nest a continuation beneath the current expression position.
+    ///
+    /// Expression rules use this around a leading [`soft_line`] so the same
+    /// document is a normal space while flat and gains configured continuation
+    /// indentation when its group breaks.
     pub(crate) fn continuation(&self, doc: Doc) -> Doc {
         nest(self.options.continuation_indent, doc)
     }
 
-    /// Wrap an explicit pair of typed action delimiters around `body`.
+    /// Format a normal parsed action with its explicit delimiter tokens.
     pub(crate) fn delimited(&self, (left, right): (LeftDelim, RightDelim), body: Doc) -> Option<Doc> {
         self.delimited_with_breaking_close((left, right), body, false)
     }
 
-    /// Wrap delimiters around a body whose closing delimiter should follow a
-    /// broken body on its own line.
+    /// Format an action while optionally moving its closing delimiter after a
+    /// broken body onto a line of its own.
+    ///
+    /// Delimiter token spelling comes from the parsed source so trim markers
+    /// remain exact, but the action body always comes from the typed document.
+    /// Existing internal action whitespace, including newlines, never changes
+    /// which layout path is used.
     pub(crate) fn delimited_with_breaking_close(
         &self,
         (left, right): (LeftDelim, RightDelim),
         body: Doc,
         break_before_close: bool,
     ) -> Option<Doc> {
-        let left_range = left.text_range();
-        let right_range = right.text_range();
-        let range = byte_offset(left_range.start())..byte_offset(right_range.end());
-        let left_end = byte_offset(left_range.end());
-        let right_start = byte_offset(right_range.start());
-        let original = &self.source[range.clone()];
-        if self.plan.range_contains_protected_line(range.clone()) && original.contains('\n') {
-            return Some(text(original));
-        }
-
-        // Preserve a multi-line action's interior layout, but still normalize
-        // horizontal padding immediately inside ordinary delimiters. This
-        // keeps a source-preserved body from opting out of delimiter options.
-        if original.contains('\n') {
-            let body = format_multiline_delimited_body(
-                &self.source[left_end..right_start],
-                left.has_trim_marker(),
-                right.has_trim_marker(),
-                self.options.delimiter_padding,
-            );
-            let mut action = String::with_capacity(original.len());
-            action.push_str(&self.source[range.start..left_end]);
-            action.push_str(&body);
-            action.push_str(&self.source[right_start..range.end]);
-            return Some(text(action));
-        }
-
+        let left_offset = byte_offset(left.text_range().start());
         let padding = match self.options.delimiter_padding {
             DelimiterPadding::None => "",
             DelimiterPadding::Spaces => " ",
@@ -97,9 +96,9 @@ impl<'a> Formatter<'a> {
             body
         };
         let doc = concat([
-            text(&self.source[range.start..left_end]),
-            // A trim marker's token includes its grammar-required space, so
-            // delimiter padding applies only to its ordinary counterpart.
+            text(left.syntax().text()),
+            // A trim marker token owns its grammar-required space. Configured
+            // delimiter padding therefore applies only to its ordinary peer.
             text(left_padding),
             body,
             if break_before_close {
@@ -107,9 +106,9 @@ impl<'a> Formatter<'a> {
             } else {
                 text(right_padding)
             },
-            text(&self.source[right_start..range.end]),
+            text(right.syntax().text()),
         ]);
-        if self.policy_at_offset(range.start) == LayoutPolicy::Protected {
+        if self.policy_at_offset(left_offset) == LayoutPolicy::Protected {
             doc.flatten()
         } else if break_before_close {
             Some(doc)
@@ -118,76 +117,83 @@ impl<'a> Formatter<'a> {
         }
     }
 
-    /// Format a typed compound body. A final source newline belongs to the
-    /// surrounding block boundary, so it aligns the following `else`, `catch`,
-    /// or `end` with the header.
+    /// Lower one typed compound body and apply its block indentation.
     pub(crate) fn body(&mut self, body: ActionList, compact: bool) -> Doc {
         let range = source_range(&body);
         let sequence_end = range.end;
         let has_terminal_newline = ends_with_line_break_after_margin(&self.source[range]);
         let elements = body.actions_with_text().collect::<Vec<_>>();
-        // A compact block owns whitespace-only boundaries around flexible body actions.
-        let leading_boundary = compact
-            && matches!(
-                elements.as_slice(),
-                [ActionOrText::Text(text), ActionOrText::Action(action), ..]
-                    if self.is_flexible_inline_separator(text.get(), action)
-            );
-        let trailing_boundary = compact
-            && matches!(
-                elements.as_slice(),
-                [.., ActionOrText::Action(action), ActionOrText::Text(text)]
-                    if self.is_flexible_inline_separator(text.get(), action)
-            );
-        let first = usize::from(leading_boundary);
-        let last = elements.len() - usize::from(trailing_boundary);
+        let edges = self.compact_body_edges(compact, &elements);
         let content = nest(
             self.options.indent,
             concat([
                 // These stay spaces while the enclosing compact block fits.
-                if leading_boundary { soft_line() } else { empty() },
-                self.sequence(elements[first..last].iter().cloned(), Some(sequence_end)),
+                if edges.leading_flexible { soft_line() } else { empty() },
+                self.sequence(edges.interior(&elements), Some(sequence_end)),
             ]),
         );
         concat([
             content,
-            if trailing_boundary { soft_line() } else { empty() },
+            if edges.trailing_flexible { soft_line() } else { empty() },
             if has_terminal_newline { line() } else { empty() },
         ])
     }
 
-    fn is_flexible_inline_separator(&self, text: &str, action: &Action) -> bool {
-        !text.contains('\n')
-            && text.chars().all(char::is_whitespace)
-            && self.policy_at_offset(source_range(action).start) == LayoutPolicy::Flexible
+    /// Identify the whitespace tokens that a compact block may reflow.
+    ///
+    /// Only an outer body edge made of one inline whitespace token beside a
+    /// flexible action is eligible. A non-compact source block, protected
+    /// display action, literal text, or existing newline leaves the edge in the
+    /// normal sequence unchanged.
+    fn compact_body_edges(&self, compact: bool, elements: &[ActionOrText]) -> BodyEdges {
+        if !compact {
+            return BodyEdges::default();
+        }
+        let leading = matches!(
+            elements,
+            [ActionOrText::Text(text), ActionOrText::Action(action), ..]
+                if self.is_flexible_inline_separator(text.get(), action)
+        );
+        let trailing = matches!(
+            elements,
+            [.., ActionOrText::Action(action), ActionOrText::Text(text)]
+                if self.is_flexible_inline_separator(text.get(), action)
+        );
+        BodyEdges {
+            leading_flexible: leading,
+            trailing_flexible: trailing,
+        }
     }
 
-    /// Format a direct root/body sequence. It owns structural action separation
-    /// and literal-text physical margins, which are source relationships rather
-    /// than properties of a single syntax node.
+    /// Whether `text` can serve as a compact body edge before or after `action`.
+    ///
+    /// This uses the action's source offset rather than its syntax shape so it
+    /// follows the line classifier's final protected-versus-flexible decision.
+    fn is_flexible_inline_separator(&self, text: &str, action: &Action) -> bool {
+        is_inline_whitespace(text) && self.has_flexible_layout_at(source_range(action).start)
+    }
+
+    /// Lower one direct root or body sequence.
+    ///
+    /// The sequence owns relationships between siblings that no individual AST
+    /// action can see. Consecutive flexible actions gain a structural
+    /// [`line`]; whitespace-only text between flexible actions is replaced by
+    /// the same line; all remaining text is passed to [`literal_text`]. This
+    /// keeps action separation policy in one place while typed action rules
+    /// remain responsible only for their own syntax.
     fn sequence(&mut self, elements: impl Iterator<Item = ActionOrText>, sequence_end: Option<usize>) -> Doc {
         let elements = elements.collect::<Vec<_>>();
         let mut documents = Vec::new();
         for (index, element) in elements.iter().cloned().enumerate() {
             match element {
                 ActionOrText::Action(action) => {
-                    if index > 0
-                        && matches!(elements[index - 1], ActionOrText::Action(_))
-                        && self.policy_at_offset(source_range(&action).start) == LayoutPolicy::Flexible
-                    {
+                    if self.should_break_before_action(&elements, index, &action) {
                         documents.push(line());
                     }
                     documents.push(self.action(action));
                 }
                 ActionOrText::Text(text) => {
-                    let separates_flexible_actions = !text.get().contains('\n')
-                        && text.get().chars().all(char::is_whitespace)
-                        && index > 0
-                        && index + 1 < elements.len()
-                        && matches!(elements[index - 1], ActionOrText::Action(_))
-                        && matches!(elements[index + 1], ActionOrText::Action(_))
-                        && self.policy_at_offset(byte_offset(text.text_range().start())) == LayoutPolicy::Flexible;
-                    if separates_flexible_actions {
+                    if self.should_break_at_text_separator(&elements, index, &text) {
                         documents.push(line());
                     } else {
                         documents.push(self.literal_text(text, sequence_end));
@@ -198,11 +204,38 @@ impl<'a> Formatter<'a> {
         concat(documents)
     }
 
-    /// Preserve literal content while letting block layout own physical-line
-    /// margins. This never strips whitespace at an action/text boundary on a
-    /// shared source line; it only removes whitespace before a source newline
-    /// or after one.
-    fn literal_text(&self, literal: yag_template_syntax::ast::Text, sequence_end: Option<usize>) -> Doc {
+    /// Decide whether an action directly following another action starts a new
+    /// formatter-owned line.
+    fn should_break_before_action(&self, elements: &[ActionOrText], index: usize, action: &Action) -> bool {
+        index > 0
+            && matches!(elements[index - 1], ActionOrText::Action(_))
+            && self.has_flexible_layout_at(source_range(action).start)
+    }
+
+    /// Decide whether a text token is an inline, formatter-owned separator
+    /// between two actions.
+    ///
+    /// The policy is queried at the token's source offset. This matters when a
+    /// protected display action shares the physical line with a flexible action:
+    /// protected ownership wins for the whole line.
+    fn should_break_at_text_separator(&self, elements: &[ActionOrText], index: usize, separator: &Text) -> bool {
+        if !is_inline_whitespace(separator.get()) || index == 0 {
+            return false;
+        }
+        matches!(elements[index - 1], ActionOrText::Action(_))
+            && matches!(elements.get(index + 1), Some(ActionOrText::Action(_)))
+            && self.has_flexible_layout_at(byte_offset(separator.text_range().start()))
+    }
+
+    /// Lower literal text while normalizing only physical line margins in a
+    /// compound body.
+    ///
+    /// Root-level text is emitted verbatim. Within a body, each source line is
+    /// split at existing newlines: leading whitespace is removed only at a
+    /// physical line start, trailing whitespace only before a newline, and the
+    /// newline itself becomes a [`line`]. Text on a shared action/text line is
+    /// retained exactly, so this never invents or removes same-line adjacency.
+    fn literal_text(&self, literal: Text, sequence_end: Option<usize>) -> Doc {
         let range = literal.text_range();
         let start = byte_offset(range.start());
         let end = byte_offset(range.end());
@@ -242,57 +275,38 @@ impl<'a> Formatter<'a> {
         concat(documents)
     }
 
+    /// Return whether the line classifier grants formatter layout ownership at
+    /// `offset`.
+    fn has_flexible_layout_at(&self, offset: usize) -> bool {
+        self.policy_at_offset(offset) == LayoutPolicy::Flexible
+    }
+
+    /// Read the resolved source-line ownership at `offset`.
     fn policy_at_offset(&self, offset: usize) -> LayoutPolicy {
         self.plan.policy_at_offset(offset)
     }
 }
 
-/// Normalize only same-line whitespace adjacent to the delimiters of a
-/// source-preserved multi-line action. Newline-led and newline-terminated
-/// bodies retain their existing vertical layout.
-fn format_multiline_delimited_body(
-    body: &str,
-    left_has_trim_marker: bool,
-    right_has_trim_marker: bool,
-    delimiter_padding: DelimiterPadding,
-) -> String {
-    let body = body.trim_start_matches(is_horizontal_whitespace);
-    let starts_on_same_line = !starts_with_line_break(body);
-    let body = body.trim_end_matches(is_horizontal_whitespace);
-    let ends_on_same_line = !body.ends_with('\n');
-    let padding = match delimiter_padding {
-        DelimiterPadding::None => "",
-        DelimiterPadding::Spaces => " ",
-    };
-
-    let mut formatted = String::with_capacity(body.len() + 2);
-    if starts_on_same_line && !left_has_trim_marker {
-        formatted.push_str(padding);
-    }
-    formatted.push_str(body);
-    if ends_on_same_line && !right_has_trim_marker {
-        formatted.push_str(padding);
-    }
-    formatted
+/// Return whether `text` is whitespace confined to one physical source line.
+/// Such text can be a formatter-owned action separator; any newline keeps it
+/// structural and source-owned.
+fn is_inline_whitespace(text: &str) -> bool {
+    !text.contains('\n') && text.chars().all(char::is_whitespace)
 }
 
-fn is_horizontal_whitespace(character: char) -> bool {
-    matches!(character, ' ' | '\t')
-}
-
-fn starts_with_line_break(text: &str) -> bool {
-    text.starts_with('\n') || text.starts_with("\r\n")
-}
-
+/// Convert an AST node's text range to byte offsets for slicing `source`.
 fn source_range(node: &impl AstNode) -> Range<usize> {
     let range = node.text_range();
     byte_offset(range.start())..byte_offset(range.end())
 }
 
+/// Convert the syntax library's byte-based text position to `usize`.
 fn byte_offset(position: impl Into<u32>) -> usize {
     position.into() as usize
 }
 
+/// Return whether `text` ends with a newline followed only by line-margin
+/// whitespace.
 fn ends_with_line_break_after_margin(text: &str) -> bool {
     final_line_break_end(text).is_some()
 }

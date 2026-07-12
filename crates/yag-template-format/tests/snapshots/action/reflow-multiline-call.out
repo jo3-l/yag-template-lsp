@@ -1,0 +1,4 @@
+{{ print
+	.First
+	.Second
+	.Third }}

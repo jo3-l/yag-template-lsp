@@ -44,22 +44,6 @@ impl LinePlan {
         self.policy_for_line(self.line_index.line_for(offset))
     }
 
-    /// Whether any source line covered by `range` is protected.
-    ///
-    /// A cross-line action that cannot be emitted as independently pinned AST
-    /// pieces must fall back to its original source when this is true.
-    #[allow(dead_code)] // Used by the later AST-to-Doc lowering pass.
-    pub(super) fn range_contains_protected_line(&self, range: Range<usize>) -> bool {
-        if range.is_empty() {
-            return false;
-        }
-        let first_line = self.line_index.line_for(range.start);
-        let last_line = self.line_index.line_for(range.end - 1);
-        self.policies
-            .range(first_line..=last_line)
-            .any(|(_, policy)| *policy == LayoutPolicy::Protected)
-    }
-
     #[cfg(test)]
     fn line_count(&self) -> usize {
         self.line_index.len()
@@ -376,11 +360,5 @@ mod tests {
             policies("{{if .Show}}{{.User}}{{else}}fallback{{end}}"),
             vec![LayoutPolicy::Protected]
         );
-    }
-
-    #[test]
-    fn cross_line_actions_can_detect_a_protected_boundary_for_original_source_fallback() {
-        let source = "{{add\n  1\n}}{{.Value}}";
-        assert!(plan(source).range_contains_protected_line(0.."{{add\n  1\n}}".len()));
     }
 }

@@ -1,0 +1,7 @@
+---
+max_width: 22
+---
+{{print
+  .First
+  .Second
+  .Third}}

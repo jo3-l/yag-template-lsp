@@ -30,8 +30,9 @@ actions. Keep formatting deterministic and idempotent.
 - Existing block-body newlines become structural `Line` nodes; block depth comes
   from typed block structure, not keyword scanning. Do not invent a separator
   at a same-line text/action boundary.
-- For a cross-line action that cannot safely be decomposed and intersects a
-  protected line, preserve its original action source.
+- Newlines inside an action are formatter-owned whitespace. Always lower the
+  action from its typed AST; protected-textual policy preserves only same-line
+  action/text adjacency, not the action's original internal layout.
 
 ## Delimiters and expressions
 
@@ -41,9 +42,9 @@ actions. Keep formatting deterministic and idempotent.
   those spellings intact and apply configurable padding only to an ordinary
   delimiter on the other side. In particular, default formatting turns
   `{{- $usr := .User.String }}` into `{{- $usr := .User.String}}`.
-- For a source-preserved multi-line action, normalize only horizontal padding
-  immediately inside same-line delimiters. Preserve its interior vertical
-  layout and do not add padding next to a source newline.
+- Newlines and indentation inside an action do not constrain formatting.
+  Reflow calls, pipelines, assignments, and parentheses through the document
+  model exactly as if the action had been written on one line.
 - Format headers and assignments from AST nodes. Use groups, soft lines, and
   continuation nesting for calls, pipelines, and parentheses rather than
   per-case width heuristics.
