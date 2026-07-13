@@ -1,12 +1,12 @@
-{{ $value :=
-  print
-    (printf
-      "%s"
-      .Name) }}
-{{ if
-  print
-    .A
-    .B
-    .C }}
+{{ $value := print
+  (printf
+    "%s"
+    .Name)
+}}
+{{ if print
+  .A
+  .B
+  .C
+}}
 	body
 {{ end }}

@@ -21,28 +21,28 @@
 		{{- end }}
 		{{- $xp := toInt .Value }}
 		{{- $rank = add $rank 1 }}
-		{{- $display =
-			printf
-				"%s\n• **%d.** [%s](https://yagpdb.xyz) :: Level %d (%d XP)"
-				$display
-				$rank
-				$usr
-				(toInt (roundFloor (mult 0.1 (sqrt $xp))))
-				$xp -}}
+		{{- $display = printf
+			"%s\n• **%d.** [%s](https://yagpdb.xyz) :: Level %d (%d XP)"
+			$display
+			$rank
+			$usr
+			(toInt (roundFloor (mult 0.1 (sqrt $xp))))
+			$xp
+		 -}}
 	{{ end }}
-	{{ $id :=
-		sendMessageRetID
-			nil
-			(cembed
-				"title"
-				"❯ Leaderboard"
-				"thumbnail"
-				(sdict "url" "https://i.imgur.com/mJ7zu6k.png")
-				"color"
-				14232643
-				"description"
-				$display
-				"footer"
-				(sdict "text" (joinStr "" "Page " $page))) }}
+	{{ $id := sendMessageRetID
+		nil
+		(cembed
+			"title"
+			"❯ Leaderboard"
+			"thumbnail"
+			(sdict "url" "https://i.imgur.com/mJ7zu6k.png")
+			"color"
+			14232643
+			"description"
+			$display
+			"footer"
+			(sdict "text" (joinStr "" "Page " $page)))
+	}}
 	{{ addMessageReactions nil $id "◀️" "▶️" }}
 {{ end }}

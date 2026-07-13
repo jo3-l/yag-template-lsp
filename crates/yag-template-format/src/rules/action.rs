@@ -5,9 +5,8 @@ use yag_template_syntax::ast::{
     RightDelim, TemplateBlock, TemplateDefinition, TryCatchAction, WhileLoop, WithAction,
 };
 
-use crate::LayoutKind;
 use crate::lower::Formatter;
-use crate::pretty::{AllowCompact, Doc, concat, empty, join, soft_line, text, try_concat};
+use crate::pretty::{AllowCompact, Doc, concat, empty, join, text, try_concat};
 
 impl Formatter<'_> {
     /// Format an action atomically. A rule that cannot construct a complete
@@ -38,24 +37,25 @@ impl Formatter<'_> {
             Action::TryCatch(action) => self.try_catch_action(action),
             Action::ExprAction(action) => {
                 let expression = action.expr()?;
-                let break_before_close = self.is_top_level_key_value_call(&expression);
+                let break_before_close = self.action_breaks_before_close(&expression);
                 let body = self.expr(expression)?;
                 self.delimited_with_breaking_close(action.delims()?, body, break_before_close)
             }
         }
     }
 
-    /// A key/value call is formatted as rows. When it is the whole action,
-    /// keep the action delimiter out of the final row without affecting
-    /// parenthesized or otherwise nested calls.
-    fn is_top_level_key_value_call(&self, expression: &Expr) -> bool {
-        let Expr::FuncCall(call) = expression else {
-            return false;
-        };
-        let Some(name) = call.func_name() else {
-            return false;
-        };
-        self.function_layout(name.get()) == Some(LayoutKind::KeyValuePairs) && call.args().count().is_multiple_of(2)
+    /// Keep the closing delimiter out of a broken direct call without
+    /// affecting parenthesized or otherwise nested calls.
+    fn action_breaks_before_close(&self, expression: &Expr) -> bool {
+        match expression {
+            Expr::VarDecl(declaration) => declaration
+                .initializer()
+                .is_some_and(|value| self.is_direct_call(&value)),
+            Expr::VarAssign(assignment) => assignment
+                .assign_expr()
+                .is_some_and(|value| self.is_direct_call(&value)),
+            _ => self.is_direct_call(expression),
+        }
     }
 
     fn template_definition(&mut self, action: &TemplateDefinition) -> Option<Doc> {
@@ -137,12 +137,14 @@ impl Formatter<'_> {
     }
 
     fn else_clause(&mut self, clause: &ElseClause) -> Option<Doc> {
-        let condition = if let Some(condition) = clause.condition() {
-            concat([text(" "), text("if"), self.expression_argument(condition)?])
+        let (condition, break_before_close) = if let Some(condition) = clause.condition() {
+            let break_before_close = self.is_direct_call(&condition);
+            let condition = concat([text(" "), text("if"), self.expression_argument(condition)?]);
+            (condition, break_before_close)
         } else {
-            empty()
+            (empty(), false)
         };
-        self.delimited(clause.delims()?, concat([text("else"), condition]))
+        self.delimited_with_breaking_close(clause.delims()?, concat([text("else"), condition]), break_before_close)
     }
 
     fn range_action(&mut self, action: &RangeLoop) -> Option<Doc> {
@@ -183,8 +185,14 @@ impl Formatter<'_> {
         } else {
             empty()
         };
-        let expression = self.expression_argument(clause.expr()?)?;
-        self.delimited(clause.delims()?, concat([text("range"), binding, expression]))
+        let expression = clause.expr()?;
+        let break_before_close = self.is_direct_call(&expression);
+        let expression = self.expression_argument(expression)?;
+        self.delimited_with_breaking_close(
+            clause.delims()?,
+            concat([text("range"), binding, expression]),
+            break_before_close,
+        )
     }
 
     fn while_action(&mut self, action: &WhileLoop) -> Option<Doc> {
@@ -232,14 +240,16 @@ impl Formatter<'_> {
         template_name: String,
         context_data: Option<Expr>,
     ) -> Option<Doc> {
-        let context_data = if let Some(context_data) = context_data {
-            self.expression_argument(context_data)?
+        let (context_data, break_before_close) = if let Some(context_data) = context_data {
+            let break_before_close = self.is_direct_call(&context_data);
+            (self.expression_argument(context_data)?, break_before_close)
         } else {
-            empty()
+            (empty(), false)
         };
-        self.delimited(
+        self.delimited_with_breaking_close(
             delims,
             concat([text(keyword), text(" "), text(template_name), context_data]),
+            break_before_close,
         )
     }
 
@@ -253,13 +263,13 @@ impl Formatter<'_> {
         keyword: &str,
         expression: Expr,
     ) -> Option<Doc> {
+        let break_before_close = self.is_direct_call(&expression);
         let expression = self.expression_argument(expression)?;
-        self.delimited(delims, concat([text(keyword), expression]))
+        self.delimited_with_breaking_close(delims, concat([text(keyword), expression]), break_before_close)
     }
 
     fn expression_argument(&mut self, expression: Expr) -> Option<Doc> {
-        let expression = self.expr(expression)?;
-        Some(self.continuation(concat([soft_line(), expression])))
+        self.prefixed_expression(expression)
     }
 }
 

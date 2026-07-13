@@ -1,11 +1,12 @@
 {{ print
 	.A
 	.B
-	.C }}
-{{ if
-	print
-		.A
-		.B
-		.C }}
+	.C
+}}
+{{ if print
+	.A
+	.B
+	.C
+}}
 	body
 {{ end }}

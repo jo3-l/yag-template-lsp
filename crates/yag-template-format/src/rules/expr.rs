@@ -66,6 +66,23 @@ impl Formatter<'_> {
         }
     }
 
+    pub(crate) fn is_direct_call(&self, expression: &Expr) -> bool {
+        matches!(expression, Expr::FuncCall(_) | Expr::ExprCall(_))
+    }
+
+    /// Lower an expression following a keyword, assignment operator, or other
+    /// prefix. Calls own their first break after the callee, so keep a direct
+    /// call's callee with that prefix and let the call lay out its arguments.
+    pub(crate) fn prefixed_expression(&mut self, expression: Expr) -> Option<Doc> {
+        let is_call = self.is_direct_call(&expression);
+        let expression = self.expr(expression)?;
+        if is_call {
+            Some(concat([text(" "), expression]))
+        } else {
+            Some(self.continuation(concat([soft_line(), expression])))
+        }
+    }
+
     fn call(&self, callee: Doc, args: impl IntoIterator<Item = Doc>) -> Doc {
         let args = args.into_iter().collect::<Vec<_>>();
         if args.is_empty() {
@@ -85,13 +102,8 @@ impl Formatter<'_> {
     }
 
     fn assignment(&mut self, operator: &str, variable: Option<String>, value: Option<Expr>) -> Option<Doc> {
-        let value = self.expr(value?)?;
-        Some(group(concat([
-            text(variable?),
-            text(" "),
-            text(operator),
-            self.continuation(concat([soft_line(), value])),
-        ])))
+        let value = self.prefixed_expression(value?)?;
+        Some(group(concat([text(variable?), text(" "), text(operator), value])))
     }
 }
 

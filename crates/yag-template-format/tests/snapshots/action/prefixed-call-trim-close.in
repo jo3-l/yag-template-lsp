@@ -1,0 +1,5 @@
+---
+max_width: 20
+---
+{{- $value := print .First .Second .Third
+-}}

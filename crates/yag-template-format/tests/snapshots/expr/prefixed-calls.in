@@ -1,0 +1,8 @@
+---
+max_width: 20
+---
+{{$x := or .First .Second .Third}}
+{{if or .First .Second .Third}}
+body
+{{end}}
+{{return or .First .Second .Third}}
