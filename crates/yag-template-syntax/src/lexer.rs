@@ -116,6 +116,17 @@ impl Lexer<'_> {
                 self.mode = LexMode::Text;
                 SyntaxKind::TrimmedRightDelim
             }
+            '-' if self.s.eat_if("}}") => {
+                let has_preceding_space = self.s.string()[..start.into()]
+                    .chars()
+                    .next_back()
+                    .is_some_and(upstream_compat::is_space);
+                if !has_preceding_space {
+                    self.error_from(start, "trimmed right action delimiter must be preceded by whitespace")
+                }
+                self.mode = LexMode::Text;
+                SyntaxKind::TrimmedRightDelim
+            }
             c if upstream_compat::is_space(c) => self.whitespace(),
             ',' => SyntaxKind::Comma,
             '=' => SyntaxKind::Eq,
@@ -161,7 +172,9 @@ impl Lexer<'_> {
     }
 
     fn whitespace(&mut self) -> SyntaxKind {
-        self.s.eat_whitespace();
+        while self.s.at(char::is_whitespace) && !self.s.at(" -}}") {
+            self.s.eat();
+        }
         SyntaxKind::Whitespace
     }
 
