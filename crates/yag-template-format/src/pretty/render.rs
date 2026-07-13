@@ -31,18 +31,23 @@ impl Command {
 pub(crate) fn render(doc: Doc, width: usize) -> String {
     let mut out = String::new();
     let mut column = 0;
+    let mut pending_indent = None;
     let mut commands = vec![Command::new("", Mode::Break, doc)];
 
     while let Some(Command { indent, mode, doc }) = commands.pop() {
         match doc {
-            Doc::Text(text) => append_text(&mut out, &mut column, &text),
+            Doc::Text(text) => {
+                append_pending_indent(&mut out, &mut column, &mut pending_indent);
+                append_text(&mut out, &mut column, &text);
+            }
             Doc::Concat(parts) => push_parts(&mut commands, &indent, mode, parts),
-            Doc::Line => append_line(&mut out, &mut column, &indent),
+            Doc::Line => append_line(&mut out, &mut column, &mut pending_indent, indent),
             Doc::SoftLine if mode == Mode::Flat => {
+                append_pending_indent(&mut out, &mut column, &mut pending_indent);
                 out.push(' ');
                 column += 1;
             }
-            Doc::SoftLine => append_line(&mut out, &mut column, &indent),
+            Doc::SoftLine => append_line(&mut out, &mut column, &mut pending_indent, indent),
             Doc::IfBreak { broken, flat } => {
                 let doc = if mode == Mode::Break { broken } else { flat };
                 commands.push(Command::new(indent, mode, *doc));
@@ -86,10 +91,17 @@ fn append_text(out: &mut String, column: &mut usize, text: &str) {
         .map_or(*column + text.chars().count(), |(_, tail)| tail.chars().count());
 }
 
-fn append_line(out: &mut String, column: &mut usize, indent: &str) {
+fn append_pending_indent(out: &mut String, column: &mut usize, pending_indent: &mut Option<String>) {
+    if let Some(indent) = pending_indent.take() {
+        out.push_str(&indent);
+        *column = indent.chars().count();
+    }
+}
+
+fn append_line(out: &mut String, column: &mut usize, pending_indent: &mut Option<String>, indent: String) {
     out.push('\n');
-    out.push_str(indent);
     *column = indent.chars().count();
+    *pending_indent = Some(indent);
 }
 
 fn indented(existing: &str, extra: Indent) -> String {
@@ -170,6 +182,18 @@ mod tests {
     fn nesting_uses_tabs_when_configured() {
         let doc = concat([text("header"), nest(Indent::Tabs, concat([line(), text("body")]))]);
         assert_eq!(render(doc, 100), "header\n\tbody");
+    }
+
+    #[test]
+    fn nesting_does_not_indent_empty_lines() {
+        let doc = concat([
+            text("header"),
+            nest(
+                Indent::Tabs,
+                concat([line(), text("body"), line(), line(), text("tail")]),
+            ),
+        ]);
+        assert_eq!(render(doc, 100), "header\n\tbody\n\n\ttail");
     }
 
     #[test]
