@@ -93,7 +93,7 @@ mod tests {
 
         assert_eq!(
             format_with_options("{{ .Name }}", &options),
-            Some("{{.Name}}".to_owned())
+            Some("{{.Name}}\n".to_owned())
         );
     }
 

@@ -30,7 +30,7 @@ fn formats_stdin_to_stdout() {
     let output = child.wait_with_output().unwrap();
 
     assert!(output.status.success());
-    assert_eq!(output.stdout, b"Hello {{ .Name }}");
+    assert_eq!(output.stdout, b"Hello {{ .Name }}\n");
 }
 
 #[test]
@@ -51,7 +51,7 @@ fn check_and_write_are_safe_for_explicit_valid_files() {
     assert_eq!(command().arg("--check").arg(&path).status().unwrap().code(), Some(1));
     assert_eq!(fs::read_to_string(&path).unwrap(), "{{.Name}}");
     assert!(command().arg("--write").arg(&path).status().unwrap().success());
-    assert_eq!(fs::read_to_string(&path).unwrap(), "{{ .Name }}");
+    assert_eq!(fs::read_to_string(&path).unwrap(), "{{ .Name }}\n");
     assert!(command().arg("--check").arg(&path).status().unwrap().success());
 }
 
@@ -95,8 +95,8 @@ fn resolves_config_independently_for_each_file() {
             .unwrap()
             .success()
     );
-    assert_eq!(fs::read_to_string(left).unwrap(), "{{.Left}}");
-    assert_eq!(fs::read_to_string(right).unwrap(), "{{ .Right }}");
+    assert_eq!(fs::read_to_string(left).unwrap(), "{{.Left}}\n");
+    assert_eq!(fs::read_to_string(right).unwrap(), "{{ .Right }}\n");
 }
 
 #[test]
@@ -114,7 +114,7 @@ fn cli_flags_override_discovered_config() {
             .unwrap()
             .success()
     );
-    assert_eq!(fs::read_to_string(path).unwrap(), "{{ .Name }}");
+    assert_eq!(fs::read_to_string(path).unwrap(), "{{ .Name }}\n");
 }
 
 #[test]

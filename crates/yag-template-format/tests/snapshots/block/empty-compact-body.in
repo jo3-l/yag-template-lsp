@@ -1,0 +1,5 @@
+---
+max_width: 24
+indent: { spaces: 2 }
+---
+{{with .LongValue}} {{end}}

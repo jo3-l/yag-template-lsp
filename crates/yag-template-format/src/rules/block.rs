@@ -94,12 +94,16 @@ impl<'a> Formatter<'a> {
             elements,
             trailing,
         } = self.reflow_body_edges(allow_compact, &elements);
-        let sequence = self.sequence(elements, SequenceContext::Body, allow_compact);
-        concat([
-            nest(self.options().indent, concat([leading, sequence.doc])),
-            trailing,
-            if sequence.trailing_line { line() } else { empty() },
-        ])
+        if elements.is_empty() {
+            empty()
+        } else {
+            let lowered_inner = self.sequence(elements, SequenceContext::Body, allow_compact);
+            concat([
+                nest(self.options().indent, concat([leading, lowered_inner.doc])),
+                trailing,
+                if lowered_inner.trailing_line { line() } else { empty() },
+            ])
+        }
     }
 
     /// Reflow formatter-owned whitespace at a compound body's edges.
