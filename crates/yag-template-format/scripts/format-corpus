@@ -1,0 +1,17 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+repository_root="$(git rev-parse --show-toplevel)"
+corpus_root="$repository_root/crates/yag-template-format/tests/corpus"
+corpus_repository="$corpus_root/yagpdb-cc"
+temporary_root="$(mktemp -d)"
+temporary_corpus_root="$temporary_root/corpus"
+corpus_git_dir="$(git -C "$corpus_repository" rev-parse --absolute-git-dir)"
+
+trap 'rm -rf "$temporary_root"' EXIT
+
+cd "$repository_root"
+rsync -a --exclude '.git' "$corpus_root/" "$temporary_corpus_root/"
+find "$temporary_corpus_root" -type f -name '*.tmpl' -exec cargo run -p yagfmt -- --write {} +
+git --git-dir="$corpus_git_dir" --work-tree="$temporary_corpus_root/yagpdb-cc" diff | delta
