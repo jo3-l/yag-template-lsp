@@ -80,24 +80,6 @@ impl Doc {
             AllowCompact::No => self,
         }
     }
-
-    /// Convert conditional layout to a single flat line. Hard lines and
-    /// embedded newlines cannot safely be flattened.
-    pub(super) fn flatten(self) -> Option<Self> {
-        match self {
-            Self::Text(text) => (!text.contains('\n')).then_some(Self::Text(text)),
-            Self::Concat(parts) => parts
-                .into_iter()
-                .map(Self::flatten)
-                .collect::<Option<Vec<_>>>()
-                .map(Self::Concat),
-            Self::Line => None,
-            Self::SoftLine => Some(text(" ")),
-            Self::IfBreak { flat, .. } => flat.flatten(),
-            Self::Group(doc) | Self::Nest(_, doc) => doc.flatten(),
-            Self::GroupWithTail { body, tail } => Some(concat([body.flatten()?, tail.flatten()?])),
-        }
-    }
 }
 
 /// A normal layout-owned atom.
@@ -169,16 +151,7 @@ pub(super) fn nest(indent: Indent, doc: Doc) -> Doc {
 
 #[cfg(test)]
 mod tests {
-    use super::{concat, group, line, render, soft_line, text};
-
-    #[test]
-    fn flatten_converts_soft_lines_and_refuses_hard_lines() {
-        assert_eq!(
-            concat([text("left"), soft_line(), text("right")]).flatten(),
-            Some(concat([text("left"), text(" "), text("right")]))
-        );
-        assert_eq!(line().flatten(), None);
-    }
+    use super::{concat, group, render, soft_line, text};
 
     #[test]
     fn helpers_compose_document_fragments() {

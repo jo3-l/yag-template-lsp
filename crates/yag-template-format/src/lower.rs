@@ -84,10 +84,7 @@ impl<'a> Formatter<'a> {
             text(right_delim.syntax().text()),
         ]);
 
-        let left_offset = byte_offset(left_delim.text_range().start());
-        if self.reflow_policy_at(left_offset) == ReflowPolicy::Protected {
-            doc.flatten()
-        } else if break_before_close {
+        if break_before_close {
             Some(doc)
         } else {
             Some(group(doc))
