@@ -187,7 +187,7 @@ func ctextDisplay(string)
 	To display standalone text inside a modal.
 	`{{ $td := ctextDisplay "this is the content of text display" }}`
 
-func ctextInput(custom_id, opts...)
+func ctextInput(opts...)
 	A field for text input for use in a modal.
 	It is an sdict with the following keys:
 	- `custom_id`: a unique identifier for the textInput (used in `.ModalValues` sdict to retrieve the value later.)
