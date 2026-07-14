@@ -35,16 +35,11 @@
 	$id := sendMessageRetID
 		nil
 		(cembed
-			"title"
-			"❯ Leaderboard"
-			"thumbnail"
-			(sdict "url" "https://i.imgur.com/mJ7zu6k.png")
-			"color"
-			14232643
-			"description"
-			$display
-			"footer"
-			(sdict "text" (joinStr "" "Page " $page)))
+			"title" "❯ Leaderboard"
+			"thumbnail" (sdict "url" "https://i.imgur.com/mJ7zu6k.png")
+			"color" 14232643
+			"description" $display
+			"footer" (sdict "text" (joinStr "" "Page " $page)))
 	}}
 	{{ addMessageReactions nil $id "◀️" "▶️" }}
 {{ end }}

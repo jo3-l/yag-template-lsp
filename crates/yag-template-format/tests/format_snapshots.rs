@@ -4,7 +4,7 @@ use std::fs;
 use std::path::{Path, PathBuf};
 
 use serde::Deserialize;
-use support::assert_format_result_preserving_fingerprint;
+use support::{assert_format_result_preserving_fingerprint, bundled_envdefs};
 use yag_template_format::{DelimiterPadding, FormatOptions, Indent, format};
 
 const FIXTURE_ROOT: &str = "tests/snapshots";
@@ -48,10 +48,11 @@ fn formatter_fixtures_match_raw_snapshots() {
         "no formatter fixtures found in {}",
         root.display()
     );
+    let envdefs = bundled_envdefs();
 
     for fixture_path in fixtures {
         let fixture = read_fixture(&fixture_path);
-        let result = format(&fixture.source, &fixture.options);
+        let result = format(&fixture.source, &envdefs, &fixture.options);
         assert_format_result_preserving_fingerprint(&fixture.source, &fixture.options, &result, fixture_path.display());
         assert_raw_snapshot(&fixture_path, &result.text);
     }

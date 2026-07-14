@@ -5,4 +5,5 @@ edition = "2024"
 
 [dependencies]
 clap = { version = "4.5.23", features = ["derive"] }
+yag-template-envdefs = { path = "../../crates/yag-template-envdefs" }
 yag-template-format = { path = "../../crates/yag-template-format" }

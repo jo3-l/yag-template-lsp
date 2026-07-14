@@ -3,6 +3,7 @@ use std::io::Write;
 use std::path::PathBuf;
 use std::process::{Command, Stdio};
 
+use yag_template_envdefs::bundled_envdefs;
 use yag_template_format::{FormatOptions, format};
 
 fn command() -> Command {
@@ -41,7 +42,11 @@ fn default_options_come_from_the_formatter() {
     let output = child.wait_with_output().unwrap();
 
     assert!(output.status.success());
-    assert_eq!(output.stdout, format(source, &FormatOptions::default()).text.as_bytes());
+    let envdefs = bundled_envdefs::load().unwrap();
+    assert_eq!(
+        output.stdout,
+        format(source, &envdefs, &FormatOptions::default()).text.as_bytes()
+    );
 }
 
 #[test]

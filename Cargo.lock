@@ -1362,6 +1362,7 @@ dependencies = [
  "serde",
  "serde_yaml",
  "toml",
+ "yag-template-envdefs",
  "yag-template-syntax",
 ]
 
@@ -1397,5 +1398,6 @@ name = "yagfmt"
 version = "0.1.0"
 dependencies = [
  "clap",
+ "yag-template-envdefs",
  "yag-template-format",
 ]

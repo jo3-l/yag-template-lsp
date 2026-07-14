@@ -1,4 +1,5 @@
 use tower_lsp::lsp_types::{DocumentFormattingParams, MessageType, TextEdit, Url};
+use yag_template_envdefs::EnvDefs;
 use yag_template_format::config::{ConfigError, resolve_options_for_file};
 use yag_template_format::{FormatDiagnosticKind, FormatOptions, format};
 
@@ -22,7 +23,7 @@ pub(crate) async fn format_document(
         }
     };
     let doc = sess.document(&uri)?;
-    let Some(text) = format_with_options(&doc.source, &options) else {
+    let Some(text) = format_with_options(&doc.source, &sess.envdefs, &options) else {
         return Ok(None);
     };
 
@@ -37,8 +38,8 @@ fn options_for_uri(uri: &Url) -> Result<FormatOptions, ConfigError> {
     }
 }
 
-fn format_with_options(source: &str, options: &FormatOptions) -> Option<String> {
-    let result = format(source, options);
+fn format_with_options(source: &str, envdefs: &EnvDefs, options: &FormatOptions) -> Option<String> {
+    let result = format(source, envdefs, options);
     if result
         .diagnostics
         .iter()
@@ -58,6 +59,7 @@ mod tests {
     use std::sync::atomic::{AtomicUsize, Ordering};
 
     use tower_lsp::lsp_types::Url;
+    use yag_template_envdefs::bundled_envdefs;
 
     use super::{format_with_options, options_for_uri};
 
@@ -90,16 +92,18 @@ mod tests {
         fs::write(root.path().join("yagfmt.toml"), "delimiter_padding = \"none\"\n").unwrap();
         let uri = Url::from_file_path(root.path().join("template.gotmpl")).unwrap();
         let options = options_for_uri(&uri).unwrap();
+        let envdefs = bundled_envdefs::load().unwrap();
 
         assert_eq!(
-            format_with_options("{{ .Name }}", &options),
+            format_with_options("{{ .Name }}", &envdefs, &options),
             Some("{{.Name}}\n".to_owned())
         );
     }
 
     #[test]
     fn invalid_templates_do_not_produce_edits() {
-        assert_eq!(format_with_options("{{ if", &Default::default()), None);
+        let envdefs = bundled_envdefs::load().unwrap();
+        assert_eq!(format_with_options("{{ if", &envdefs, &Default::default()), None);
     }
 
     #[test]

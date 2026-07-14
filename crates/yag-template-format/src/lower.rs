@@ -1,18 +1,25 @@
 use std::ops::Range;
 
+use yag_template_envdefs::EnvDefs;
 use yag_template_syntax::SyntaxNode;
 use yag_template_syntax::ast::{AstNode, Root};
 
+use crate::FormatOptions;
 use crate::line_protection::{LineProtection, ReflowPolicy};
 use crate::pretty::{Doc, indent, text};
-use crate::{FormatOptions, LayoutKind};
 
 /// Lower a successfully parsed root into a renderable document.
-pub(super) fn lower(root: &SyntaxNode, source: &str, options: &FormatOptions, protection: &LineProtection) -> Doc {
+pub(super) fn lower(
+    root: &SyntaxNode,
+    source: &str,
+    envdefs: &EnvDefs,
+    options: &FormatOptions,
+    protection: &LineProtection,
+) -> Doc {
     let Some(root) = Root::cast(root.clone()) else {
         return text(source);
     };
-    let mut formatter = Formatter::new(source, options, protection);
+    let mut formatter = Formatter::new(source, envdefs, options, protection);
     let elements = root.actions_with_text().collect::<Vec<_>>();
     formatter.root(&elements)
 }
@@ -20,22 +27,20 @@ pub(super) fn lower(root: &SyntaxNode, source: &str, options: &FormatOptions, pr
 /// Formatting context shared by the typed AST rules.
 pub(crate) struct Formatter<'a> {
     pub(crate) source: &'a str,
+    pub(crate) envdefs: &'a EnvDefs,
     pub(crate) options: &'a FormatOptions,
     pub(crate) protection: &'a LineProtection,
 }
 
 impl<'a> Formatter<'a> {
     /// Build the context used for one lowering pass.
-    fn new(source: &'a str, options: &'a FormatOptions, protection: &'a LineProtection) -> Self {
+    fn new(source: &'a str, envdefs: &'a EnvDefs, options: &'a FormatOptions, protection: &'a LineProtection) -> Self {
         Self {
             source,
+            envdefs,
             options,
             protection,
         }
-    }
-
-    pub(crate) fn function_layout(&self, name: &str) -> Option<LayoutKind> {
-        self.options.function_layouts.by_name.get(name).copied()
     }
 
     /// Return the reflow policy for the source line containing `offset`.

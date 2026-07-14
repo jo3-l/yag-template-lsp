@@ -1,5 +1,6 @@
 use std::fmt::Display;
 
+use yag_template_envdefs::EnvDefs;
 use yag_template_format::{FormatDiagnosticKind, FormatOptions, FormatResult, format};
 use yag_template_syntax::{SyntaxElement, SyntaxKind, SyntaxNode};
 
@@ -20,6 +21,10 @@ pub enum TemplateFingerprint {
     Text {
         text: String,
     },
+}
+
+pub fn bundled_envdefs() -> EnvDefs {
+    yag_template_envdefs::bundled_envdefs::load().expect("bundled envdefs should be valid")
 }
 
 pub fn fingerprint(source: &str) -> TemplateFingerprint {
@@ -123,7 +128,7 @@ pub fn assert_format_result_preserving_fingerprint(
         "{context}: formatter changed semantic template shape"
     );
     assert_eq!(
-        format(&formatted.text, options).text,
+        format(&formatted.text, &bundled_envdefs(), options).text,
         formatted.text,
         "{context}: formatter is not idempotent"
     );

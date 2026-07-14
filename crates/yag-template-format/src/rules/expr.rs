@@ -2,7 +2,6 @@
 
 use yag_template_syntax::ast::{AstNode, AstToken, Expr, ExprCall, ExprFieldChain, FuncCall, Pipeline};
 
-use crate::LayoutKind;
 use crate::lower::Formatter;
 use crate::pretty::{Doc, concat, group, soft_line, text, try_concat};
 
@@ -32,6 +31,16 @@ impl Formatter<'_> {
 }
 
 impl<'a> Formatter<'a> {
+    fn function_uses_key_value_layout(&self, name: &str) -> bool {
+        let Some(func) = self.envdefs.funcs.get(name) else {
+            return false;
+        };
+        let [param] = func.params.as_slice() else {
+            return false;
+        };
+        param.is_variadic && matches!(param.name.as_str(), "opts" | "keyvalues")
+    }
+
     fn func_call(&mut self, expr: FuncCall) -> Option<Doc> {
         let name = expr.func_name()?;
         let args = expr.args().map(|arg| self.expr(arg)).collect::<Option<Vec<_>>>()?;
@@ -61,10 +70,10 @@ impl<'a> Formatter<'a> {
     }
 
     fn function_call(&mut self, name: &str, args: Vec<Doc>) -> Doc {
-        match self.function_layout(name) {
-            Some(LayoutKind::KeyValuePairs) if args.len().is_multiple_of(2) => self.key_value_call(text(name), args),
-            Some(LayoutKind::KeyValuePairs) => self.call(text(name), args),
-            Some(LayoutKind::Call) | None => self.call(text(name), args),
+        if self.function_uses_key_value_layout(name) && args.len().is_multiple_of(2) {
+            self.key_value_call(text(name), args)
+        } else {
+            self.call(text(name), args)
         }
     }
 

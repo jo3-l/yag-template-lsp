@@ -3,6 +3,7 @@ use std::io::{self, Read, Write};
 use std::path::PathBuf;
 
 use clap::{Parser, ValueEnum};
+use yag_template_envdefs::bundled_envdefs;
 use yag_template_format::config::ConfigResolver;
 use yag_template_format::{DelimiterPadding, FormatDiagnosticKind, FormatOptions, Indent};
 
@@ -67,6 +68,7 @@ fn run(args: Args) -> i32 {
         eprintln!("--write requires one or more explicit file paths; stdin is never written");
         return 2;
     }
+    let envdefs = bundled_envdefs::load().expect("bundled envdefs should be valid");
 
     if args.files.is_empty() {
         let mut source = String::new();
@@ -76,7 +78,7 @@ fn run(args: Args) -> i32 {
         }
         let mut options = FormatOptions::default();
         apply_cli_overrides(&mut options, &args);
-        let result = yag_template_format::format(&source, &options);
+        let result = yag_template_format::format(&source, &envdefs, &options);
         if let Err(error) = io::stdout().write_all(result.text.as_bytes()) {
             eprintln!("failed to write stdout: {error}");
             return 2;
@@ -103,7 +105,7 @@ fn run(args: Args) -> i32 {
             }
         };
         apply_cli_overrides(&mut options, &args);
-        let result = yag_template_format::format(&source, &options);
+        let result = yag_template_format::format(&source, &envdefs, &options);
         let invalid = has_parse_error(&result.diagnostics);
         failed |= invalid;
 

@@ -2,10 +2,9 @@
 //!
 //! Invalid input is always returned unchanged. The current lowering stages
 //! format delimiter padding, parsed block indentation, and ordinary expression
-//! layout; specialized function layouts remain for later stages.
+//! layout. Function-specific layouts are derived from the supplied EnvDefs.
 
-use std::collections::HashMap;
-
+use yag_template_envdefs::EnvDefs;
 use yag_template_syntax::SyntaxNode;
 
 pub mod config;
@@ -32,30 +31,6 @@ pub enum DelimiterPadding {
     Spaces,
 }
 
-/// Layout dispatch table for calls with known syntactic callees.
-#[derive(Debug, Clone, Eq, PartialEq)]
-pub struct FunctionLayouts {
-    pub by_name: HashMap<String, LayoutKind>,
-}
-
-impl Default for FunctionLayouts {
-    fn default() -> Self {
-        Self {
-            by_name: HashMap::from([
-                ("dict".to_owned(), LayoutKind::KeyValuePairs),
-                ("sdict".to_owned(), LayoutKind::KeyValuePairs),
-            ]),
-        }
-    }
-}
-
-/// A configured function's document layout.
-#[derive(Debug, Clone, Copy, Eq, PartialEq)]
-pub enum LayoutKind {
-    Call,
-    KeyValuePairs,
-}
-
 /// Formatter configuration.
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct FormatOptions {
@@ -63,7 +38,6 @@ pub struct FormatOptions {
     pub continuation_indent: Indent,
     pub max_width: usize,
     pub delimiter_padding: DelimiterPadding,
-    pub function_layouts: FunctionLayouts,
 }
 
 impl Default for FormatOptions {
@@ -73,7 +47,6 @@ impl Default for FormatOptions {
             continuation_indent: Indent::Tabs,
             max_width: 100,
             delimiter_padding: DelimiterPadding::Spaces,
-            function_layouts: FunctionLayouts::default(),
         }
     }
 }
@@ -95,8 +68,8 @@ pub struct FormatResult {
     pub diagnostics: Vec<FormatDiagnostic>,
 }
 
-/// Format `source` according to `options`.
-pub fn format(source: &str, options: &FormatOptions) -> FormatResult {
+/// Format `source` according to `envdefs` and `options`.
+pub fn format(source: &str, envdefs: &EnvDefs, options: &FormatOptions) -> FormatResult {
     let parsed = yag_template_syntax::parser::parse(source);
     let diagnostics = parsed
         .errors
@@ -109,7 +82,7 @@ pub fn format(source: &str, options: &FormatOptions) -> FormatResult {
     if parsed.errors.is_empty() {
         let root = SyntaxNode::new_root(parsed.root.clone());
         let line_protection = line_protection::resolve(&root, source);
-        let doc = lower::lower(&root, source, options, &line_protection);
+        let doc = lower::lower(&root, source, envdefs, options, &line_protection);
         let mut text = pretty::render(doc, options.max_width);
         // Ensure trailing newline.
         if !text.ends_with('\n') {
@@ -126,6 +99,8 @@ pub fn format(source: &str, options: &FormatOptions) -> FormatResult {
 
 #[cfg(test)]
 mod tests {
+    use yag_template_envdefs::{EnvDefSource, bundled_envdefs};
+
     use super::{DelimiterPadding, FormatOptions, format};
 
     #[test]
@@ -135,15 +110,41 @@ mod tests {
             max_width: 8,
             ..FormatOptions::default()
         };
-        let result = format("A {{.V}}", &options);
+        let envdefs = bundled_envdefs::load().unwrap();
+        let result = format("A {{.V}}", &envdefs, &options);
 
         assert!(result.diagnostics.is_empty());
     }
 
     #[test]
     fn formatting_adds_a_terminal_newline() {
-        let result = format("{{.Value}}", &FormatOptions::default());
+        let envdefs = bundled_envdefs::load().unwrap();
+        let result = format("{{.Value}}", &envdefs, &FormatOptions::default());
 
         assert_eq!(result.text, "{{ .Value }}\n");
+    }
+
+    #[test]
+    fn function_layouts_are_derived_from_envdefs() {
+        let envdefs = yag_template_envdefs::parse(&[EnvDefSource::new_static(
+            "test.ydef",
+            "func options(opts...)\nfunc keys(keyvalues...)\nfunc mixed(first, opts...)\nfunc values(args...)\nfunc optional(value)\n",
+        )])
+        .unwrap();
+        let options = FormatOptions {
+            max_width: 20,
+            ..FormatOptions::default()
+        };
+
+        for name in ["options", "keys"] {
+            let result = format(&format!(r#"{{{{{name} "a" "one" "b" "two"}}}}"#), &envdefs, &options);
+            assert!(result.text.contains("\"a\" \"one\""), "{name}: {}", result.text);
+            assert!(!result.text.contains("\"a\"\n"), "{name}: {}", result.text);
+        }
+
+        for name in ["mixed", "values", "optional"] {
+            let result = format(&format!(r#"{{{{{name} "a" "one" "b" "two"}}}}"#), &envdefs, &options);
+            assert!(result.text.contains("\"a\"\n"), "{name}: {}", result.text);
+        }
     }
 }
