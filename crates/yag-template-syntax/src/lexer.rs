@@ -86,8 +86,12 @@ impl Lexer<'_> {
             SyntaxKind::Eof
         } else if self.s.eat_if("{{") {
             self.mode = LexMode::Action;
-            if self.s.eat_if("- ") {
-                // space is required: just '{{-' might be a negative number
+            // "{{-" followed by a space is a trimmed right action delimiter. Otherwise,
+            // we can't tell at this point: it could be a negative number, say {{-1}},
+            // or just plain erroneous syntax.
+            if self.s.at('-') && self.s.scout(1).is_some_and(upstream_compat::is_space) {
+                self.s.eat();
+                self.s.eat();
                 SyntaxKind::TrimmedLeftDelim
             } else {
                 SyntaxKind::LeftDelim
@@ -112,22 +116,14 @@ impl Lexer<'_> {
         };
         match c {
             '/' if self.s.eat_if('*') => self.comment(start),
-            ' ' if self.s.eat_if("-}}") => {
-                self.mode = LexMode::Text;
-                SyntaxKind::TrimmedRightDelim
-            }
-            '-' if self.s.eat_if("}}") => {
-                let has_preceding_space = self.s.string()[..start.into()]
-                    .chars()
-                    .next_back()
-                    .is_some_and(upstream_compat::is_space);
-                if !has_preceding_space {
-                    self.error_from(start, "trimmed right action delimiter must be preceded by whitespace")
+            c if upstream_compat::is_space(c) => {
+                if self.s.eat_if("-}}") {
+                    self.mode = LexMode::Text;
+                    SyntaxKind::TrimmedRightDelim
+                } else {
+                    self.whitespace()
                 }
-                self.mode = LexMode::Text;
-                SyntaxKind::TrimmedRightDelim
             }
-            c if upstream_compat::is_space(c) => self.whitespace(),
             ',' => SyntaxKind::Comma,
             '=' => SyntaxKind::Eq,
             ':' if self.s.eat_if('=') => SyntaxKind::ColonEq,
@@ -172,8 +168,12 @@ impl Lexer<'_> {
     }
 
     fn whitespace(&mut self) -> SyntaxKind {
-        while self.s.at(char::is_whitespace) && !self.s.at(" -}}") {
-            self.s.eat();
+        while self.s.eat_if(upstream_compat::is_space) {
+            if self.s.at("-}}") {
+                // Back up: the space belongs to the trimmed right delimiter.
+                self.s.uneat();
+                break;
+            }
         }
         SyntaxKind::Whitespace
     }
@@ -328,5 +328,71 @@ mod upstream_compat {
             }
             _ => false,
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn lex(input: &str) -> (Vec<(SyntaxKind, String)>, Vec<SyntaxError>) {
+        let mut lexer = Lexer::new(input);
+        let mut tokens = Vec::new();
+        while !lexer.done() {
+            let start = lexer.cursor();
+            let kind = lexer.next();
+            let end = lexer.cursor();
+            tokens.push((kind, input[TextRange::new(start, end)].to_owned()));
+        }
+        (tokens, lexer.drain_errors().collect())
+    }
+
+    #[test]
+    fn trimmed_left_delimiters_accept_all_supported_whitespace() {
+        for whitespace in [' ', '\t', '\r', '\n'] {
+            let input = format!("{{{{-{whitespace}value}}}}");
+            let (tokens, errors) = lex(&input);
+
+            assert_eq!(tokens[0], (SyntaxKind::TrimmedLeftDelim, format!("{{{{-{whitespace}")));
+            assert!(errors.is_empty(), "unexpected errors for {input:?}: {errors:?}");
+        }
+    }
+
+    #[test]
+    fn trimmed_left_delimiter_requires_whitespace() {
+        let (tokens, _) = lex("{{-value}}");
+
+        assert_eq!(tokens[0], (SyntaxKind::LeftDelim, "{{".to_owned()));
+    }
+
+    #[test]
+    fn trimmed_right_delimiters_include_one_supported_whitespace_character() {
+        for whitespace in [' ', '\t', '\r', '\n'] {
+            let input = format!("{{{{value{whitespace}-}}}}");
+            let (tokens, errors) = lex(&input);
+
+            assert_eq!(
+                tokens.last(),
+                Some(&(SyntaxKind::TrimmedRightDelim, format!("{whitespace}-}}}}")))
+            );
+            assert!(errors.is_empty(), "unexpected errors for {input:?}: {errors:?}");
+        }
+    }
+
+    #[test]
+    fn trimmed_delimiters_consume_only_one_whitespace_character() {
+        let (tokens, errors) = lex("{{-  value  -}}");
+
+        assert_eq!(
+            tokens,
+            vec![
+                (SyntaxKind::TrimmedLeftDelim, "{{- ".to_owned()),
+                (SyntaxKind::Whitespace, " ".to_owned()),
+                (SyntaxKind::Ident, "value".to_owned()),
+                (SyntaxKind::Whitespace, " ".to_owned()),
+                (SyntaxKind::TrimmedRightDelim, " -}}".to_owned()),
+            ]
+        );
+        assert!(errors.is_empty(), "unexpected errors: {errors:?}");
     }
 }

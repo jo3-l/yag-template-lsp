@@ -1,9 +1,9 @@
 use yag_template_syntax::SyntaxNode;
-use yag_template_syntax::ast::{AstNode, AstToken, LeftDelim, RightDelim, Root};
+use yag_template_syntax::ast::{AstNode, LeftDelim, RightDelim, Root};
 
 use crate::line_protection::{LineProtection, ReflowPolicy};
-use crate::pretty::{Doc, concat, group, group_with_tail, if_break, line, nest, text};
-use crate::{FormatOptions, LayoutKind};
+use crate::pretty::{Doc, concat, empty, group, nest, soft_line, text};
+use crate::{DelimiterPadding, FormatOptions, LayoutKind};
 
 /// Lower a successfully parsed root into a renderable document.
 pub(super) fn lower(root: &SyntaxNode, source: &str, options: &FormatOptions, protection: &LineProtection) -> Doc {
@@ -57,38 +57,20 @@ impl<'a> Formatter<'a> {
         nest(self.options.continuation_indent, doc)
     }
 
-    pub(crate) fn delimited(&self, delims: (LeftDelim, RightDelim), body: Doc) -> Option<Doc> {
-        self.delimited_with_breaking_close(delims, body, false)
-    }
-
-    /// Format an action while optionally moving its closing delimiter after a
-    /// broken body onto a line of its own.
-    pub(crate) fn delimited_with_breaking_close(
-        &self,
-        (left_delim, right_delim): (LeftDelim, RightDelim),
-        body: Doc,
-        break_before_close: bool,
-    ) -> Option<Doc> {
-        let padding = self.options.delimiter_padding.as_str();
-        let left_padding = if left_delim.has_trim_marker() { "" } else { padding };
-        let right_padding = if right_delim.has_trim_marker() { "" } else { padding };
-
-        let doc = concat([
-            text(left_delim.syntax().text()),
-            text(left_padding),
-            if break_before_close {
-                group_with_tail(body, if_break(line(), text(right_padding)))
-            } else {
-                concat([body, text(right_padding)])
-            },
-            text(right_delim.syntax().text()),
-        ]);
-
-        if break_before_close {
-            Some(doc)
+    pub(crate) fn delimited(&self, (left_delim, right_delim): (LeftDelim, RightDelim), body: Doc) -> Doc {
+        let pad_delimiters = self.options.delimiter_padding == DelimiterPadding::Spaces;
+        let left = if left_delim.has_trim_marker() {
+            concat([text("{{-"), soft_line()])
         } else {
-            Some(group(doc))
-        }
+            concat([text("{{"), if pad_delimiters { soft_line() } else { empty() }])
+        };
+        let right = if right_delim.has_trim_marker() {
+            concat([soft_line(), text("-}}")])
+        } else {
+            concat([if pad_delimiters { soft_line() } else { empty() }, text("}}")])
+        };
+
+        group(concat([left, body, right]))
     }
 }
 

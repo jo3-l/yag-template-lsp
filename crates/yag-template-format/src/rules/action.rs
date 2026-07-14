@@ -37,24 +37,9 @@ impl Formatter<'_> {
             Action::TryCatch(action) => self.try_catch_action(action),
             Action::ExprAction(action) => {
                 let expression = action.expr()?;
-                let break_before_close = self.action_breaks_before_close(&expression);
                 let body = self.expr(expression)?;
-                self.delimited_with_breaking_close(action.delims()?, body, break_before_close)
+                Some(self.delimited(action.delims()?, body))
             }
-        }
-    }
-
-    /// Keep the closing delimiter out of a broken direct call without
-    /// affecting parenthesized or otherwise nested calls.
-    fn action_breaks_before_close(&self, expression: &Expr) -> bool {
-        match expression {
-            Expr::VarDecl(declaration) => declaration
-                .initializer()
-                .is_some_and(|value| self.is_direct_call(&value)),
-            Expr::VarAssign(assignment) => assignment
-                .assign_expr()
-                .is_some_and(|value| self.is_direct_call(&value)),
-            _ => self.is_direct_call(expression),
         }
     }
 
@@ -137,14 +122,12 @@ impl Formatter<'_> {
     }
 
     fn else_clause(&mut self, clause: &ElseClause) -> Option<Doc> {
-        let (condition, break_before_close) = if let Some(condition) = clause.condition() {
-            let break_before_close = self.is_direct_call(&condition);
-            let condition = concat([text(" "), text("if"), self.expression_argument(condition)?]);
-            (condition, break_before_close)
+        let condition = if let Some(condition) = clause.condition() {
+            concat([text(" "), text("if"), self.expression_argument(condition)?])
         } else {
-            (empty(), false)
+            empty()
         };
-        self.delimited_with_breaking_close(clause.delims()?, concat([text("else"), condition]), break_before_close)
+        Some(self.delimited(clause.delims()?, concat([text("else"), condition])))
     }
 
     fn range_action(&mut self, action: &RangeLoop) -> Option<Doc> {
@@ -186,13 +169,8 @@ impl Formatter<'_> {
             empty()
         };
         let expression = clause.expr()?;
-        let break_before_close = self.is_direct_call(&expression);
         let expression = self.expression_argument(expression)?;
-        self.delimited_with_breaking_close(
-            clause.delims()?,
-            concat([text("range"), binding, expression]),
-            break_before_close,
-        )
+        Some(self.delimited(clause.delims()?, concat([text("range"), binding, expression])))
     }
 
     fn while_action(&mut self, action: &WhileLoop) -> Option<Doc> {
@@ -240,21 +218,18 @@ impl Formatter<'_> {
         template_name: String,
         context_data: Option<Expr>,
     ) -> Option<Doc> {
-        let (context_data, break_before_close) = if let Some(context_data) = context_data {
-            let break_before_close = self.is_direct_call(&context_data);
-            (self.expression_argument(context_data)?, break_before_close)
-        } else {
-            (empty(), false)
+        let context_data = match context_data {
+            Some(context_data) => self.expression_argument(context_data)?,
+            None => empty(),
         };
-        self.delimited_with_breaking_close(
+        Some(self.delimited(
             delims,
             concat([text(keyword), text(" "), text(template_name), context_data]),
-            break_before_close,
-        )
+        ))
     }
 
     fn keyword(&self, delims: (LeftDelim, RightDelim), keyword: &str) -> Option<Doc> {
-        self.delimited(delims, text(keyword))
+        Some(self.delimited(delims, text(keyword)))
     }
 
     fn keyword_with_expression(
@@ -263,9 +238,8 @@ impl Formatter<'_> {
         keyword: &str,
         expression: Expr,
     ) -> Option<Doc> {
-        let break_before_close = self.is_direct_call(&expression);
         let expression = self.expression_argument(expression)?;
-        self.delimited_with_breaking_close(delims, concat([text(keyword), expression]), break_before_close)
+        Some(self.delimited(delims, concat([text(keyword), expression])))
     }
 
     fn expression_argument(&mut self, expression: Expr) -> Option<Doc> {

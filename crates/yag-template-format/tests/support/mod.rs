@@ -44,7 +44,11 @@ fn fingerprint_node(node: SyntaxNode, source: &str) -> TemplateFingerprint {
             }),
             SyntaxElement::Token(token) => Some(TemplateFingerprint::Token {
                 kind: token.kind(),
-                text: token.text().to_owned(),
+                text: match token.kind() {
+                    SyntaxKind::TrimmedLeftDelim => "{{-".to_owned(),
+                    SyntaxKind::TrimmedRightDelim => "-}}".to_owned(),
+                    _ => token.text().to_owned(),
+                },
             }),
         })
         .collect();

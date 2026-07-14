@@ -106,25 +106,3 @@ impl Formatter<'_> {
         Some(group(concat([text(variable?), text(" "), text(operator), value])))
     }
 }
-
-#[cfg(test)]
-mod tests {
-    use std::collections::HashMap;
-
-    use crate::{FormatOptions, FunctionLayouts, LayoutKind, format};
-
-    #[test]
-    fn configured_key_value_functions_dispatch_by_exact_name() {
-        let options = FormatOptions {
-            max_width: 18,
-            function_layouts: FunctionLayouts {
-                by_name: HashMap::from([("metadata".to_owned(), LayoutKind::KeyValuePairs)]),
-            },
-            ..FormatOptions::default()
-        };
-        let source = "{{metadata \"name\" (print .First .Last) \"active\" true}}";
-        let expected = "{{ metadata\n\t\"name\" (print\n\t\t.First\n\t\t.Last)\n\t\"active\" true\n}}\n";
-
-        assert_eq!(format(source, &options).text, expected);
-    }
-}

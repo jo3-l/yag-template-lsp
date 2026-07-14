@@ -32,15 +32,6 @@ pub enum DelimiterPadding {
     Spaces,
 }
 
-impl DelimiterPadding {
-    fn as_str(self) -> &'static str {
-        match self {
-            DelimiterPadding::None => "",
-            DelimiterPadding::Spaces => " ",
-        }
-    }
-}
-
 /// Layout dispatch table for calls with known syntactic callees.
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct FunctionLayouts {

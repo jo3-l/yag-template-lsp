@@ -48,10 +48,6 @@ pub(super) enum Doc {
     ///
     /// when it does not.
     Group(Box<Doc>),
-    /// Like [`Group`], but the layout decision is based only on `body` while
-    /// `tail` shares its selected mode. This lets a closing delimiter follow
-    /// the body's layout without making that delimiter affect wrapping.
-    GroupWithTail { body: Box<Doc>, tail: Box<Doc> },
     /// Add configured indentation to the indentation applied after line breaks in the enclosed
     /// document. It has no effect while the document remains flat. For
     /// example, nesting `SoftLine + Text("world")` by two under `hello`
@@ -134,14 +130,6 @@ pub(super) fn if_break(broken: Doc, flat: Doc) -> Doc {
 /// Attempt to render `doc` on one line before breaking it.
 pub(super) fn group(doc: Doc) -> Doc {
     Doc::Group(Box::new(doc))
-}
-
-/// Choose the layout from `body`, then render `tail` in that same layout.
-pub(super) fn group_with_tail(body: Doc, tail: Doc) -> Doc {
-    Doc::GroupWithTail {
-        body: Box::new(body),
-        tail: Box::new(tail),
-    }
 }
 
 /// Apply `indent` after line breaks inside `doc`.

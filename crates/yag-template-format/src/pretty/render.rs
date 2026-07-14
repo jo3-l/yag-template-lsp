@@ -65,16 +65,6 @@ pub(crate) fn render(doc: Doc, width: usize) -> String {
                 };
                 commands.push(Command::new(indent, mode, *doc));
             }
-            Doc::GroupWithTail { body, tail } => {
-                let probe = vec![Command::new(&indent, Mode::Flat, (*body).clone())];
-                let mode = if fits(width.saturating_sub(column), probe) {
-                    Mode::Flat
-                } else {
-                    Mode::Break
-                };
-                commands.push(Command::new(indent.clone(), mode, *tail));
-                commands.push(Command::new(indent, mode, *body));
-            }
         }
     }
     out
@@ -138,7 +128,6 @@ fn fits(width: usize, mut commands: Vec<Command>) -> bool {
             }
             Doc::Nest(extra, doc) => commands.push(Command::new(indented(&indent, extra), mode, *doc)),
             Doc::Group(doc) => commands.push(Command::new(indent, Mode::Flat, *doc)),
-            Doc::GroupWithTail { body, .. } => commands.push(Command::new(indent, Mode::Flat, *body)),
         }
     }
     false
