@@ -48,11 +48,7 @@ pub(crate) fn render(doc: Doc, width: usize) -> String {
                 column += 1;
             }
             Doc::SoftLine => append_line(&mut out, &mut column, &mut pending_indent, indent),
-            Doc::IfBreak { broken, flat } => {
-                let doc = if mode == Mode::Break { broken } else { flat };
-                commands.push(Command::new(indent, mode, *doc));
-            }
-            Doc::Nest(extra, doc) => commands.push(Command::new(indented(&indent, extra), mode, *doc)),
+            Doc::Indent(extra, doc) => commands.push(Command::new(indented(&indent, extra), mode, *doc)),
             Doc::Group(doc) => {
                 // A group's decision belongs to that group. Looking through
                 // later sibling documents makes short nested calls wrap only
@@ -122,11 +118,7 @@ fn fits(width: usize, mut commands: Vec<Command>) -> bool {
             Doc::Line => return true,
             Doc::SoftLine if mode == Mode::Flat => remaining -= 1,
             Doc::SoftLine => return true,
-            Doc::IfBreak { broken, flat } => {
-                let doc = if mode == Mode::Break { broken } else { flat };
-                commands.push(Command::new(indent, mode, *doc));
-            }
-            Doc::Nest(extra, doc) => commands.push(Command::new(indented(&indent, extra), mode, *doc)),
+            Doc::Indent(extra, doc) => commands.push(Command::new(indented(&indent, extra), mode, *doc)),
             Doc::Group(doc) => commands.push(Command::new(indent, Mode::Flat, *doc)),
         }
     }
@@ -137,7 +129,7 @@ fn fits(width: usize, mut commands: Vec<Command>) -> bool {
 mod tests {
     use super::render;
     use crate::Indent;
-    use crate::pretty::{concat, group, join, line, nest, soft_line, text, try_concat};
+    use crate::pretty::{concat, group, indent, join, line, soft_line, text, try_concat};
 
     #[test]
     fn width_boundaries_choose_flat_or_broken_groups() {
@@ -147,10 +139,10 @@ mod tests {
     }
 
     #[test]
-    fn nesting_applies_after_a_soft_line_break() {
+    fn indentation_applies_after_a_soft_line_break() {
         let doc = group(concat([
             text("hello"),
-            nest(Indent::Spaces(2), concat([soft_line(), text("world")])),
+            indent(Indent::Spaces(2), concat([soft_line(), text("world")])),
         ]));
         assert_eq!(render(doc, 10), "hello\n  world");
     }
@@ -168,16 +160,16 @@ mod tests {
     }
 
     #[test]
-    fn nesting_uses_tabs_when_configured() {
-        let doc = concat([text("header"), nest(Indent::Tabs, concat([line(), text("body")]))]);
+    fn indentation_uses_tabs_when_configured() {
+        let doc = concat([text("header"), indent(Indent::Tabs, concat([line(), text("body")]))]);
         assert_eq!(render(doc, 100), "header\n\tbody");
     }
 
     #[test]
-    fn nesting_does_not_indent_empty_lines() {
+    fn indentation_does_not_indent_empty_lines() {
         let doc = concat([
             text("header"),
-            nest(
+            indent(
                 Indent::Tabs,
                 concat([line(), text("body"), line(), line(), text("tail")]),
             ),

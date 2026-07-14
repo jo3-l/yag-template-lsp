@@ -1,14 +1,12 @@
 //! Declarative document rules for template blocks and compound bodies.
 
-use std::ops::Range;
-
 use yag_template_syntax::ast::{ActionList, ActionOrText, AstNode, AstToken, Text};
 
 use crate::cursor::DoubleEndedPeekable;
 use crate::iterutil::iter_with_neighbors;
 use crate::line_protection::ReflowPolicy;
-use crate::lower::{Formatter, byte_offset};
-use crate::pretty::{AllowCompact, Doc, concat, empty, line, nest, soft_line, text};
+use crate::lower::{Formatter, byte_offset, source_range};
+use crate::pretty::{AllowCompact, Doc, concat, empty, indent, line, soft_line, text};
 
 /// How a sequence lowers its literal text tokens.
 #[derive(Clone, Copy)]
@@ -99,13 +97,15 @@ impl<'a> Formatter<'a> {
         } else {
             let lowered_inner = self.sequence(elements, SequenceContext::Body, allow_compact);
             concat([
-                nest(self.options().indent, concat([leading, lowered_inner.doc])),
+                indent(self.options.indent, concat([leading, lowered_inner.doc])),
                 trailing,
                 if lowered_inner.trailing_line { line() } else { empty() },
             ])
         }
     }
+}
 
+impl<'a> Formatter<'a> {
     /// Reflow formatter-owned whitespace at a compound body's edges.
     ///
     /// Compact reflow turns flexible inline edge whitespace into soft lines.
@@ -242,7 +242,7 @@ impl<'a> Formatter<'a> {
     /// enclosing body owns it.
     fn lower_body_text(&self, literal: &Text, is_final: bool) -> (Doc, bool) {
         let start = byte_offset(literal.text_range().start());
-        let starts_new_line = start == 0 || self.source().as_bytes()[start - 1] == b'\n';
+        let starts_new_line = start == 0 || self.source.as_bytes()[start - 1] == b'\n';
         let mut body_text = split_body_text(literal.get(), starts_new_line);
         let trailing_line = is_final && body_text.has_terminal_newline;
         if trailing_line {
@@ -322,10 +322,4 @@ fn split_body_text(text: &str, starts_new_line: bool) -> BodyText<'_> {
 fn is_inline_whitespace(text: &Text) -> bool {
     let text = text.get();
     !text.contains('\n') && text.chars().all(char::is_whitespace)
-}
-
-/// Convert an AST node's text range to byte offsets for slicing source text.
-fn source_range(node: &impl AstNode) -> Range<usize> {
-    let range = node.text_range();
-    byte_offset(range.start())..byte_offset(range.end())
 }

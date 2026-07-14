@@ -29,7 +29,9 @@ impl Formatter<'_> {
             Expr::Literal(expr) => Some(text(expr.syntax().text().to_owned())),
         }
     }
+}
 
+impl<'a> Formatter<'a> {
     fn func_call(&mut self, expr: FuncCall) -> Option<Doc> {
         let name = expr.func_name()?;
         let args = expr.args().map(|arg| self.expr(arg)).collect::<Option<Vec<_>>>()?;
@@ -48,7 +50,7 @@ impl Formatter<'_> {
             expr.stages()
                 .map(|stage| Some(concat([soft_line(), text("| "), self.expr(stage.call_expr()?)?]))),
         )?;
-        Some(group(concat([initial, self.continuation(stages)])))
+        Some(group(concat([initial, self.indent_if_broken(stages)])))
     }
 
     fn expr_field_chain(&mut self, expr: ExprFieldChain) -> Option<Doc> {
@@ -66,7 +68,7 @@ impl Formatter<'_> {
         }
     }
 
-    pub(crate) fn is_direct_call(&self, expression: &Expr) -> bool {
+    fn is_direct_call(&self, expression: &Expr) -> bool {
         matches!(expression, Expr::FuncCall(_) | Expr::ExprCall(_))
     }
 
@@ -79,7 +81,7 @@ impl Formatter<'_> {
         if is_call {
             Some(concat([text(" "), expression]))
         } else {
-            Some(self.continuation(concat([soft_line(), expression])))
+            Some(self.indent_if_broken(concat([soft_line(), expression])))
         }
     }
 
@@ -90,7 +92,7 @@ impl Formatter<'_> {
         }
         group(concat([
             callee,
-            self.continuation(concat(args.into_iter().flat_map(|arg| [soft_line(), arg]))),
+            self.indent_if_broken(concat(args.into_iter().flat_map(|arg| [soft_line(), arg]))),
         ]))
     }
 
@@ -98,7 +100,7 @@ impl Formatter<'_> {
         let rows = args
             .chunks_exact(2)
             .flat_map(|pair| [soft_line(), pair[0].clone(), text(" "), pair[1].clone()]);
-        group(concat([callee, self.continuation(concat(rows))]))
+        group(concat([callee, self.indent_if_broken(concat(rows))]))
     }
 
     fn assignment(&mut self, operator: &str, variable: Option<String>, value: Option<Expr>) -> Option<Doc> {

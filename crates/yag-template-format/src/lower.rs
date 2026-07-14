@@ -1,9 +1,11 @@
+use std::ops::Range;
+
 use yag_template_syntax::SyntaxNode;
-use yag_template_syntax::ast::{AstNode, LeftDelim, RightDelim, Root};
+use yag_template_syntax::ast::{AstNode, Root};
 
 use crate::line_protection::{LineProtection, ReflowPolicy};
-use crate::pretty::{Doc, concat, empty, group, nest, soft_line, text};
-use crate::{DelimiterPadding, FormatOptions, LayoutKind};
+use crate::pretty::{Doc, indent, text};
+use crate::{FormatOptions, LayoutKind};
 
 /// Lower a successfully parsed root into a renderable document.
 pub(super) fn lower(root: &SyntaxNode, source: &str, options: &FormatOptions, protection: &LineProtection) -> Doc {
@@ -17,9 +19,9 @@ pub(super) fn lower(root: &SyntaxNode, source: &str, options: &FormatOptions, pr
 
 /// Formatting context shared by the typed AST rules.
 pub(crate) struct Formatter<'a> {
-    source: &'a str,
-    options: &'a FormatOptions,
-    protection: &'a LineProtection,
+    pub(crate) source: &'a str,
+    pub(crate) options: &'a FormatOptions,
+    pub(crate) protection: &'a LineProtection,
 }
 
 impl<'a> Formatter<'a> {
@@ -36,45 +38,23 @@ impl<'a> Formatter<'a> {
         self.options.function_layouts.by_name.get(name).copied()
     }
 
-    /// Return the immutable configuration for this lowering pass.
-    pub(crate) fn options(&self) -> &FormatOptions {
-        self.options
-    }
-
-    /// Return the source text associated with this lowering pass.
-    pub(crate) fn source(&self) -> &'a str {
-        self.source
-    }
-
     /// Return the reflow policy for the source line containing `offset`.
     pub(crate) fn reflow_policy_at(&self, offset: usize) -> ReflowPolicy {
         self.protection.policy_at_offset(offset)
     }
-}
 
-impl<'a> Formatter<'a> {
-    pub(crate) fn continuation(&self, doc: Doc) -> Doc {
-        nest(self.options.continuation_indent, doc)
-    }
-
-    pub(crate) fn delimited(&self, (left_delim, right_delim): (LeftDelim, RightDelim), body: Doc) -> Doc {
-        let pad_delimiters = self.options.delimiter_padding == DelimiterPadding::Spaces;
-        let left = if left_delim.has_trim_marker() {
-            concat([text("{{-"), soft_line()])
-        } else {
-            concat([text("{{"), if pad_delimiters { soft_line() } else { empty() }])
-        };
-        let right = if right_delim.has_trim_marker() {
-            concat([soft_line(), text("-}}")])
-        } else {
-            concat([if pad_delimiters { soft_line() } else { empty() }, text("}}")])
-        };
-
-        group(concat([left, body, right]))
+    pub(crate) fn indent_if_broken(&self, doc: Doc) -> Doc {
+        indent(self.options.continuation_indent, doc)
     }
 }
 
 /// Convert the syntax library's byte-based text position to `usize`.
 pub(crate) fn byte_offset(position: impl Into<u32>) -> usize {
     position.into() as usize
+}
+
+/// Convert an AST node's text range to byte offsets for slicing source text.
+pub(crate) fn source_range(node: &impl AstNode) -> Range<usize> {
+    let range = node.text_range();
+    byte_offset(range.start())..byte_offset(range.end())
 }

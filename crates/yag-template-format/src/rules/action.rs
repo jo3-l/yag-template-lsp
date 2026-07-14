@@ -5,8 +5,9 @@ use yag_template_syntax::ast::{
     RightDelim, TemplateBlock, TemplateDefinition, TryCatchAction, WhileLoop, WithAction,
 };
 
+use crate::DelimiterPadding;
 use crate::lower::Formatter;
-use crate::pretty::{AllowCompact, Doc, concat, empty, join, text, try_concat};
+use crate::pretty::{AllowCompact, Doc, concat, empty, group, join, soft_line, text, try_concat};
 
 impl Formatter<'_> {
     /// Format an action atomically. A rule that cannot construct a complete
@@ -14,6 +15,22 @@ impl Formatter<'_> {
     pub(crate) fn action(&mut self, action: Action) -> Doc {
         self.action_rule(&action)
             .unwrap_or_else(|| text(action.syntax().text().to_owned()))
+    }
+
+    fn delimited(&self, (left_delim, right_delim): (LeftDelim, RightDelim), body: Doc) -> Doc {
+        let pad_delimiters = self.options.delimiter_padding == DelimiterPadding::Spaces;
+        let left = if left_delim.has_trim_marker() {
+            concat([text("{{-"), soft_line()])
+        } else {
+            concat([text("{{"), if pad_delimiters { soft_line() } else { empty() }])
+        };
+        let right = if right_delim.has_trim_marker() {
+            concat([soft_line(), text("-}}")])
+        } else {
+            concat([if pad_delimiters { soft_line() } else { empty() }, text("}}")])
+        };
+
+        group(concat([left, body, right]))
     }
 
     fn action_rule(&mut self, action: &Action) -> Option<Doc> {

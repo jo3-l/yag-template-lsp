@@ -21,7 +21,7 @@ actions. Keep formatting deterministic and idempotent.
 - Format typed AST nodes; do not reconstruct actions by splitting raw source.
   Traverse roots and action lists through `actions_with_text()`.
 - Use the document model (`Text`, `Concat`, `Line`, `SoftLine`, `Group`, and
-  `Nest`) for width-sensitive expression layout. `SoftLine` is a space when
+  `Indent`) for width-sensitive expression layout. `SoftLine` is a space when
   flat and a newline when broken.
 - Classify logical lines as flexible, protected-textual, or literal.
   Protected-textual lines preserve same-line text/action adjacency and force

@@ -26,9 +26,6 @@ pub(super) enum Doc {
     /// A conditional line break: one space in a flat `Group`, or a newline in
     /// a broken group.
     SoftLine,
-    /// Select `broken` when enclosed by a broken `Group`, otherwise select
-    /// `flat`.
-    IfBreak { broken: Box<Doc>, flat: Box<Doc> },
     /// Attempt to render the enclosed document on the current line. The
     /// renderer selects flat or broken mode using its bounded `fits` probe.
     ///
@@ -50,7 +47,7 @@ pub(super) enum Doc {
     Group(Box<Doc>),
     /// Add configured indentation to the indentation applied after line breaks in the enclosed
     /// document. It has no effect while the document remains flat. For
-    /// example, nesting `SoftLine + Text("world")` by two under `hello`
+    /// example, indenting `SoftLine + Text("world")` by two under `hello`
     /// produces:
     ///
     /// ```text
@@ -65,7 +62,7 @@ pub(super) enum Doc {
     /// ```
     ///
     /// when broken.
-    Nest(Indent, Box<Doc>),
+    Indent(Indent, Box<Doc>),
 }
 
 impl Doc {
@@ -119,22 +116,14 @@ pub(super) fn soft_line() -> Doc {
     Doc::SoftLine
 }
 
-/// Choose a document based on the enclosing group's layout mode.
-pub(super) fn if_break(broken: Doc, flat: Doc) -> Doc {
-    Doc::IfBreak {
-        broken: Box::new(broken),
-        flat: Box::new(flat),
-    }
-}
-
 /// Attempt to render `doc` on one line before breaking it.
 pub(super) fn group(doc: Doc) -> Doc {
     Doc::Group(Box::new(doc))
 }
 
 /// Apply `indent` after line breaks inside `doc`.
-pub(super) fn nest(indent: Indent, doc: Doc) -> Doc {
-    Doc::Nest(indent, Box::new(doc))
+pub(super) fn indent(indent: Indent, doc: Doc) -> Doc {
+    Doc::Indent(indent, Box::new(doc))
 }
 
 #[cfg(test)]
