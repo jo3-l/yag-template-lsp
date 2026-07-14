@@ -1,9 +1,11 @@
-{{ $value := print
+{{
+$value := print
   (printf
     "%s"
     .Name)
 }}
-{{ if print
+{{
+if print
   .A
   .B
   .C

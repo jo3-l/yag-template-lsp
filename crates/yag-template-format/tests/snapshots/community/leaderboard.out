@@ -21,16 +21,18 @@
 		{{- end }}
 		{{- $xp := toInt .Value }}
 		{{- $rank = add $rank 1 }}
-		{{- $display = printf
+		{{-
+		$display = printf
 			"%s\n• **%d.** [%s](https://yagpdb.xyz) :: Level %d (%d XP)"
 			$display
 			$rank
 			$usr
 			(toInt (roundFloor (mult 0.1 (sqrt $xp))))
 			$xp
-		 -}}
+		-}}
 	{{ end }}
-	{{ $id := sendMessageRetID
+	{{
+	$id := sendMessageRetID
 		nil
 		(cembed
 			"title"

@@ -1,4 +1,5 @@
-{{- $value := print
+{{-
+$value := print
 	.First
 	.Second
 	.Third

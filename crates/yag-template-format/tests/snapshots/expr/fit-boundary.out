@@ -1,2 +1,4 @@
 {{ print .A .B .C }}
-{{ .Value | first | second }}
+{{
+.Value | first | second
+}}

@@ -1,7 +1,10 @@
-{{ (sdict
+{{
+(sdict
 	"a" "one"
-	"b" "two") }}
-{{ dict
+	"b" "two")
+}}
+{{
+dict
 	"first" .User.First
 	"last" .User.Last
 }}

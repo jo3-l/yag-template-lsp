@@ -1,16 +1,19 @@
-{{ $x := or
+{{
+$x := or
 	.First
 	.Second
 	.Third
 }}
-{{ if or
+{{
+if or
 	.First
 	.Second
 	.Third
 }}
 	body
 {{ end }}
-{{ return or
+{{
+return or
 	.First
 	.Second
 	.Third

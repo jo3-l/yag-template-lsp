@@ -1,1 +1,3 @@
-Hello, {{ .User.Username }}! This literal line is intentionally too long.
+Hello, {{
+.User.Username
+}}! This literal line is intentionally too long.
