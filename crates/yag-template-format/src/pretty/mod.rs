@@ -13,6 +13,10 @@ pub(crate) enum AllowCompact {
     No,
 }
 
+/// Identity of a named layout group allocated during lowering.
+#[derive(Debug, Clone, Copy, Eq, PartialEq)]
+pub(crate) struct GroupId(pub(super) usize);
+
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub(super) enum Doc {
     /// A run of output whose surrounding whitespace and line breaks belong to
@@ -45,6 +49,16 @@ pub(super) enum Doc {
     ///
     /// when it does not.
     Group(Box<Doc>),
+    /// A group whose selected mode can be referenced by conditional documents.
+    NamedGroup(GroupId, Box<Doc>),
+    /// Select a document according to a named group's mode.
+    IfBreak {
+        group_id: GroupId,
+        broken: Box<Doc>,
+        flat: Box<Doc>,
+    },
+    /// Apply indentation only when a named group selected broken mode.
+    IndentIfBreak(GroupId, Indent, Box<Doc>),
     /// Add configured indentation to the indentation applied after line breaks in the enclosed
     /// document. It has no effect while the document remains flat. For
     /// example, indenting `SoftLine + Text("world")` by two under `hello`
@@ -119,6 +133,25 @@ pub(super) fn soft_line() -> Doc {
 /// Attempt to render `doc` on one line before breaking it.
 pub(super) fn group(doc: Doc) -> Doc {
     Doc::Group(Box::new(doc))
+}
+
+/// Attempt to render a named group on one line before breaking it.
+pub(super) fn group_with_id(id: GroupId, doc: Doc) -> Doc {
+    Doc::NamedGroup(id, Box::new(doc))
+}
+
+/// Select `broken` or `flat` based on the selected mode of `group_id`.
+pub(super) fn if_break(group_id: GroupId, broken: Doc, flat: Doc) -> Doc {
+    Doc::IfBreak {
+        group_id,
+        broken: Box::new(broken),
+        flat: Box::new(flat),
+    }
+}
+
+/// Apply `indent` only when `group_id` breaks.
+pub(super) fn indent_if_break(group_id: GroupId, indent: Indent, doc: Doc) -> Doc {
+    Doc::IndentIfBreak(group_id, indent, Box::new(doc))
 }
 
 /// Apply `indent` after line breaks inside `doc`.

@@ -6,7 +6,7 @@ use yag_template_syntax::ast::{AstNode, Root};
 
 use crate::FormatOptions;
 use crate::line_protection::{LineProtection, ReflowPolicy};
-use crate::pretty::{Doc, indent, text};
+use crate::pretty::{Doc, GroupId, indent, text};
 
 /// Lower a successfully parsed root into a renderable document.
 pub(super) fn lower(
@@ -30,6 +30,7 @@ pub(crate) struct Formatter<'a> {
     pub(crate) envdefs: &'a EnvDefs,
     pub(crate) options: &'a FormatOptions,
     pub(crate) protection: &'a LineProtection,
+    next_group_id: usize,
 }
 
 impl<'a> Formatter<'a> {
@@ -40,7 +41,15 @@ impl<'a> Formatter<'a> {
             envdefs,
             options,
             protection,
+            next_group_id: 0,
         }
+    }
+
+    /// Allocate a new named pretty-printing group.
+    pub(crate) fn new_group_id(&mut self) -> GroupId {
+        let id = GroupId(self.next_group_id);
+        self.next_group_id += 1;
+        id
     }
 
     /// Return the reflow policy for the source line containing `offset`.
