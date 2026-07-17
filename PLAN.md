@@ -115,10 +115,12 @@ In `src/rules/expr.rs`:
   }
   ```
 
-- Convert recursive expression lowering to return `ExpressionDoc` internally.
+- Keep the existing metadata-discarding formatter interfaces, such as `expr() -> Option<Doc>` and `prefixed_expression() -> Option<Doc>`, so callers which do not coordinate closing rows remain unchanged.
+- Add focused metadata-aware internal entry points, for example `expression_doc()` and `prefixed_expression_doc()`, which return `ExpressionDoc` and are used by recursive expression lowering.
+- Keep `ExpressionDoc` private to `expr.rs` in this slice; expose only a narrow metadata-aware formatter method to `action.rs` when Slice 3 needs it.
 - Provide small constructors/helpers for:
   - a plain fragment with no trailing closing group;
-  - prefixing without changing trailing metadata;
+  - transforming or prefixing the underlying document without changing trailing metadata;
   - concatenating a suffix which clears trailing metadata;
   - extracting the underlying `Doc` when metadata is irrelevant.
 - Propagate metadata according to `DESIGN.md`:
@@ -131,8 +133,8 @@ In `src/rules/expr.rs`:
 
 In `src/rules/action.rs`:
 
-- Adapt expression consumers to accept the new focused result type and discard unused metadata for now.
-- Do not change delimiter construction yet.
+- Keep existing expression consumers on the metadata-discarding `Doc` facade.
+- Do not expose `ExpressionDoc` to `action.rs` or change delimiter construction yet.
 
 ### Tests
 
@@ -141,8 +143,8 @@ In `src/rules/action.rs`:
 
 ### Review checkpoint
 
-- `action.rs` learns only about `ExpressionDoc`, not call classification or parenthesis internals.
-- No new dependency is introduced between `action.rs` and `expr.rs` beyond this narrow return type.
+- `action.rs` remains byte-identical and does not learn about `ExpressionDoc` in this representation-only slice.
+- Recursive metadata handling remains localized to `expr.rs`; ordinary formatter-rule call sites continue to consume `Doc`.
 - Snapshot output is byte-identical.
 
 ### Verification
@@ -174,6 +176,7 @@ In `src/rules/expr.rs`:
 
 In `src/rules/action.rs`:
 
+- Use the narrow metadata-aware expression formatter only for action bodies and prefixed expressions whose closing rows must coordinate with the right delimiter; keep other consumers on the existing `Doc` facade.
 - Allocate a named group for each formatted action.
 - Make opening padding fixed horizontal text:
   - ordinary + spaces: one literal space;
