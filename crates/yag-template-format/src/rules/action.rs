@@ -7,7 +7,8 @@ use yag_template_syntax::ast::{
 
 use crate::DelimiterPadding;
 use crate::lower::Formatter;
-use crate::pretty::{AllowCompact, Doc, concat, empty, group, join, soft_line, text, try_concat};
+use crate::pretty::{AllowCompact, Doc, concat, empty, group_with_id, if_break, join, line, text, try_concat};
+use crate::rules::expr::ExprDoc;
 
 impl Formatter<'_> {
     /// Format an action atomically. A rule that cannot construct a complete
@@ -17,20 +18,48 @@ impl Formatter<'_> {
             .unwrap_or_else(|| text(action.syntax().text().to_owned()))
     }
 
-    fn delimited(&self, (left_delim, right_delim): (LeftDelim, RightDelim), body: Doc) -> Doc {
+    fn delimited_doc(&mut self, delims: (LeftDelim, RightDelim), body: Doc) -> Doc {
+        self.delimited(delims, ExprDoc::new(body))
+    }
+
+    fn delimited(&mut self, (left_delim, right_delim): (LeftDelim, RightDelim), body: ExprDoc) -> Doc {
+        let ExprDoc {
+            doc: body,
+            trailing_closing_group,
+        } = body;
         let pad_delimiters = self.options.delimiter_padding == DelimiterPadding::Spaces;
+
+        // Opening padding is horizontal: trim delimiters require one space,
+        // while ordinary delimiters follow the configured padding.
         let left = if left_delim.has_trim_marker() {
-            concat([text("{{-"), soft_line()])
+            text("{{- ")
+        } else if pad_delimiters {
+            text("{{ ")
         } else {
-            concat([text("{{"), if pad_delimiters { soft_line() } else { empty() }])
-        };
-        let right = if right_delim.has_trim_marker() {
-            concat([soft_line(), text("-}}")])
-        } else {
-            concat([if pad_delimiters { soft_line() } else { empty() }, text("}}")])
+            text("{{")
         };
 
-        group(concat([left, body, right]))
+        // Closing padding is emitted only when the delimiter stays on the same
+        // row. A generated newline replaces it, so no line ends in padding.
+        let closing_padding = if right_delim.has_trim_marker() || pad_delimiters {
+            text(" ")
+        } else {
+            empty()
+        };
+        let right = if right_delim.has_trim_marker() {
+            text("-}}")
+        } else {
+            text("}}")
+        };
+
+        let action_id = self.new_group_id();
+        let action_boundary = if_break(action_id, line(), closing_padding.clone());
+        let closing_boundary = trailing_closing_group.map_or(action_boundary.clone(), |closing_id| {
+            // Reuse a trailing parenthesis row when one exists; otherwise the
+            // action group decides whether the right delimiter needs a new row.
+            if_break(closing_id, closing_padding, action_boundary)
+        });
+        group_with_id(action_id, concat([left, body, closing_boundary, right]))
     }
 
     fn action_rule(&mut self, action: &Action) -> Option<Doc> {
@@ -44,18 +73,17 @@ impl Formatter<'_> {
                 action.template_name()?.syntax().text().to_string(),
                 action.context_data(),
             ),
-            Action::Return(action) => self.keyword_with_expression(action.delims()?, "return", action.expr()?),
+            Action::Return(action) => self.kw_then_expr(action.delims()?, "return", action.expr()?),
             Action::If(action) => self.if_action(action),
             Action::With(action) => self.with_action(action),
             Action::Range(action) => self.range_action(action),
             Action::While(action) => self.while_action(action),
-            Action::Break(action) => self.keyword(action.delims()?, "break"),
-            Action::Continue(action) => self.keyword(action.delims()?, "continue"),
+            Action::Break(action) => self.kw(action.delims()?, "break"),
+            Action::Continue(action) => self.kw(action.delims()?, "continue"),
             Action::TryCatch(action) => self.try_catch_action(action),
             Action::ExprAction(action) => {
-                let expression = action.expr()?;
-                let body = self.expr(expression)?;
-                Some(self.delimited(action.delims()?, body))
+                let expr = self.expr(action.expr()?)?;
+                Some(self.delimited(action.delims()?, expr))
             }
         }
     }
@@ -101,7 +129,7 @@ impl Formatter<'_> {
         let clause = action.clause()?;
         Some(
             concat([
-                self.keyword_with_expression(clause.delims()?, "if", clause.condition()?)?,
+                self.kw_then_expr(clause.delims()?, "if", clause.condition()?)?,
                 self.body(action.body()?, allow_compact),
                 self.else_branches(action.else_branches(), allow_compact)?,
                 self.end_clause(&action.end_clause()?)?,
@@ -115,7 +143,7 @@ impl Formatter<'_> {
         let clause = action.clause()?;
         Some(
             concat([
-                self.keyword_with_expression(clause.delims()?, "with", clause.condition()?)?,
+                self.kw_then_expr(clause.delims()?, "with", clause.condition()?)?,
                 self.body(action.body()?, allow_compact),
                 self.else_branches(action.else_branches(), allow_compact)?,
                 self.end_clause(&action.end_clause()?)?,
@@ -139,12 +167,10 @@ impl Formatter<'_> {
     }
 
     fn else_clause(&mut self, clause: &ElseClause) -> Option<Doc> {
-        let condition = if let Some(condition) = clause.condition() {
-            concat([text(" "), text("if"), self.expression_argument(condition)?])
-        } else {
-            empty()
-        };
-        Some(self.delimited(clause.delims()?, concat([text("else"), condition])))
+        match clause.condition() {
+            Some(condition) => self.kw_then_expr(clause.delims()?, "else if", condition),
+            None => self.kw(clause.delims()?, "else"),
+        }
     }
 
     fn range_action(&mut self, action: &RangeLoop) -> Option<Doc> {
@@ -185,9 +211,8 @@ impl Formatter<'_> {
         } else {
             empty()
         };
-        let expression = clause.expr()?;
-        let expression = self.expression_argument(expression)?;
-        Some(self.delimited(clause.delims()?, concat([text("range"), binding, expression])))
+        let expr = self.prefixed_expr(clause.expr()?)?;
+        Some(self.delimited(clause.delims()?, expr.with_prefix(concat([text("range"), binding]))))
     }
 
     fn while_action(&mut self, action: &WhileLoop) -> Option<Doc> {
@@ -201,7 +226,7 @@ impl Formatter<'_> {
         };
         Some(
             concat([
-                self.keyword_with_expression(clause.delims()?, "while", clause.condition()?)?,
+                self.kw_then_expr(clause.delims()?, "while", clause.condition()?)?,
                 self.body(action.body()?, allow_compact),
                 else_branch,
                 self.end_clause(&action.end_clause()?)?,
@@ -214,9 +239,9 @@ impl Formatter<'_> {
         let allow_compact = allows_compact(action);
         Some(
             concat([
-                self.keyword(action.try_clause()?.delims()?, "try")?,
+                self.kw(action.try_clause()?.delims()?, "try")?,
                 self.body(action.try_body()?, allow_compact),
-                self.keyword(action.catch_clause()?.delims()?, "catch")?,
+                self.kw(action.catch_clause()?.delims()?, "catch")?,
                 self.body(action.catch_body()?, allow_compact),
                 self.end_clause(&action.end_clause()?)?,
             ])
@@ -224,43 +249,34 @@ impl Formatter<'_> {
         )
     }
 
-    fn end_clause(&self, clause: &EndClause) -> Option<Doc> {
-        self.keyword(clause.delims()?, "end")
+    fn end_clause(&mut self, clause: &EndClause) -> Option<Doc> {
+        self.kw(clause.delims()?, "end")
     }
 
     fn template_action(
         &mut self,
         delims: (LeftDelim, RightDelim),
-        keyword: &str,
+        kw: &str,
         template_name: String,
         context_data: Option<Expr>,
     ) -> Option<Doc> {
-        let context_data = match context_data {
-            Some(context_data) => self.expression_argument(context_data)?,
-            None => empty(),
-        };
-        Some(self.delimited(
-            delims,
-            concat([text(keyword), text(" "), text(template_name), context_data]),
-        ))
+        let prefix = concat([text(kw), text(" "), text(template_name)]);
+        match context_data {
+            Some(context_data) => {
+                let context_data = self.prefixed_expr(context_data)?.with_prefix(prefix);
+                Some(self.delimited(delims, context_data))
+            }
+            None => Some(self.delimited_doc(delims, prefix)),
+        }
     }
 
-    fn keyword(&self, delims: (LeftDelim, RightDelim), keyword: &str) -> Option<Doc> {
-        Some(self.delimited(delims, text(keyword)))
+    fn kw(&mut self, delims: (LeftDelim, RightDelim), kw: &str) -> Option<Doc> {
+        Some(self.delimited_doc(delims, text(kw)))
     }
 
-    fn keyword_with_expression(
-        &mut self,
-        delims: (LeftDelim, RightDelim),
-        keyword: &str,
-        expression: Expr,
-    ) -> Option<Doc> {
-        let expression = self.expression_argument(expression)?;
-        Some(self.delimited(delims, concat([text(keyword), expression])))
-    }
-
-    fn expression_argument(&mut self, expression: Expr) -> Option<Doc> {
-        self.prefixed_expression(expression)
+    fn kw_then_expr(&mut self, delims: (LeftDelim, RightDelim), kw: &str, expr: Expr) -> Option<Doc> {
+        let expr = self.prefixed_expr(expr)?.with_prefix(text(kw));
+        Some(self.delimited(delims, expr))
     }
 }
 

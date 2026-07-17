@@ -1,0 +1,6 @@
+---
+max_width: 30
+delimiter_padding: none
+---
+{{$a := (sdict "a" "b" "c" "d" "e" "f")}}
+{{$a := sdict "a" "b" "c" "d" "e" "f"}}

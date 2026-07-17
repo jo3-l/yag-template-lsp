@@ -1,3 +1,2 @@
-{{ if .ReallyLong }}{{
-end
+{{ if .ReallyLong }}{{ end
 }}

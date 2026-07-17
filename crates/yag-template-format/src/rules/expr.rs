@@ -6,22 +6,22 @@ use crate::lower::Formatter;
 use crate::pretty::{Doc, GroupId, concat, empty, group, group_with_id, if_break, line, soft_line, text, try_concat};
 
 /// A lowered expression with metadata about its trailing closing boundary.
-struct ExprDoc {
-    doc: Doc,
+pub(crate) struct ExprDoc {
+    pub(crate) doc: Doc,
     /// The named group which, when broken, generates the expression's final
     /// closing-delimiter row.
-    trailing_closing_group: Option<GroupId>,
+    pub(crate) trailing_closing_group: Option<GroupId>,
 }
 
 impl ExprDoc {
-    fn plain(doc: Doc) -> Self {
+    pub(crate) fn new(doc: Doc) -> Self {
         Self {
             doc,
             trailing_closing_group: None,
         }
     }
 
-    fn prefixed(self, prefix: Doc) -> Self {
+    pub(crate) fn with_prefix(self, prefix: Doc) -> Self {
         Self {
             doc: concat([prefix, self.doc]),
             // Prefixing does not change where an expression ends.
@@ -31,22 +31,25 @@ impl ExprDoc {
 
     fn with_suffix(self, suffix: Doc) -> Self {
         // Appending syntax means the expression no longer ends at an earlier closing row.
-        Self::plain(concat([self.doc, suffix]))
+        Self::new(concat([self.doc, suffix]))
     }
 
     fn into_doc(self) -> Doc {
         self.doc
     }
-
-    fn into_parts(self) -> (Doc, Option<GroupId>) {
-        (self.doc, self.trailing_closing_group)
-    }
 }
 
 impl Formatter<'_> {
-    /// Format an expression with the closing-boundary metadata needed by an action.
-    pub(crate) fn expr_with_closing(&mut self, expr: Expr) -> Option<(Doc, Option<GroupId>)> {
-        Some(self.expr_doc(expr)?.into_parts())
+    /// Format an explicit expression as a document fragment.
+    pub(crate) fn expr(&mut self, expr: Expr) -> Option<ExprDoc> {
+        self.expr_doc(expr)
+    }
+
+    /// Lower an expression following a keyword, assignment operator, or other
+    /// prefix. Calls and opening parentheses stay with that prefix and own
+    /// their internal breaks.
+    pub(crate) fn prefixed_expr(&mut self, expr: Expr) -> Option<ExprDoc> {
+        self.prefixed_expr_doc(expr)
     }
 
     fn expr_doc(&mut self, expr: Expr) -> Option<ExprDoc> {
@@ -65,19 +68,19 @@ impl Formatter<'_> {
                 })
             }
             Expr::Pipeline(expr) => self.pipeline(expr),
-            Expr::ContextAccess(expr) => Some(ExprDoc::plain(text(expr.syntax().text().to_owned()))),
-            Expr::ContextFieldChain(expr) => Some(ExprDoc::plain(concat(
+            Expr::ContextAccess(expr) => Some(ExprDoc::new(text(expr.syntax().text().to_owned()))),
+            Expr::ContextFieldChain(expr) => Some(ExprDoc::new(concat(
                 expr.fields().map(|field| text(field.syntax().text().to_owned())),
             ))),
             Expr::ExprFieldChain(expr) => self.expr_field_chain(expr),
-            Expr::VarAccess(expr) => Some(ExprDoc::plain(text(expr.var()?.name()))),
+            Expr::VarAccess(expr) => Some(ExprDoc::new(text(expr.var()?.name()))),
             Expr::VarDecl(expr) => {
                 self.assignment(":=", expr.var().map(|var| var.name().to_owned()), expr.initializer())
             }
             Expr::VarAssign(expr) => {
                 self.assignment("=", expr.var().map(|var| var.name().to_owned()), expr.assign_expr())
             }
-            Expr::Literal(expr) => Some(ExprDoc::plain(text(expr.syntax().text().to_owned()))),
+            Expr::Literal(expr) => Some(ExprDoc::new(text(expr.syntax().text().to_owned()))),
         }
     }
 }
@@ -139,27 +142,18 @@ impl<'a> Formatter<'a> {
         }
     }
 
-    fn is_direct_call(&self, expression: &Expr) -> bool {
-        matches!(expression, Expr::FuncCall(_) | Expr::ExprCall(_))
-    }
-
-    /// Lower an expression following a keyword, assignment operator, or other
-    /// prefix. Calls own their first break after the callee, so keep a direct
-    /// call's callee with that prefix and let the call lay out its arguments.
-    /// Format a prefixed expression with closing-boundary metadata for an action.
-    pub(crate) fn prefixed_expression_with_closing(&mut self, expression: Expr) -> Option<(Doc, Option<GroupId>)> {
-        Some(self.prefixed_expression_doc(expression)?.into_parts())
-    }
-
-    fn prefixed_expression_doc(&mut self, expression: Expr) -> Option<ExprDoc> {
-        let is_call = self.is_direct_call(&expression);
-        let expression = self.expr_doc(expression)?;
-        if is_call {
-            Some(expression.prefixed(text(" ")))
+    fn prefixed_expr_doc(&mut self, expr: Expr) -> Option<ExprDoc> {
+        // Calls and parentheses own their first possible break, so their opening
+        // head stays beside the prefix. Other expressions may break before the
+        // entire expression.
+        let stays_with_prefix = matches!(expr, Expr::FuncCall(_) | Expr::ExprCall(_) | Expr::Parenthesized(_));
+        let expr = self.expr_doc(expr)?;
+        if stays_with_prefix {
+            Some(expr.with_prefix(text(" ")))
         } else {
-            let trailing_closing_group = expression.trailing_closing_group;
+            let trailing_closing_group = expr.trailing_closing_group;
             Some(ExprDoc {
-                doc: self.indent_if_broken(concat([soft_line(), expression.into_doc()])),
+                doc: self.indent_if_broken(concat([soft_line(), expr.into_doc()])),
                 trailing_closing_group,
             })
         }
@@ -168,7 +162,7 @@ impl<'a> Formatter<'a> {
     fn call(&self, callee: Doc, args: impl IntoIterator<Item = ExprDoc>) -> ExprDoc {
         let args = args.into_iter().collect::<Vec<_>>();
         if args.is_empty() {
-            return ExprDoc::plain(callee);
+            return ExprDoc::new(callee);
         }
         let trailing_closing_group = args.last().and_then(|arg| arg.trailing_closing_group);
         ExprDoc {
@@ -193,7 +187,7 @@ impl<'a> Formatter<'a> {
     }
 
     fn assignment(&mut self, operator: &str, variable: Option<String>, value: Option<Expr>) -> Option<ExprDoc> {
-        let value = self.prefixed_expression_doc(value?)?;
+        let value = self.prefixed_expr_doc(value?)?;
         let trailing_closing_group = value.trailing_closing_group;
         Some(ExprDoc {
             doc: group(concat([text(variable?), text(" "), text(operator), value.into_doc()])),

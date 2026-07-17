@@ -1,11 +1,9 @@
-{{
-print
+{{ print
   .A
   .B
   .C
 }}
-{{
-.Value
+{{ .Value
   | first
   | second
 }}

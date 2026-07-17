@@ -1,0 +1,8 @@
+---
+max_width: 32
+---
+{{ $a := sdict "a" "b" "c" "d" "e" "f" }}
+{{ $a := (sdict "a" "b" "c" "d" "e" "f") }}
+{{ $a := ((sdict "a" "b" "c" "d" "e" "f")) }}
+{{ $a := (sdict "a" "b" "c" "d" "e" "f").Field }}
+{{- $a := (sdict "a" "b" "c" "d" "e" "f") -}}

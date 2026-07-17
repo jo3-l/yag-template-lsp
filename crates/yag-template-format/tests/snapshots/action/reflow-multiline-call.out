@@ -1,5 +1,4 @@
-{{
-print
+{{ print
 	.First
 	.Second
 	.Third

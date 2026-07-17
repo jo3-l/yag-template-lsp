@@ -1,11 +1,9 @@
-{{
-print
+{{ print
 	.A
 	.B
 	.C
 }}
-{{
-if print
+{{ if print
 	.A
 	.B
 	.C

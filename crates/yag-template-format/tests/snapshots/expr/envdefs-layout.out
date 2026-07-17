@@ -1,10 +1,8 @@
-{{
-cembed
+{{ cembed
 	"title" "A long title"
 	"description" "A long description"
 }}
-{{
-editThread
+{{ editThread
 	.Thread
 	"slowmode"
 	10

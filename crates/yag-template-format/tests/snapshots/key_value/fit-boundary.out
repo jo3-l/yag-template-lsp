@@ -1,3 +1,2 @@
-{{
-dict "a" "one" "b" "two"
+{{ dict "a" "one" "b" "two"
 }}
