@@ -110,6 +110,11 @@ the following entries to your `settings.json` to show more:
 
 The resulting logs will then be visible in the VSCode output window under the `YAGPDB Template Language Server` channel.
 
+## LLM usage statement
+
+Most of this codebase predates LLM-assisted development, with the notable exception of the formatter (`crates/yag-template-format` and
+`cmd/yagfmt`), which were written with extensive help from GPT 5.6.
+
 ## License
 
 This project is released under the MIT license.
