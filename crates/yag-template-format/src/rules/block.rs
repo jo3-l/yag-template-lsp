@@ -6,7 +6,7 @@ use crate::cursor::DoubleEndedPeekable;
 use crate::iterutil::iter_with_neighbors;
 use crate::line_protection::ReflowPolicy;
 use crate::lower::{Formatter, byte_offset, source_range};
-use crate::pretty::{AllowCompact, Doc, concat, empty, indent, line, soft_line, text};
+use crate::pretty::{Doc, concat, empty, indent, line, soft_line, text};
 
 /// A source boundary structurally eligible for formatter-owned reflow.
 ///
@@ -74,11 +74,11 @@ impl<'a> Formatter<'a> {
     /// Lower a root document with exactly one final line boundary.
     pub(crate) fn root(&mut self, root: &Root) -> Doc {
         let elements = root.actions_with_text().collect::<Vec<_>>();
-        concat([self.sequence(&elements, AllowCompact::No).doc, line()])
+        concat([self.sequence(&elements, false).doc, line()])
     }
 
     /// Lower one typed compound body and apply its block indentation.
-    pub(crate) fn body(&mut self, body: ActionList, allow_compact: AllowCompact) -> Doc {
+    pub(crate) fn body(&mut self, body: ActionList, allow_compact: bool) -> Doc {
         let elements = body.actions_with_text().collect::<Vec<_>>();
 
         let BodyEdgeReflow {
@@ -105,10 +105,11 @@ impl<'a> Formatter<'a> {
     /// Compact reflow turns flexible inline edge whitespace into soft lines.
     /// Expanded reflow turns only flexible action-to-clause adjacency into
     /// hard lines. Both preserve protected and source-owned edges.
-    fn reflow_body_edges<'b>(&self, allow_compact: AllowCompact, elements: &'b [ActionOrText]) -> BodyEdgeReflow<'b> {
-        match allow_compact {
-            AllowCompact::Yes => self.reflow_compact_edges(elements),
-            AllowCompact::No => self.reflow_expanded_edges(elements),
+    fn reflow_body_edges<'b>(&self, allow_compact: bool, elements: &'b [ActionOrText]) -> BodyEdgeReflow<'b> {
+        if allow_compact {
+            self.reflow_compact_edges(elements)
+        } else {
+            self.reflow_expanded_edges(elements)
         }
     }
 
@@ -189,11 +190,8 @@ impl<'a> Formatter<'a> {
     /// remaining text is passed to [`lower_text`]. This keeps action
     /// separation policy in one place while typed action rules remain
     /// responsible only for their own syntax.
-    fn sequence(&mut self, elements: &[ActionOrText], allow_compact: AllowCompact) -> LoweredSequence {
-        let action_separator = match allow_compact {
-            AllowCompact::Yes => soft_line(),
-            AllowCompact::No => line(),
-        };
+    fn sequence(&mut self, elements: &[ActionOrText], allow_compact: bool) -> LoweredSequence {
+        let action_separator = if allow_compact { soft_line() } else { line() };
 
         let mut parts: Vec<Doc> = Vec::new();
         let mut trailing_line = false;

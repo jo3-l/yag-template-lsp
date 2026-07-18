@@ -6,13 +6,6 @@ mod render;
 
 pub(super) use render::render;
 
-/// Whether a source sequence may render compactly on a single line.
-#[derive(Debug, Clone, Copy, Eq, PartialEq)]
-pub(crate) enum AllowCompact {
-    Yes,
-    No,
-}
-
 /// Identity of a named layout group allocated during lowering.
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
 pub(crate) struct GroupId(pub(super) usize);
@@ -80,12 +73,10 @@ pub(super) enum Doc {
 }
 
 impl Doc {
-    /// Wrap this document in a group when its parent decides compact layout.
-    pub(super) fn group_if(self, allow_compact: AllowCompact) -> Self {
-        match allow_compact {
-            AllowCompact::Yes => Self::Group(Box::new(self)),
-            AllowCompact::No => self,
-        }
+    /// Wrap the document in a group (allowing it to render on a single line, if it fits)
+    /// when `allow_compact` is true.
+    pub(super) fn group_if(self, yes: bool) -> Self {
+        if yes { Self::Group(Box::new(self)) } else { self }
     }
 }
 

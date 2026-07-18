@@ -6,7 +6,7 @@ use yag_template_syntax::ast::{
 };
 
 use crate::lower::Formatter;
-use crate::pretty::{AllowCompact, Doc, concat, empty, join, text, try_concat};
+use crate::pretty::{Doc, concat, empty, join, text, try_concat};
 use crate::rules::delimited::DelimitedInner;
 
 impl Formatter<'_> {
@@ -108,11 +108,7 @@ impl Formatter<'_> {
         )
     }
 
-    fn else_branches(
-        &mut self,
-        branches: impl Iterator<Item = ElseBranch>,
-        allow_compact: AllowCompact,
-    ) -> Option<Doc> {
+    fn else_branches(&mut self, branches: impl Iterator<Item = ElseBranch>, allow_compact: bool) -> Option<Doc> {
         try_concat(branches.map(|branch| {
             let clause = branch.clause()?;
             Some(concat([
@@ -237,12 +233,8 @@ impl Formatter<'_> {
     }
 }
 
-fn allows_compact(action: &impl AstNode) -> AllowCompact {
-    if Action::cast(action.syntax().clone()).is_some_and(is_compact_action) {
-        AllowCompact::Yes
-    } else {
-        AllowCompact::No
-    }
+fn allows_compact(action: &impl AstNode) -> bool {
+    Action::cast(action.syntax().clone()).is_some_and(is_compact_action)
 }
 
 /// Whether a typed action can share a compact compound layout with its
@@ -311,9 +303,9 @@ mod tests {
     use yag_template_syntax::SyntaxNode;
     use yag_template_syntax::ast::{AstNode, Root};
 
-    use super::{AllowCompact, allows_compact};
+    use super::allows_compact;
 
-    fn compactness(source: &str) -> AllowCompact {
+    fn compactness(source: &str) -> bool {
         let parsed = yag_template_syntax::parser::parse(source);
         assert!(parsed.errors.is_empty(), "source did not parse: {:?}", parsed.errors);
         let root = Root::cast(SyntaxNode::new_root(parsed.root)).unwrap();
@@ -322,21 +314,15 @@ mod tests {
 
     #[test]
     fn compound_compactness_follows_direct_body_actions_recursively() {
-        assert_eq!(
-            compactness("{{if .Enabled}} {{ $name := .Name }} {{end}}"),
-            AllowCompact::Yes
-        );
-        assert_eq!(
-            compactness("{{if .Enabled}} {{ $name := .Name }} {{ $value := .Value }} {{end}}"),
-            AllowCompact::No
-        );
-        assert_eq!(
-            compactness("{{if .Enabled}} {{ $name := .Name }} {{else}} {{ $value := .Value }} {{end}}"),
-            AllowCompact::Yes
-        );
-        assert_eq!(
-            compactness("{{range .Items}}{{if .Enabled}}{{ $name := .Name}}{{ $value := .Value}}{{end}}{{end}}"),
-            AllowCompact::No
-        );
+        assert!(compactness("{{if .Enabled}} {{ $name := .Name }} {{end}}"));
+        assert!(!compactness(
+            "{{if .Enabled}} {{ $name := .Name }} {{ $value := .Value }} {{end}}"
+        ));
+        assert!(compactness(
+            "{{if .Enabled}} {{ $name := .Name }} {{else}} {{ $value := .Value }} {{end}}"
+        ));
+        assert!(!compactness(
+            "{{range .Items}}{{if .Enabled}}{{ $name := .Name}}{{ $value := .Value}}{{end}}{{end}}"
+        ));
     }
 }
