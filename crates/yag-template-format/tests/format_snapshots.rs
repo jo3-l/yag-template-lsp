@@ -1,5 +1,6 @@
 mod support;
 
+use std::borrow::Cow;
 use std::fs;
 use std::path::{Path, PathBuf};
 
@@ -67,6 +68,7 @@ struct Fixture {
 
 fn read_fixture(path: &Path) -> Fixture {
     let bytes = fs::read(path).unwrap_or_else(|error| panic!("could not read {}: {error}", path.display()));
+    let bytes = normalize_line_endings(&bytes);
     let (header, source) = split_front_matter(path, &bytes);
     let options = if header.trim().is_empty() {
         FixtureOptions::default()
@@ -142,13 +144,13 @@ fn assert_raw_snapshot(fixture_path: &Path, actual: &str) {
     let snapshot_path = fixture_path.with_extension("out");
     let update = std::env::var_os(UPDATE_ENV).is_some_and(|value| value == "1");
     match fs::read(&snapshot_path) {
-        Ok(expected) if expected == actual.as_bytes() => {}
+        Ok(expected) if normalize_line_endings(&expected) == actual.as_bytes() => {}
         Ok(_expected) if update => write_snapshot(&snapshot_path, actual),
         Ok(expected) => panic!(
             "{}: snapshot differs from formatter output\n{}\nexpected:\n{}\nactual:\n{}",
             snapshot_path.display(),
             update_instructions(),
-            String::from_utf8_lossy(&expected),
+            String::from_utf8_lossy(&normalize_line_endings(&expected)),
             actual
         ),
         Err(error) if error.kind() == std::io::ErrorKind::NotFound && update => write_snapshot(&snapshot_path, actual),
@@ -161,6 +163,25 @@ fn assert_raw_snapshot(fixture_path: &Path, actual: &str) {
         }
         Err(error) => panic!("could not read {}: {error}", snapshot_path.display()),
     }
+}
+
+fn normalize_line_endings(bytes: &[u8]) -> Cow<'_, [u8]> {
+    if !bytes.windows(2).any(|window| window == b"\r\n") {
+        return Cow::Borrowed(bytes);
+    }
+
+    let mut normalized = Vec::with_capacity(bytes.len());
+    let mut index = 0;
+    while index < bytes.len() {
+        if bytes[index..].starts_with(b"\r\n") {
+            normalized.push(b'\n');
+            index += 2;
+        } else {
+            normalized.push(bytes[index]);
+            index += 1;
+        }
+    }
+    Cow::Owned(normalized)
 }
 
 fn write_snapshot(path: &Path, actual: &str) {
