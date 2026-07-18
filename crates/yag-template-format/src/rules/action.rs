@@ -18,7 +18,7 @@ impl Formatter<'_> {
                 Action::Comment(action) => Some(text(action.syntax().text().to_owned())),
                 Action::TemplateDefinition(action) => self.template_definition(action),
                 Action::TemplateBlock(action) => self.template_block(action),
-                Action::TemplateInvocation(action) => self.template_action(
+                Action::TemplateInvocation(action) => self.template_or_block_clause(
                     action.delims()?,
                     "template",
                     action.template_name()?.syntax().text().to_string(),
@@ -43,15 +43,18 @@ impl Formatter<'_> {
 
     fn template_definition(&mut self, tmpldef: &TemplateDefinition) -> Option<Doc> {
         let allow_compact = allows_compact(tmpldef);
+
         let clause = tmpldef.clause()?;
+        let formatted_clause = self.delimited(
+            clause.delims()?,
+            DelimitedInner::new(concat([
+                text("define "),
+                text(clause.template_name()?.syntax().text().to_string()),
+            ])),
+        );
         Some(
             concat([
-                self.template_action(
-                    clause.delims()?,
-                    "define",
-                    clause.template_name()?.syntax().text().to_string(),
-                    None,
-                )?,
+                formatted_clause,
                 self.body(tmpldef.template_body()?, allow_compact),
                 self.end_clause(&tmpldef.end_clause()?)?,
             ])
@@ -64,7 +67,7 @@ impl Formatter<'_> {
         let clause = tmplblock.clause()?;
         Some(
             concat([
-                self.template_action(
+                self.template_or_block_clause(
                     clause.delims()?,
                     "block",
                     clause.template_name()?.syntax().text().to_string(),
@@ -209,21 +212,19 @@ impl Formatter<'_> {
         self.kw(end.delims()?, "end")
     }
 
-    fn template_action(
+    fn template_or_block_clause(
         &mut self,
         delims: (LeftDelim, RightDelim),
-        kw: &str,
+        keyword: &str,
         template_name: String,
         context_data: Option<Expr>,
     ) -> Option<Doc> {
-        let prefix = concat([text(kw), text(" "), text(template_name)]);
-        match context_data {
-            Some(context_data) => {
-                let context_data = self.prefixed_expr(context_data)?.with_prefix(prefix);
-                Some(self.delimited(delims, context_data))
-            }
-            None => Some(self.delimited(delims, DelimitedInner::new(prefix))),
-        }
+        let prefix = concat([text(keyword), text(" "), text(template_name)]);
+        let inner = match context_data {
+            Some(context_data) => self.prefixed_expr(context_data)?.with_prefix(prefix),
+            None => DelimitedInner::new(prefix),
+        };
+        Some(self.delimited(delims, inner))
     }
 
     fn kw(&mut self, delims: (LeftDelim, RightDelim), kw: &str) -> Option<Doc> {
