@@ -1,6 +1,6 @@
 # Rules module design
 
-Treat `action.rs`, `block.rs`, and `expr.rs` as separate, independently
+Treat `action.rs`, `block.rs`, and the `expr` module as separate, independently
 reasoned-about components. An agent working on one of these modules should be
 able to understand and change its logic without needing to understand the
 implementation details of the other two.
