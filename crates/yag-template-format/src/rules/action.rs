@@ -305,7 +305,7 @@ mod tests {
 
     use super::allows_compact;
 
-    fn compactness(source: &str) -> bool {
+    fn compact(source: &str) -> bool {
         let parsed = yag_template_syntax::parser::parse(source);
         assert!(parsed.errors.is_empty(), "source did not parse: {:?}", parsed.errors);
         let root = Root::cast(SyntaxNode::new_root(parsed.root)).unwrap();
@@ -314,14 +314,14 @@ mod tests {
 
     #[test]
     fn compound_compactness_follows_direct_body_actions_recursively() {
-        assert!(compactness("{{if .Enabled}} {{ $name := .Name }} {{end}}"));
-        assert!(!compactness(
+        assert!(compact("{{if .Enabled}} {{ $name := .Name }} {{end}}"));
+        assert!(!compact(
             "{{if .Enabled}} {{ $name := .Name }} {{ $value := .Value }} {{end}}"
         ));
-        assert!(compactness(
+        assert!(compact(
             "{{if .Enabled}} {{ $name := .Name }} {{else}} {{ $value := .Value }} {{end}}"
         ));
-        assert!(!compactness(
+        assert!(!compact(
             "{{range .Items}}{{if .Enabled}}{{ $name := .Name}}{{ $value := .Value}}{{end}}{{end}}"
         ));
     }

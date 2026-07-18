@@ -81,11 +81,17 @@ impl<'a> Formatter<'a> {
     pub(crate) fn body(&mut self, body: ActionList, allow_compact: bool) -> Doc {
         let elements = body.actions_with_text().collect::<Vec<_>>();
 
+        // Reflow whitespace around the boundaries.
         let BodyEdgeReflow {
             leading,
             elements,
             trailing,
-        } = self.reflow_body_edges(allow_compact, &elements);
+        } = if allow_compact {
+            self.reflow_compact_edges(&elements)
+        } else {
+            self.reflow_expanded_edges(&elements)
+        };
+
         if elements.is_empty() {
             empty()
         } else {
@@ -100,19 +106,6 @@ impl<'a> Formatter<'a> {
 }
 
 impl<'a> Formatter<'a> {
-    /// Reflow formatter-owned whitespace at a compound body's edges.
-    ///
-    /// Compact reflow turns flexible inline edge whitespace into soft lines.
-    /// Expanded reflow turns only flexible action-to-clause adjacency into
-    /// hard lines. Both preserve protected and source-owned edges.
-    fn reflow_body_edges<'b>(&self, allow_compact: bool, elements: &'b [ActionOrText]) -> BodyEdgeReflow<'b> {
-        if allow_compact {
-            self.reflow_compact_edges(elements)
-        } else {
-            self.reflow_expanded_edges(elements)
-        }
-    }
-
     /// Reflow edges for a body that may remain on one line.
     ///
     /// Inline whitespace beside a flexible first or last action belongs to the
