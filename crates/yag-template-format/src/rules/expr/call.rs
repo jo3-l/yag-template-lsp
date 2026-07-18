@@ -44,9 +44,9 @@
 use yag_template_envdefs::EnvDefs;
 use yag_template_syntax::ast::{Expr, ExprCall, FuncCall};
 
-use super::LoweredExpr;
 use crate::lower::Formatter;
 use crate::pretty::{Doc, concat, empty, group, group_with_id, if_break, indent_if_break, line, soft_line, text};
+use crate::rules::delimited::DelimitedInner;
 
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
 enum CallLayout {
@@ -84,19 +84,19 @@ fn classify_call(envdefs: &EnvDefs, name: &str, actual_count: usize) -> CallLayo
 }
 
 impl Formatter<'_> {
-    pub(super) fn func_call(&mut self, expr: FuncCall) -> Option<LoweredExpr> {
+    pub(super) fn func_call(&mut self, expr: FuncCall) -> Option<DelimitedInner> {
         let name = expr.func_name()?;
         let args = expr.args().collect::<Vec<_>>();
         let layout = classify_call(self.envdefs, name.get(), args.len());
         self.call(text(name.get()), args, layout)
     }
 
-    pub(super) fn expr_call(&mut self, expr: ExprCall) -> Option<LoweredExpr> {
+    pub(super) fn expr_call(&mut self, expr: ExprCall) -> Option<DelimitedInner> {
         let callee = self.expr(expr.callee()?)?.into_doc();
         self.call(callee, expr.args().collect(), CallLayout::Default)
     }
 
-    fn call(&mut self, callee: Doc, args: Vec<Expr>, layout: CallLayout) -> Option<LoweredExpr> {
+    fn call(&mut self, callee: Doc, args: Vec<Expr>, layout: CallLayout) -> Option<DelimitedInner> {
         if layout == CallLayout::Default
             && let Some(trailing_call_format) = self.try_trailing_call_format(callee.clone(), &args)
         {
@@ -106,9 +106,9 @@ impl Formatter<'_> {
         let args = args.into_iter().map(|arg| self.expr(arg)).collect::<Option<Vec<_>>>()?;
         let trailing_closing_group = args.last().and_then(|arg| arg.trailing_closing_group);
         if args.is_empty() {
-            return Some(LoweredExpr::new(callee));
+            return Some(DelimitedInner::new(callee));
         }
-        let args = args.into_iter().map(LoweredExpr::into_doc).collect::<Vec<_>>();
+        let args = args.into_iter().map(DelimitedInner::into_doc).collect::<Vec<_>>();
         let doc = match layout {
             CallLayout::Default => group(self.callee_with_args(callee, args)),
             CallLayout::Variadic { fixed_count, row_style } => {
@@ -118,7 +118,7 @@ impl Formatter<'_> {
                 group(concat([prefix, self.indent_if_broken(tail)]))
             }
         };
-        Some(LoweredExpr {
+        Some(DelimitedInner {
             doc,
             trailing_closing_group,
         })
@@ -128,7 +128,7 @@ impl Formatter<'_> {
     ///
     /// For `outer "x" (inner "y" "z")`, the first group ends after
     /// `outer "x" (inner`; the inner arguments and `)` form the second group.
-    fn try_trailing_call_format(&mut self, outer_callee: Doc, args: &[Expr]) -> Option<LoweredExpr> {
+    fn try_trailing_call_format(&mut self, outer_callee: Doc, args: &[Expr]) -> Option<DelimitedInner> {
         // Match only an exact final `(function args...)` argument.
         let (Expr::Parenthesized(parenthesized), preceding) = args.split_last()? else {
             return None;
@@ -147,11 +147,11 @@ impl Formatter<'_> {
         let preceding = preceding
             .iter()
             .cloned()
-            .map(|arg| self.expr(arg).map(LoweredExpr::into_doc))
+            .map(|arg| self.expr(arg).map(DelimitedInner::into_doc))
             .collect::<Option<Vec<_>>>()?;
         let inner_args = inner_args
             .into_iter()
-            .map(|arg| self.expr(arg).map(LoweredExpr::into_doc))
+            .map(|arg| self.expr(arg).map(DelimitedInner::into_doc))
             .collect::<Option<Vec<_>>>()?;
         let inner_tail = match inner_layout {
             CallLayout::Default => concat(inner_args.into_iter().flat_map(|arg| [soft_line(), arg])),
@@ -180,7 +180,7 @@ impl Formatter<'_> {
             ]),
         );
 
-        Some(LoweredExpr {
+        Some(DelimitedInner {
             doc: concat([
                 prefix,
                 indent_if_break(prefix_id, self.options.continuation_indent, closing),

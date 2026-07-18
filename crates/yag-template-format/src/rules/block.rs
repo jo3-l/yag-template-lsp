@@ -1,4 +1,4 @@
-//! Declarative document rules for template blocks and compound bodies.
+//! Declarative document rules for compound bodies.
 
 use yag_template_syntax::ast::{ActionList, ActionOrText, AstNode, AstToken, Text};
 

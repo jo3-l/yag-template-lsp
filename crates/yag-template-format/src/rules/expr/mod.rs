@@ -3,54 +3,21 @@
 use yag_template_syntax::ast::{AstNode, AstToken, Expr, ExprFieldChain, Pipeline};
 
 use crate::lower::Formatter;
-use crate::pretty::{Doc, GroupId, concat, empty, group, group_with_id, if_break, line, soft_line, text, try_concat};
+use crate::pretty::{concat, empty, group, group_with_id, if_break, line, soft_line, text, try_concat};
+use crate::rules::delimited::DelimitedInner;
 
 mod call;
 
-/// A lowered expression with metadata about its trailing closing boundary.
-pub(crate) struct LoweredExpr {
-    pub(crate) doc: Doc,
-    /// The named group which, when broken, generates the expression's final
-    /// closing-delimiter row.
-    pub(crate) trailing_closing_group: Option<GroupId>,
-}
-
-impl LoweredExpr {
-    pub(crate) fn new(doc: Doc) -> Self {
-        Self {
-            doc,
-            trailing_closing_group: None,
-        }
-    }
-
-    pub(crate) fn with_prefix(self, prefix: Doc) -> Self {
-        Self {
-            doc: concat([prefix, self.doc]),
-            // Prefixing does not change where an expression ends.
-            trailing_closing_group: self.trailing_closing_group,
-        }
-    }
-
-    pub(crate) fn with_suffix(self, suffix: Doc) -> Self {
-        // Appending syntax means the expression no longer ends at an earlier closing row.
-        Self::new(concat([self.doc, suffix]))
-    }
-
-    pub(crate) fn into_doc(self) -> Doc {
-        self.doc
-    }
-}
-
 impl Formatter<'_> {
     /// Format an explicit expression as a document fragment.
-    pub(crate) fn expr(&mut self, expr: Expr) -> Option<LoweredExpr> {
+    pub(super) fn expr(&mut self, expr: Expr) -> Option<DelimitedInner> {
         match expr {
             Expr::FuncCall(expr) => self.func_call(expr),
             Expr::ExprCall(expr) => self.expr_call(expr),
             Expr::Parenthesized(expr) => {
                 let inner = self.expr(expr.inner_expr()?)?;
                 let id = self.new_group_id();
-                Some(LoweredExpr {
+                Some(DelimitedInner {
                     doc: group_with_id(
                         id,
                         concat([text("("), inner.into_doc(), if_break(id, line(), empty()), text(")")]),
@@ -59,26 +26,26 @@ impl Formatter<'_> {
                 })
             }
             Expr::Pipeline(expr) => self.pipeline(expr),
-            Expr::ContextAccess(expr) => Some(LoweredExpr::new(text(expr.syntax().text().to_owned()))),
-            Expr::ContextFieldChain(expr) => Some(LoweredExpr::new(concat(
+            Expr::ContextAccess(expr) => Some(DelimitedInner::new(text(expr.syntax().text().to_owned()))),
+            Expr::ContextFieldChain(expr) => Some(DelimitedInner::new(concat(
                 expr.fields().map(|field| text(field.syntax().text().to_owned())),
             ))),
             Expr::ExprFieldChain(expr) => self.expr_field_chain(expr),
-            Expr::VarAccess(expr) => Some(LoweredExpr::new(text(expr.var()?.name()))),
+            Expr::VarAccess(expr) => Some(DelimitedInner::new(text(expr.var()?.name()))),
             Expr::VarDecl(expr) => {
                 self.assignment(":=", expr.var().map(|var| var.name().to_owned()), expr.initializer())
             }
             Expr::VarAssign(expr) => {
                 self.assignment("=", expr.var().map(|var| var.name().to_owned()), expr.assign_expr())
             }
-            Expr::Literal(expr) => Some(LoweredExpr::new(text(expr.syntax().text().to_owned()))),
+            Expr::Literal(expr) => Some(DelimitedInner::new(text(expr.syntax().text().to_owned()))),
         }
     }
 
     /// Lower an expression following a keyword, assignment operator, or other
     /// prefix. Calls and opening parentheses stay with that prefix and own
     /// their internal breaks.
-    pub(crate) fn prefixed_expr(&mut self, expr: Expr) -> Option<LoweredExpr> {
+    pub(super) fn prefixed_expr(&mut self, expr: Expr) -> Option<DelimitedInner> {
         // Calls and parentheses own their first possible break, so their opening
         // head stays beside the prefix. Other expressions may break before the
         // entire expression.
@@ -88,7 +55,7 @@ impl Formatter<'_> {
             Some(expr.with_prefix(text(" ")))
         } else {
             let trailing_closing_group = expr.trailing_closing_group;
-            Some(LoweredExpr {
+            Some(DelimitedInner {
                 doc: self.indent_if_broken(concat([soft_line(), expr.into_doc()])),
                 trailing_closing_group,
             })
@@ -97,9 +64,9 @@ impl Formatter<'_> {
 }
 
 impl Formatter<'_> {
-    fn pipeline(&mut self, expr: Pipeline) -> Option<LoweredExpr> {
-        let initial = self.expr(expr.init_expr()?)?;
-        let stages = expr
+    fn pipeline(&mut self, pipe: Pipeline) -> Option<DelimitedInner> {
+        let initial = self.expr(pipe.init_expr()?)?;
+        let stages = pipe
             .stages()
             .map(|stage| self.expr(stage.call_expr()?))
             .collect::<Option<Vec<_>>>()?;
@@ -111,23 +78,23 @@ impl Formatter<'_> {
                 .into_iter()
                 .map(|stage| Some(concat([soft_line(), text("| "), stage.into_doc()]))),
         )?;
-        Some(LoweredExpr {
+        Some(DelimitedInner {
             doc: group(concat([initial.into_doc(), self.indent_if_broken(stages)])),
             trailing_closing_group,
         })
     }
 
-    fn expr_field_chain(&mut self, expr: ExprFieldChain) -> Option<LoweredExpr> {
-        Some(self.expr(expr.base_expr()?)?.with_suffix(concat(
-            expr.fields().map(|field| text(field.syntax().text().to_owned())),
+    fn expr_field_chain(&mut self, chain: ExprFieldChain) -> Option<DelimitedInner> {
+        Some(self.expr(chain.base_expr()?)?.with_suffix(concat(
+            chain.fields().map(|field| text(field.syntax().text().to_owned())),
         )))
     }
 
-    fn assignment(&mut self, operator: &str, variable: Option<String>, value: Option<Expr>) -> Option<LoweredExpr> {
+    fn assignment(&mut self, op: &str, var: Option<String>, value: Option<Expr>) -> Option<DelimitedInner> {
         let value = self.prefixed_expr(value?)?;
         let trailing_closing_group = value.trailing_closing_group;
-        Some(LoweredExpr {
-            doc: group(concat([text(variable?), text(" "), text(operator), value.into_doc()])),
+        Some(DelimitedInner {
+            doc: group(concat([text(var?), text(" "), text(op), value.into_doc()])),
             trailing_closing_group,
         })
     }
