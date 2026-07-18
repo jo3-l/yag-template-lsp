@@ -8,7 +8,7 @@ use yag_template_syntax::ast::{
 use crate::DelimiterPadding;
 use crate::lower::Formatter;
 use crate::pretty::{AllowCompact, Doc, concat, empty, group_with_id, if_break, join, line, text, try_concat};
-use crate::rules::expr::ExprDoc;
+use crate::rules::expr::LoweredExpr;
 
 impl Formatter<'_> {
     /// Format an action atomically. A rule that cannot construct a complete
@@ -19,11 +19,11 @@ impl Formatter<'_> {
     }
 
     fn delimited_doc(&mut self, delims: (LeftDelim, RightDelim), body: Doc) -> Doc {
-        self.delimited(delims, ExprDoc::new(body))
+        self.delimited(delims, LoweredExpr::new(body))
     }
 
-    fn delimited(&mut self, (left_delim, right_delim): (LeftDelim, RightDelim), body: ExprDoc) -> Doc {
-        let ExprDoc {
+    fn delimited(&mut self, (left_delim, right_delim): (LeftDelim, RightDelim), body: LoweredExpr) -> Doc {
+        let LoweredExpr {
             doc: body,
             trailing_closing_group,
         } = body;

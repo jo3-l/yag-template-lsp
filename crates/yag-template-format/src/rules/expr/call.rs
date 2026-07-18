@@ -1,7 +1,7 @@
 use yag_template_envdefs::EnvDefs;
 use yag_template_syntax::ast::{ExprCall, FuncCall};
 
-use super::ExprDoc;
+use super::LoweredExpr;
 use crate::lower::Formatter;
 use crate::pretty::{Doc, concat, group, soft_line, text};
 
@@ -42,21 +42,21 @@ fn classify_call(envdefs: &EnvDefs, name: &str, actual_count: usize) -> CallLayo
 }
 
 impl Formatter<'_> {
-    pub(super) fn func_call(&mut self, expr: FuncCall) -> Option<ExprDoc> {
+    pub(super) fn func_call(&mut self, expr: FuncCall) -> Option<LoweredExpr> {
         let name = expr.func_name()?;
-        let args = expr.args().map(|arg| self.expr_doc(arg)).collect::<Option<Vec<_>>>()?;
+        let args = expr.args().map(|arg| self.expr(arg)).collect::<Option<Vec<_>>>()?;
         Some(self.function_call(name.get(), args))
     }
 
-    pub(super) fn expr_call(&mut self, expr: ExprCall) -> Option<ExprDoc> {
-        let callee = self.expr_doc(expr.callee()?)?.into_doc();
-        let args = expr.args().map(|arg| self.expr_doc(arg)).collect::<Option<Vec<_>>>()?;
+    pub(super) fn expr_call(&mut self, expr: ExprCall) -> Option<LoweredExpr> {
+        let callee = self.expr(expr.callee()?)?.into_doc();
+        let args = expr.args().map(|arg| self.expr(arg)).collect::<Option<Vec<_>>>()?;
         Some(self.call(callee, args))
     }
 }
 
 impl Formatter<'_> {
-    fn function_call(&mut self, name: &str, args: Vec<ExprDoc>) -> ExprDoc {
+    fn function_call(&mut self, name: &str, args: Vec<LoweredExpr>) -> LoweredExpr {
         // Slice 5 will construct all signature-guided layouts. For now, retain
         // the existing output gate while deriving that decision from the full classifier.
         match classify_call(self.envdefs, name, args.len()) {
@@ -68,13 +68,13 @@ impl Formatter<'_> {
         }
     }
 
-    fn call(&self, callee: Doc, args: impl IntoIterator<Item = ExprDoc>) -> ExprDoc {
+    fn call(&self, callee: Doc, args: impl IntoIterator<Item = LoweredExpr>) -> LoweredExpr {
         let args = args.into_iter().collect::<Vec<_>>();
         if args.is_empty() {
-            return ExprDoc::new(callee);
+            return LoweredExpr::new(callee);
         }
         let trailing_closing_group = args.last().and_then(|arg| arg.trailing_closing_group);
-        ExprDoc {
+        LoweredExpr {
             doc: group(concat([
                 callee,
                 self.indent_if_broken(concat(args.into_iter().flat_map(|arg| [soft_line(), arg.into_doc()]))),
@@ -83,13 +83,13 @@ impl Formatter<'_> {
         }
     }
 
-    fn key_value_call(&self, callee: Doc, args: Vec<ExprDoc>) -> ExprDoc {
+    fn key_value_call(&self, callee: Doc, args: Vec<LoweredExpr>) -> LoweredExpr {
         let trailing_closing_group = args.last().and_then(|arg| arg.trailing_closing_group);
-        let args = args.into_iter().map(ExprDoc::into_doc).collect::<Vec<_>>();
+        let args = args.into_iter().map(LoweredExpr::into_doc).collect::<Vec<_>>();
         let rows = args
             .chunks_exact(2)
             .flat_map(|pair| [soft_line(), pair[0].clone(), text(" "), pair[1].clone()]);
-        ExprDoc {
+        LoweredExpr {
             doc: group(concat([callee, self.indent_if_broken(concat(rows))])),
             trailing_closing_group,
         }
