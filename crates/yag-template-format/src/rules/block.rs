@@ -6,7 +6,7 @@ use crate::cursor::DoubleEndedPeekable;
 use crate::iterutil::iter_with_neighbors;
 use crate::line_protection::ReflowPolicy;
 use crate::lower::{Formatter, byte_offset, source_range};
-use crate::pretty::{Doc, concat, empty, indent, line, soft_line, text};
+use crate::pretty::{Doc, concat, empty, hard_line, indent, soft_line, text};
 
 /// A source boundary structurally eligible for formatter-owned reflow.
 ///
@@ -74,7 +74,7 @@ impl<'a> Formatter<'a> {
     /// Lower a root document with exactly one final line boundary.
     pub(crate) fn root(&mut self, root: &Root) -> Doc {
         let elements = root.actions_with_text().collect::<Vec<_>>();
-        concat([self.sequence(&elements, false).doc, line()])
+        concat([self.sequence(&elements, false).doc, hard_line()])
     }
 
     /// Lower one typed compound body and apply its block indentation.
@@ -99,7 +99,11 @@ impl<'a> Formatter<'a> {
             concat([
                 indent(self.options.indent, concat([leading, lowered_inner.doc])),
                 trailing,
-                if lowered_inner.trailing_line { line() } else { empty() },
+                if lowered_inner.trailing_line {
+                    hard_line()
+                } else {
+                    empty()
+                },
             ])
         }
     }
@@ -150,20 +154,20 @@ impl<'a> Formatter<'a> {
         let mut cursor = DoubleEndedPeekable::new(elements);
 
         let leading = match (cursor.peek_first(), cursor.peek_second()) {
-            (Some(Action(action)), _) if self.may_reflow_before(action) => line(),
+            (Some(Action(action)), _) if self.may_reflow_before(action) => hard_line(),
             (Some(Text(text)), Some(Action(_))) if self.may_reflow_inline_whitespace(text) => {
                 // replace leading inline whitespace with hard newline
                 cursor.drop_first();
-                line()
+                hard_line()
             }
             _ => empty(),
         };
         let trailing = match (cursor.peek_secondlast(), cursor.peek_last()) {
-            (_, Some(Action(action))) if self.may_reflow_after(action) => line(),
+            (_, Some(Action(action))) if self.may_reflow_after(action) => hard_line(),
             (Some(Action(_)), Some(Text(text))) if self.may_reflow_inline_whitespace(text) => {
                 // replace trailing inline whitespace with hard newline
                 cursor.drop_last();
-                line()
+                hard_line()
             }
             _ => empty(),
         };
@@ -179,12 +183,12 @@ impl<'a> Formatter<'a> {
     ///
     /// The sequence owns relationships between siblings that no individual AST
     /// action can see. Flexible action separators are [`soft_line`]s in a
-    /// body that allows compact layout and structural [`line`]s otherwise; all
+    /// body that allows compact layout and structural [`hard_line`]s otherwise; all
     /// remaining text is passed to [`lower_text`]. This keeps action
     /// separation policy in one place while typed action rules remain
     /// responsible only for their own syntax.
     fn sequence(&mut self, elements: &[ActionOrText], allow_compact: bool) -> LoweredSequence {
-        let action_separator = if allow_compact { soft_line() } else { line() };
+        let action_separator = if allow_compact { soft_line() } else { hard_line() };
 
         let mut parts: Vec<Doc> = Vec::new();
         let mut trailing_line = false;
@@ -230,7 +234,7 @@ impl<'a> Formatter<'a> {
 
         let doc = concat(body_text.fragments.into_iter().map(|fragment| match fragment {
             BodyTextFragment::Text(content) => text(content),
-            BodyTextFragment::Line => line(),
+            BodyTextFragment::Line => hard_line(),
         }));
         (doc, trailing_line)
     }

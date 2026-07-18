@@ -184,8 +184,8 @@ mod tests {
     use super::render;
     use crate::Indent;
     use crate::pretty::{
-        GroupId, concat, empty, group, group_with_id, if_break, indent, indent_if_break, join, line, soft_line, text,
-        try_concat,
+        GroupId, concat, empty, group, hard_line, if_break, indent, indent_if_break, join, named_group, soft_line,
+        text, try_concat,
     };
 
     #[test]
@@ -206,7 +206,7 @@ mod tests {
 
     #[test]
     fn hard_lines_always_break() {
-        let doc = group(concat([text("left"), line(), text("right")]));
+        let doc = group(concat([text("left"), hard_line(), text("right")]));
         assert_eq!(render(doc, 100), "left\nright");
     }
 
@@ -218,7 +218,10 @@ mod tests {
 
     #[test]
     fn indentation_uses_tabs_when_configured() {
-        let doc = concat([text("header"), indent(Indent::Tabs, concat([line(), text("body")]))]);
+        let doc = concat([
+            text("header"),
+            indent(Indent::Tabs, concat([hard_line(), text("body")])),
+        ]);
         assert_eq!(render(doc, 100), "header\n\tbody");
     }
 
@@ -228,7 +231,7 @@ mod tests {
             text("header"),
             indent(
                 Indent::Tabs,
-                concat([line(), text("body"), line(), line(), text("tail")]),
+                concat([hard_line(), text("body"), hard_line(), hard_line(), text("tail")]),
             ),
         ]);
         assert_eq!(render(doc, 100), "header\n\tbody\n\n\ttail");
@@ -237,7 +240,7 @@ mod tests {
     #[test]
     fn named_group_selects_conditional_branch() {
         let id = GroupId(0);
-        let doc = group_with_id(
+        let doc = named_group(
             id,
             concat([
                 text("left"),
@@ -254,7 +257,7 @@ mod tests {
     fn conditional_can_reference_an_earlier_sibling_group() {
         let id = GroupId(0);
         let doc = concat([
-            group_with_id(id, concat([text("long"), soft_line(), text("text")])),
+            named_group(id, concat([text("long"), soft_line(), text("text")])),
             if_break(id, text(" broken"), text(" flat")),
         ]);
         assert_eq!(render(doc.clone(), 20), "long text flat");
@@ -265,8 +268,8 @@ mod tests {
     fn conditional_indentation_follows_named_group() {
         let id = GroupId(0);
         let doc = concat([
-            group_with_id(id, concat([text("long"), soft_line(), text("text")])),
-            indent_if_break(id, Indent::Spaces(2), concat([line(), text("tail")])),
+            named_group(id, concat([text("long"), soft_line(), text("text")])),
+            indent_if_break(id, Indent::Spaces(2), concat([hard_line(), text("tail")])),
         ]);
         assert_eq!(render(doc.clone(), 20), "long text\ntail");
         assert_eq!(render(doc, 7), "long\ntext\n  tail");
@@ -276,12 +279,12 @@ mod tests {
     fn nested_named_groups_choose_independently() {
         let outer = GroupId(0);
         let inner = GroupId(1);
-        let doc = group_with_id(
+        let doc = named_group(
             outer,
             concat([
                 text("outer"),
                 soft_line(),
-                group_with_id(inner, concat([text("a"), soft_line(), text("b")])),
+                named_group(inner, concat([text("a"), soft_line(), text("b")])),
                 if_break(inner, text("!"), empty()),
             ]),
         );

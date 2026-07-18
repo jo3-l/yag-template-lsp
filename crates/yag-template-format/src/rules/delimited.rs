@@ -4,7 +4,7 @@ use yag_template_syntax::ast::{LeftDelim, RightDelim};
 
 use crate::DelimiterPadding;
 use crate::lower::Formatter;
-use crate::pretty::{Doc, GroupId, concat, empty, group_with_id, if_break, line, text};
+use crate::pretty::{Doc, GroupId, concat, empty, hard_line, if_break, named_group, space, text};
 
 /// Lowered content with metadata about its trailing closing boundary.
 pub(super) struct DelimitedInner {
@@ -39,7 +39,7 @@ impl Formatter<'_> {
         // Closing padding is emitted only when the delimiter stays on the same
         // row. A generated newline replaces it, so no line ends in padding.
         let closing_padding = if right_delim.has_trim_marker() || pad_delimiters {
-            text(" ")
+            space()
         } else {
             empty()
         };
@@ -50,13 +50,13 @@ impl Formatter<'_> {
         };
 
         let action_id = self.new_group_id();
-        let action_boundary = if_break(action_id, line(), closing_padding.clone());
+        let action_boundary = if_break(action_id, hard_line(), closing_padding.clone());
         let closing_boundary = trailing_closing_group.map_or(action_boundary.clone(), |closing_id| {
             // Reuse a trailing parenthesis row when one exists; otherwise the
             // action group decides whether the right delimiter needs a new row.
             if_break(closing_id, closing_padding, action_boundary)
         });
-        group_with_id(action_id, concat([left, body, closing_boundary, right]))
+        named_group(action_id, concat([left, body, closing_boundary, right]))
     }
 }
 

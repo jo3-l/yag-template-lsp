@@ -3,7 +3,7 @@
 use yag_template_syntax::ast::{AstNode, AstToken, Expr, ExprFieldChain, Pipeline};
 
 use crate::lower::Formatter;
-use crate::pretty::{concat, empty, group, group_with_id, if_break, line, soft_line, text, try_concat};
+use crate::pretty::{concat, group, line_if_break, named_group, soft_line, space, text, try_concat};
 use crate::rules::delimited::DelimitedInner;
 
 mod call;
@@ -18,10 +18,7 @@ impl Formatter<'_> {
                 let inner = self.expr(expr.inner_expr()?)?;
                 let id = self.new_group_id();
                 Some(DelimitedInner {
-                    doc: group_with_id(
-                        id,
-                        concat([text("("), inner.into_doc(), if_break(id, line(), empty()), text(")")]),
-                    ),
+                    doc: named_group(id, concat([text("("), inner.into_doc(), line_if_break(id), text(")")])),
                     trailing_closing_group: Some(id),
                 })
             }
@@ -52,7 +49,7 @@ impl Formatter<'_> {
         let stays_with_prefix = matches!(expr, Expr::FuncCall(_) | Expr::ExprCall(_) | Expr::Parenthesized(_));
         let expr = self.expr(expr)?;
         if stays_with_prefix {
-            Some(expr.with_prefix(text(" ")))
+            Some(expr.with_prefix(space()))
         } else {
             let trailing_closing_group = expr.trailing_closing_group;
             Some(DelimitedInner {
@@ -94,7 +91,7 @@ impl Formatter<'_> {
         let value = self.prefixed_expr(value?)?;
         let trailing_closing_group = value.trailing_closing_group;
         Some(DelimitedInner {
-            doc: group(concat([text(var?), text(" "), text(op), value.into_doc()])),
+            doc: group(concat([text(var?), space(), text(op), value.into_doc()])),
             trailing_closing_group,
         })
     }

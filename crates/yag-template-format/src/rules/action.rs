@@ -6,7 +6,7 @@ use yag_template_syntax::ast::{
 };
 
 use crate::lower::Formatter;
-use crate::pretty::{Doc, concat, empty, join, text, try_concat};
+use crate::pretty::{Doc, concat, empty, join, space, text, try_concat};
 use crate::rules::delimited::DelimitedInner;
 
 impl Formatter<'_> {
@@ -156,7 +156,7 @@ impl Formatter<'_> {
                 empty()
             };
             concat([
-                text(" "),
+                space(),
                 join(text(", "), variables.map(|variable| text(variable.name()))),
                 assignment,
             ])
@@ -215,7 +215,7 @@ impl Formatter<'_> {
         template_name: String,
         context_data: Option<Expr>,
     ) -> Option<Doc> {
-        let prefix = concat([text(keyword), text(" "), text(template_name)]);
+        let prefix = concat([text(keyword), space(), text(template_name)]);
         let inner = match context_data {
             Some(context_data) => self.prefixed_expr(context_data)?.with_prefix(prefix),
             None => DelimitedInner::new(prefix),

@@ -111,8 +111,13 @@ pub(super) fn empty() -> Doc {
     concat([])
 }
 
+/// A fixed horizontal space.
+pub(super) fn space() -> Doc {
+    text(" ")
+}
+
 /// An unconditional line break.
-pub(super) fn line() -> Doc {
+pub(super) fn hard_line() -> Doc {
     Doc::Line
 }
 
@@ -127,7 +132,7 @@ pub(super) fn group(doc: Doc) -> Doc {
 }
 
 /// Attempt to render a named group on one line before breaking it.
-pub(super) fn group_with_id(id: GroupId, doc: Doc) -> Doc {
+pub(super) fn named_group(id: GroupId, doc: Doc) -> Doc {
     Doc::NamedGroup(id, Box::new(doc))
 }
 
@@ -138,6 +143,11 @@ pub(super) fn if_break(group_id: GroupId, broken: Doc, flat: Doc) -> Doc {
         broken: Box::new(broken),
         flat: Box::new(flat),
     }
+}
+
+/// Add an unconditional line break only when `group_id` breaks.
+pub(super) fn line_if_break(group_id: GroupId) -> Doc {
+    if_break(group_id, hard_line(), empty())
 }
 
 /// Apply `indent` only when `group_id` breaks.

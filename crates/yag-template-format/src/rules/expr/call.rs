@@ -45,7 +45,7 @@ use yag_template_envdefs::EnvDefs;
 use yag_template_syntax::ast::{Expr, ExprCall, FuncCall};
 
 use crate::lower::Formatter;
-use crate::pretty::{Doc, concat, empty, group, group_with_id, if_break, indent_if_break, line, soft_line, text};
+use crate::pretty::{Doc, concat, group, indent_if_break, line_if_break, named_group, soft_line, space, text};
 use crate::rules::delimited::DelimitedInner;
 
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
@@ -162,7 +162,7 @@ impl Formatter<'_> {
         // the tail gains one structural indentation level.
         let prefix_id = self.new_group_id();
         let closing_id = self.new_group_id();
-        let prefix = group_with_id(
+        let prefix = named_group(
             prefix_id,
             self.callee_with_args(
                 outer_callee,
@@ -171,13 +171,9 @@ impl Formatter<'_> {
                     .chain([concat([text("("), text(inner_name.get())])]),
             ),
         );
-        let closing = group_with_id(
+        let closing = named_group(
             closing_id,
-            concat([
-                self.indent_if_broken(inner_tail),
-                if_break(closing_id, line(), empty()),
-                text(")"),
-            ]),
+            concat([self.indent_if_broken(inner_tail), line_if_break(closing_id), text(")")]),
         );
 
         Some(DelimitedInner {
@@ -204,7 +200,7 @@ impl Formatter<'_> {
                 let remainder = pairs.remainder();
                 concat(
                     pairs
-                        .flat_map(|pair| [soft_line(), concat([pair[0].clone(), text(" "), pair[1].clone()])])
+                        .flat_map(|pair| [soft_line(), concat([pair[0].clone(), space(), pair[1].clone()])])
                         .chain(remainder.iter().cloned().flat_map(|arg| [soft_line(), arg])),
                 )
             }
