@@ -8,11 +8,14 @@ use crate::pretty::{Doc, concat, group, soft_line, text};
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
 enum CallLayout {
     Default,
-    Variadic { fixed_count: usize, rows: VariadicRows },
+    Variadic {
+        fixed_count: usize,
+        row_style: VariadicRowStyle,
+    },
 }
 
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
-enum VariadicRows {
+enum VariadicRowStyle {
     Arguments,
     KeyValuePairs,
 }
@@ -30,68 +33,68 @@ fn classify_call(envdefs: &EnvDefs, name: &str, actual_count: usize) -> CallLayo
         return CallLayout::Default;
     }
 
-    let rows = if matches!(variadic.name.as_str(), "opts" | "keyvalues") {
+    let row_style = if matches!(variadic.name.as_str(), "opts" | "keyvalues") {
         if !(actual_count - fixed_count).is_multiple_of(2) {
             return CallLayout::Default;
         }
-        VariadicRows::KeyValuePairs
+        VariadicRowStyle::KeyValuePairs
     } else {
-        VariadicRows::Arguments
+        VariadicRowStyle::Arguments
     };
-    CallLayout::Variadic { fixed_count, rows }
+    CallLayout::Variadic { fixed_count, row_style }
 }
 
 impl Formatter<'_> {
     pub(super) fn func_call(&mut self, expr: FuncCall) -> Option<LoweredExpr> {
         let name = expr.func_name()?;
         let args = expr.args().map(|arg| self.expr(arg)).collect::<Option<Vec<_>>>()?;
-        Some(self.function_call(name.get(), args))
+        let layout = classify_call(self.envdefs, name.get(), args.len());
+        Some(self.call(text(name.get()), args, layout))
     }
 
     pub(super) fn expr_call(&mut self, expr: ExprCall) -> Option<LoweredExpr> {
         let callee = self.expr(expr.callee()?)?.into_doc();
         let args = expr.args().map(|arg| self.expr(arg)).collect::<Option<Vec<_>>>()?;
-        Some(self.call(callee, args))
+        Some(self.call(callee, args, CallLayout::Default))
     }
 }
 
 impl Formatter<'_> {
-    fn function_call(&mut self, name: &str, args: Vec<LoweredExpr>) -> LoweredExpr {
-        // Slice 5 will construct all signature-guided layouts. For now, retain
-        // the existing output gate while deriving that decision from the full classifier.
-        match classify_call(self.envdefs, name, args.len()) {
-            CallLayout::Variadic {
-                fixed_count: 0,
-                rows: VariadicRows::KeyValuePairs,
-            } => self.key_value_call(text(name), args),
-            CallLayout::Default | CallLayout::Variadic { .. } => self.call(text(name), args),
-        }
-    }
-
-    fn call(&self, callee: Doc, args: impl IntoIterator<Item = LoweredExpr>) -> LoweredExpr {
-        let args = args.into_iter().collect::<Vec<_>>();
+    fn call(&self, callee: Doc, args: Vec<LoweredExpr>, layout: CallLayout) -> LoweredExpr {
+        let trailing_closing_group = args.last().and_then(|arg| arg.trailing_closing_group);
         if args.is_empty() {
             return LoweredExpr::new(callee);
         }
-        let trailing_closing_group = args.last().and_then(|arg| arg.trailing_closing_group);
+        let args = args.into_iter().map(LoweredExpr::into_doc).collect::<Vec<_>>();
+        let doc = match layout {
+            CallLayout::Default => group(self.callee_with_args(callee, args)),
+            CallLayout::Variadic { fixed_count, row_style } => {
+                let (fixed, variadic) = args.split_at(fixed_count);
+                let prefix = group(self.callee_with_args(callee, fixed.iter().cloned()));
+                let tail = self.variadic_tail(variadic, row_style);
+                group(concat([prefix, self.indent_if_broken(tail)]))
+            }
+        };
         LoweredExpr {
-            doc: group(concat([
-                callee,
-                self.indent_if_broken(concat(args.into_iter().flat_map(|arg| [soft_line(), arg.into_doc()]))),
-            ])),
+            doc,
             trailing_closing_group,
         }
     }
 
-    fn key_value_call(&self, callee: Doc, args: Vec<LoweredExpr>) -> LoweredExpr {
-        let trailing_closing_group = args.last().and_then(|arg| arg.trailing_closing_group);
-        let args = args.into_iter().map(LoweredExpr::into_doc).collect::<Vec<_>>();
-        let rows = args
-            .chunks_exact(2)
-            .flat_map(|pair| [soft_line(), pair[0].clone(), text(" "), pair[1].clone()]);
-        LoweredExpr {
-            doc: group(concat([callee, self.indent_if_broken(concat(rows))])),
-            trailing_closing_group,
+    fn callee_with_args(&self, callee: Doc, args: impl IntoIterator<Item = Doc>) -> Doc {
+        concat([
+            callee,
+            self.indent_if_broken(concat(args.into_iter().flat_map(|arg| [soft_line(), arg]))),
+        ])
+    }
+
+    fn variadic_tail(&self, args: &[Doc], row_style: VariadicRowStyle) -> Doc {
+        match row_style {
+            VariadicRowStyle::Arguments => concat(args.iter().cloned().flat_map(|arg| [soft_line(), arg])),
+            VariadicRowStyle::KeyValuePairs => concat(
+                args.chunks_exact(2)
+                    .flat_map(|pair| [soft_line(), concat([pair[0].clone(), text(" "), pair[1].clone()])]),
+            ),
         }
     }
 }
@@ -100,7 +103,7 @@ impl Formatter<'_> {
 mod tests {
     use yag_template_envdefs::EnvDefSource;
 
-    use super::{CallLayout, VariadicRows, classify_call};
+    use super::{CallLayout, VariadicRowStyle, classify_call};
 
     fn envdefs() -> yag_template_envdefs::EnvDefs {
         yag_template_envdefs::parse(&[EnvDefSource::new_static(
@@ -126,21 +129,21 @@ mod tests {
             classify_call(&envdefs, "values", 3),
             CallLayout::Variadic {
                 fixed_count: 0,
-                rows: VariadicRows::Arguments,
+                row_style: VariadicRowStyle::Arguments,
             }
         );
         assert_eq!(
             classify_call(&envdefs, "parseArgs", 4),
             CallLayout::Variadic {
                 fixed_count: 2,
-                rows: VariadicRows::Arguments,
+                row_style: VariadicRowStyle::Arguments,
             }
         );
         assert_eq!(
             classify_call(&envdefs, "mixed", 5),
             CallLayout::Variadic {
                 fixed_count: 1,
-                rows: VariadicRows::KeyValuePairs,
+                row_style: VariadicRowStyle::KeyValuePairs,
             }
         );
     }
@@ -167,7 +170,7 @@ mod tests {
             classify_call(&envdefs, "keys", 4),
             CallLayout::Variadic {
                 fixed_count: 0,
-                rows: VariadicRows::KeyValuePairs,
+                row_style: VariadicRowStyle::KeyValuePairs,
             }
         );
     }

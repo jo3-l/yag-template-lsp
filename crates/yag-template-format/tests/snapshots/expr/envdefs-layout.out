@@ -2,10 +2,7 @@
 	"title" "A long title"
 	"description" "A long description"
 }}
-{{ editThread
-	.Thread
-	"slowmode"
-	10
-	"auto_archive_duration"
-	1440
+{{ editThread .Thread
+	"slowmode" 10
+	"auto_archive_duration" 1440
 }}

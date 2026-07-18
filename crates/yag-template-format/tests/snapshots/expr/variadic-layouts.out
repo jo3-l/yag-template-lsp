@@ -1,0 +1,27 @@
+{{ parseArgs 1 "invalid arguments"
+	(carg "string" "first")
+	(carg "int" "second")
+	(carg "bool" "third")
+}}
+{{ parseArgs
+	1
+	"a description which is much too long to fit beside the callee"
+	(carg "string" "first")
+	(carg "int" "second")
+}}
+{{ joinStr ", "
+	"alpha"
+	"beta"
+	"gamma"
+	"delta"
+}}
+{{ editThread .Thread
+	"slowmode" 10
+	"auto_archive_duration" 1440
+}}
+{{ sdict
+	"first" "one"
+	"second" "two"
+	"third" "three"
+}}
+{{ sdict "first" "one" "dangling" }}

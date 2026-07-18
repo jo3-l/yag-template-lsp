@@ -1,6 +1,5 @@
 {{ $value := print
-  (printf
-    "%s"
+  (printf "%s"
     .Name
   ) }}
 {{ if print

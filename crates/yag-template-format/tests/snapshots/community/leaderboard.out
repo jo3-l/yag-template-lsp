@@ -21,8 +21,7 @@
 		{{- end }}
 		{{- $xp := toInt .Value }}
 		{{- $rank = add $rank 1 }}
-		{{- $display = printf
-			"%s\n• **%d.** [%s](https://yagpdb.xyz) :: Level %d (%d XP)"
+		{{- $display = printf "%s\n• **%d.** [%s](https://yagpdb.xyz) :: Level %d (%d XP)"
 			$display
 			$rank
 			$usr
