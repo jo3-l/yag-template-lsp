@@ -13,23 +13,35 @@ actions. Keep formatting deterministic and idempotent.
   characters.
 - Parse-invalid input must be returned byte-for-byte unchanged with parse
   diagnostics. The CLI must never write that result.
-- Valid output must parse, preserve the test fingerprint, and be byte-identical
-  after a second formatting pass.
+- Valid output must parse, preserve the test fingerprint, end with a
+  formatter-owned terminal newline, and be byte-identical after a second
+  formatting pass.
 
 ## AST and layout rules
 
 - Format typed AST nodes; do not reconstruct actions by splitting raw source.
-  Traverse roots and action lists through `actions_with_text()`.
+  `lower::lower` casts the parsed node to `Root`, and the block rules traverse
+  roots and action lists through `actions_with_text()`.
+- Keep ownership boundaries explicit: `block.rs` owns root/body sibling
+  sequences and source-text margins, `action.rs` owns typed actions,
+  `expr/` owns expression lowering, and `delimited.rs` owns action delimiters
+  and their closing-row behavior. Expose narrow helpers instead of making one
+  rule coordinate another rule's internals.
 - Use the document model (`Text`, `Concat`, `Line`, `SoftLine`, `Group`, and
   `Indent`) for width-sensitive expression layout. `SoftLine` is a space when
-  flat and a newline when broken.
+  flat and a newline when broken. Build documents during lowering; only
+  `pretty::render` should decide the final line breaks.
 - Classify logical lines as flexible, protected-textual, or literal.
   Protected-textual lines preserve same-line text/action adjacency and force
   their actions flat. Only simple display expressions (variable/context access,
   field chains, or parentheses around them) qualify as protected-textual.
 - Existing block-body newlines become structural `Line` nodes; block depth comes
-  from typed block structure, not keyword scanning. Do not invent a separator
-  at a same-line text/action boundary.
+  from typed block structure, not keyword scanning. Root lowering owns exactly
+  one final `Line`; nested sequences return their trailing-line state to their
+  caller so boundaries are not duplicated.
+- Sibling separation belongs to the block sequence, not individual actions.
+  Do not invent a separator at a same-line text/action boundary, and do not
+  trim or reinterpret literal text in action or expression rules.
 - Newlines inside an action are formatter-owned whitespace. Always lower the
   action from its typed AST; protected-textual policy preserves only same-line
   action/text adjacency, not the action's original internal layout.
@@ -66,12 +78,15 @@ actions. Keep formatting deterministic and idempotent.
 
 ## Verification
 
-For formatter changes, run the focused snapshot test and relevant crate tests:
+For formatter changes, run the focused snapshot test and all crate tests:
 
 ```sh
 cargo test -p yag-template-format --test format_snapshots
 cargo test -p yag-template-format
 ```
+
+Use `YAG_UPDATE_SNAPSHOTS=1` only when intentionally creating or updating
+snapshot outputs; inspect every resulting `.out` diff.
 
 For any Rust change, the repository also requires:
 

@@ -2,14 +2,18 @@
 
 ## Project Structure & Module Organization
 
-This is a Rust workspace with a VS Code extension wrapper. Core crates live under `crates/`: `yag-template-syntax` parses templates, `yag-template-analysis` performs semantic checks, `yag-template-envdefs` embeds definitions, and `yag-template-lsp` implements the language server. Utility binaries and scripts are in `cmd/`. Bundled `.ydef` data is in `bundled-defs/`. VS Code extension sources, grammars, and packaging metadata are in `editors/vscode/`. Demo media is in `assets/`.
+This is a Rust workspace with a VS Code extension wrapper. Core crates live under `crates/`: `yag-template-syntax` parses templates, `yag-template-analysis` performs semantic checks, `yag-template-envdefs` embeds definitions, `yag-template-format` formats templates, and `yag-template-lsp` implements the language server. Utility binaries live under `cmd/`, including the `yagfmt` formatter CLI and `exportdefs`. Bundled `.ydef` data is in `bundled-defs/`. VS Code extension sources, grammars, and packaging metadata are in `editors/vscode/`. Demo media is in `assets/`.
+
+More specific `AGENTS.md` files override these guidelines within their directory trees. In particular, read `crates/yag-template-format/AGENTS.md` before changing formatter behavior.
 
 ## Build, Test, and Development Commands
 
 - `cargo build --workspace`: build all Rust crates and binaries.
 - `cargo test --workspace`: run Rust unit tests.
-- `cargo fmt --all`: format Rust code; use nightly rustfmt because `rustfmt.toml` has unstable options.
+- `cargo +nightly fmt --all`: format Rust code; `rustfmt.toml` uses unstable options.
+- `cargo +nightly fmt --all --check`: verify Rust formatting without changing files.
 - `cargo clippy --workspace --all-targets`: run Rust lints before larger changes.
+- `cargo run -p yagfmt -- --help`: inspect the formatter CLI and its options.
 - `cd editors/vscode && npm install`: install extension tooling.
 - `cd editors/vscode && npm run compile`: type-check, lint, and bundle the extension.
 - `cd editors/vscode && npm run package`: produce a VSIX package.
@@ -22,15 +26,15 @@ Rust uses edition 2024 and `rustfmt.toml` with module-level import grouping and 
 
 ## Testing Guidelines
 
-Place Rust unit tests next to the code they exercise with `#[cfg(test)]` modules or focused `#[test]` functions. Prefer parser, analysis, and envdef regression tests for language behavior changes. Run `cargo test --workspace` before submitting Rust changes. Extension tests are not prominent; at minimum run `npm run compile` to validate TypeScript, linting, and bundling.
+Place Rust unit tests next to the code they exercise with `#[cfg(test)]` modules or focused `#[test]` functions. Prefer parser, analysis, envdef, and formatter regression tests for language behavior changes. Formatter behavior changes require focused `.in`/`.out` snapshot fixtures as described in `crates/yag-template-format/AGENTS.md`. Run `cargo test --workspace` before submitting Rust changes. Extension tests are not prominent; at minimum run `npm run compile` to validate TypeScript, linting, and bundling.
 
-## Codex Verification
+## Verification
 
-For every Rust code change, Codex must run `cargo fmt --all --check` and
+For every Rust code change, run `cargo +nightly fmt --all --check` and
 `cargo clippy --workspace --all-targets` before handoff, in addition to the
-focused tests for the change. If formatting is needed, run nightly
-`cargo +nightly fmt --all` and then repeat the check. Report any verifier that could
-not be run.
+focused tests for the change. If formatting is needed, run
+`cargo +nightly fmt --all` and then repeat the check. Report any verifier that
+could not be run.
 
 ## Commit & Pull Request Guidelines
 
