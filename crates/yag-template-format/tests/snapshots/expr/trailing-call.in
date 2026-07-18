@@ -1,0 +1,11 @@
+---
+max_width: 48
+---
+{{ sendMessage nil (cembed "title" "Example" "description" "A description that expands the embed" "color" 14232643) }}
+{{ .Set "Out" (sdict "title" "Deathmatch" "description" "A description that expands the dictionary" "color" 14232643) }}
+{{ .Set "Out" (sdict "short" "value") }}
+{{ veryLongOuterCallName "a preceding argument that cannot fit" (sdict "first" "one" "second" "two") }}
+{{ print "prefix" (.Value) }}
+{{ print "prefix" (.Builder "a long first argument" "a long second argument") }}
+{{ print "prefix" (sdict "first" "one" "second" "two").Field }}
+{{ print "prefix" (parseArgs 1 "invalid arguments" (carg "string" "first") (carg "int" "second")) }}

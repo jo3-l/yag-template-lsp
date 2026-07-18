@@ -1,0 +1,7 @@
+---
+max_width: 48
+delimiter_padding: none
+continuation_indent:
+  spaces: 2
+---
+{{.Set "Out" (sdict "title" "Deathmatch" "fields" (cslice (sdict "name" "one" "value" 1) (sdict "name" "two" "value" 2)))}}

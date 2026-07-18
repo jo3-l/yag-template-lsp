@@ -1,5 +1,4 @@
 {{ sdict
-	"a"
-	"one"
+	"a" "one"
 	"dangling"
 }}

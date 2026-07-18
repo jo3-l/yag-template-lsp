@@ -1,0 +1,7 @@
+{{.Set "Out" (sdict
+  "title" "Deathmatch"
+  "fields" (cslice
+    (sdict "name" "one" "value" 1)
+    (sdict "name" "two" "value" 2)
+  )
+)}}
