@@ -1,6 +1,6 @@
 //! Declarative document rules for compound bodies.
 
-use yag_template_syntax::ast::{ActionList, ActionOrText, AstNode, AstToken, Text};
+use yag_template_syntax::ast::{ActionList, ActionOrText, AstNode, AstToken, Root, Text};
 
 use crate::cursor::DoubleEndedPeekable;
 use crate::iterutil::iter_with_neighbors;
@@ -46,8 +46,8 @@ impl ReflowBoundary {
 }
 
 /// A lowered sibling sequence with a final line boundary owned by its caller.
-pub(crate) struct LoweredSequence {
-    pub(crate) doc: Doc,
+struct LoweredSequence {
+    doc: Doc,
     trailing_line: bool,
 }
 
@@ -71,6 +71,12 @@ enum BodyTextFragment<'a> {
 }
 
 impl<'a> Formatter<'a> {
+    /// Lower a root document with exactly one final line boundary.
+    pub(crate) fn root(&mut self, root: &Root) -> Doc {
+        let elements = root.actions_with_text().collect::<Vec<_>>();
+        concat([self.sequence(&elements, AllowCompact::No).doc, line()])
+    }
+
     /// Lower one typed compound body and apply its block indentation.
     pub(crate) fn body(&mut self, body: ActionList, allow_compact: AllowCompact) -> Doc {
         let elements = body.actions_with_text().collect::<Vec<_>>();
@@ -183,7 +189,7 @@ impl<'a> Formatter<'a> {
     /// remaining text is passed to [`lower_text`]. This keeps action
     /// separation policy in one place while typed action rules remain
     /// responsible only for their own syntax.
-    pub(crate) fn sequence(&mut self, elements: &[ActionOrText], allow_compact: AllowCompact) -> LoweredSequence {
+    fn sequence(&mut self, elements: &[ActionOrText], allow_compact: AllowCompact) -> LoweredSequence {
         let action_separator = match allow_compact {
             AllowCompact::Yes => soft_line(),
             AllowCompact::No => line(),
