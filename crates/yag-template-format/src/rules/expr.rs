@@ -1,9 +1,46 @@
 //! Declarative document rules for expressions.
 
+use yag_template_envdefs::EnvDefs;
 use yag_template_syntax::ast::{AstNode, AstToken, Expr, ExprCall, ExprFieldChain, FuncCall, Pipeline};
 
 use crate::lower::Formatter;
 use crate::pretty::{Doc, GroupId, concat, empty, group, group_with_id, if_break, line, soft_line, text, try_concat};
+
+#[derive(Debug, Clone, Copy, Eq, PartialEq)]
+enum CallLayout {
+    Default,
+    Variadic { fixed_count: usize, rows: VariadicRows },
+}
+
+#[derive(Debug, Clone, Copy, Eq, PartialEq)]
+enum VariadicRows {
+    Arguments,
+    KeyValuePairs,
+}
+
+fn classify_call(envdefs: &EnvDefs, name: &str, actual_count: usize) -> CallLayout {
+    let Some(function) = envdefs.funcs.get(name) else {
+        return CallLayout::Default;
+    };
+    let Some(variadic) = function.params.last().filter(|param| param.is_variadic) else {
+        return CallLayout::Default;
+    };
+
+    let fixed_count = function.params.len() - 1;
+    if actual_count <= fixed_count {
+        return CallLayout::Default;
+    }
+
+    let rows = if matches!(variadic.name.as_str(), "opts" | "keyvalues") {
+        if !(actual_count - fixed_count).is_multiple_of(2) {
+            return CallLayout::Default;
+        }
+        VariadicRows::KeyValuePairs
+    } else {
+        VariadicRows::Arguments
+    };
+    CallLayout::Variadic { fixed_count, rows }
+}
 
 /// A lowered expression with metadata about its trailing closing boundary.
 pub(crate) struct ExprDoc {
@@ -86,16 +123,6 @@ impl Formatter<'_> {
 }
 
 impl<'a> Formatter<'a> {
-    fn function_uses_key_value_layout(&self, name: &str) -> bool {
-        let Some(func) = self.envdefs.funcs.get(name) else {
-            return false;
-        };
-        let [param] = func.params.as_slice() else {
-            return false;
-        };
-        param.is_variadic && matches!(param.name.as_str(), "opts" | "keyvalues")
-    }
-
     fn func_call(&mut self, expr: FuncCall) -> Option<ExprDoc> {
         let name = expr.func_name()?;
         let args = expr.args().map(|arg| self.expr_doc(arg)).collect::<Option<Vec<_>>>()?;
@@ -135,10 +162,14 @@ impl<'a> Formatter<'a> {
     }
 
     fn function_call(&mut self, name: &str, args: Vec<ExprDoc>) -> ExprDoc {
-        if self.function_uses_key_value_layout(name) && args.len().is_multiple_of(2) {
-            self.key_value_call(text(name), args)
-        } else {
-            self.call(text(name), args)
+        // Slice 5 will construct all signature-guided layouts. For now, retain
+        // the existing output gate while deriving that decision from the full classifier.
+        match classify_call(self.envdefs, name, args.len()) {
+            CallLayout::Variadic {
+                fixed_count: 0,
+                rows: VariadicRows::KeyValuePairs,
+            } => self.key_value_call(text(name), args),
+            CallLayout::Default | CallLayout::Variadic { .. } => self.call(text(name), args),
         }
     }
 
@@ -193,5 +224,82 @@ impl<'a> Formatter<'a> {
             doc: group(concat([text(variable?), text(" "), text(operator), value.into_doc()])),
             trailing_closing_group,
         })
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use yag_template_envdefs::EnvDefSource;
+
+    use super::{CallLayout, VariadicRows, classify_call};
+
+    fn envdefs() -> yag_template_envdefs::EnvDefs {
+        yag_template_envdefs::parse(&[EnvDefSource::new_static(
+            "test.ydef",
+            concat!(
+                "func fixed(value)\n",
+                "func values(args...)\n",
+                "func parseArgs(first, description, argDefs...)\n",
+                "func mixed(first, opts...)\n",
+                "func keys(keyvalues...)\n",
+                "func Set(opts...)\n",
+            ),
+        )])
+        .unwrap()
+    }
+
+    #[test]
+    fn call_classification_uses_variadic_signature_shape() {
+        let envdefs = envdefs();
+        assert_eq!(classify_call(&envdefs, "unknown", 3), CallLayout::Default);
+        assert_eq!(classify_call(&envdefs, "fixed", 1), CallLayout::Default);
+        assert_eq!(
+            classify_call(&envdefs, "values", 3),
+            CallLayout::Variadic {
+                fixed_count: 0,
+                rows: VariadicRows::Arguments,
+            }
+        );
+        assert_eq!(
+            classify_call(&envdefs, "parseArgs", 4),
+            CallLayout::Variadic {
+                fixed_count: 2,
+                rows: VariadicRows::Arguments,
+            }
+        );
+        assert_eq!(
+            classify_call(&envdefs, "mixed", 5),
+            CallLayout::Variadic {
+                fixed_count: 1,
+                rows: VariadicRows::KeyValuePairs,
+            }
+        );
+    }
+
+    #[test]
+    fn expr_callees_do_not_use_function_signature_layouts() {
+        let options = crate::FormatOptions {
+            max_width: 16,
+            ..crate::FormatOptions::default()
+        };
+        let result = crate::format(r#"{{.Set "a" "one" "b" "two"}}"#, &envdefs(), &options);
+        assert!(result.diagnostics.is_empty());
+        assert!(result.text.contains("\t\"a\"\n\t\"one\""), "{}", result.text);
+    }
+
+    #[test]
+    fn key_value_and_short_variadic_calls_fall_back_when_structure_is_unavailable() {
+        let envdefs = envdefs();
+        assert_eq!(classify_call(&envdefs, "mixed", 4), CallLayout::Default);
+        assert_eq!(classify_call(&envdefs, "parseArgs", 2), CallLayout::Default);
+        assert_eq!(classify_call(&envdefs, "parseArgs", 1), CallLayout::Default);
+        assert_eq!(classify_call(&envdefs, "keys", 3), CallLayout::Default);
+        assert_eq!(
+            classify_call(&envdefs, "keys", 4),
+            CallLayout::Variadic {
+                fixed_count: 0,
+                rows: VariadicRows::KeyValuePairs,
+            }
+        );
     }
 }
