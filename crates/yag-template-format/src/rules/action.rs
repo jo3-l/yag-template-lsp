@@ -12,7 +12,7 @@ use crate::rules::delimited::DelimitedInner;
 impl Formatter<'_> {
     /// Format an action atomically. A rule that cannot construct a complete
     /// document leaves the original typed action untouched.
-    pub(crate) fn action(&mut self, action: Action) -> Doc {
+    pub(super) fn action(&mut self, action: Action) -> Doc {
         let mut try_format = || -> Option<Doc> {
             match &action {
                 Action::Comment(action) => Some(text(action.syntax().text().to_owned())),

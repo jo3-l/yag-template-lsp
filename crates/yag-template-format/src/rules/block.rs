@@ -8,13 +8,6 @@ use crate::line_protection::ReflowPolicy;
 use crate::lower::{Formatter, byte_offset, source_range};
 use crate::pretty::{AllowCompact, Doc, concat, empty, indent, line, soft_line, text};
 
-/// How a sequence lowers its literal text tokens.
-#[derive(Clone, Copy)]
-enum SequenceContext {
-    Root,
-    Body,
-}
-
 /// A source boundary structurally eligible for formatter-owned reflow.
 ///
 /// Literal text with content or source line breaks is deliberately excluded:
@@ -53,8 +46,8 @@ impl ReflowBoundary {
 }
 
 /// A lowered sibling sequence with a final line boundary owned by its caller.
-struct LoweredSequence {
-    doc: Doc,
+pub(crate) struct LoweredSequence {
+    pub(crate) doc: Doc,
     trailing_line: bool,
 }
 
@@ -78,11 +71,6 @@ enum BodyTextFragment<'a> {
 }
 
 impl<'a> Formatter<'a> {
-    /// Lower the root action/text sequence.
-    pub(crate) fn root(&mut self, elements: &[ActionOrText]) -> Doc {
-        self.sequence(elements, SequenceContext::Root, AllowCompact::No).doc
-    }
-
     /// Lower one typed compound body and apply its block indentation.
     pub(crate) fn body(&mut self, body: ActionList, allow_compact: AllowCompact) -> Doc {
         let elements = body.actions_with_text().collect::<Vec<_>>();
@@ -95,7 +83,7 @@ impl<'a> Formatter<'a> {
         if elements.is_empty() {
             empty()
         } else {
-            let lowered_inner = self.sequence(elements, SequenceContext::Body, allow_compact);
+            let lowered_inner = self.sequence(elements, allow_compact);
             concat([
                 indent(self.options.indent, concat([leading, lowered_inner.doc])),
                 trailing,
@@ -192,15 +180,10 @@ impl<'a> Formatter<'a> {
     /// The sequence owns relationships between siblings that no individual AST
     /// action can see. Flexible action separators are [`soft_line`]s in a
     /// body that allows compact layout and structural [`line`]s otherwise; all
-    /// remaining text is passed to [`lower_body_text`]. This keeps action
+    /// remaining text is passed to [`lower_text`]. This keeps action
     /// separation policy in one place while typed action rules remain
     /// responsible only for their own syntax.
-    fn sequence(
-        &mut self,
-        elements: &[ActionOrText],
-        context: SequenceContext,
-        allow_compact: AllowCompact,
-    ) -> LoweredSequence {
+    pub(crate) fn sequence(&mut self, elements: &[ActionOrText], allow_compact: AllowCompact) -> LoweredSequence {
         let action_separator = match allow_compact {
             AllowCompact::Yes => soft_line(),
             AllowCompact::No => line(),
@@ -222,10 +205,7 @@ impl<'a> Formatter<'a> {
                     if separates_actions && self.may_reflow_inline_whitespace(literal) {
                         parts.push(action_separator.clone());
                     } else {
-                        let (doc, final_line) = match context {
-                            SequenceContext::Root => (text(literal.get()), false),
-                            SequenceContext::Body => self.lower_body_text(literal, next.is_none()),
-                        };
+                        let (doc, final_line) = self.lower_text(literal, next.is_none());
                         trailing_line |= final_line;
                         parts.push(doc);
                     }
@@ -238,9 +218,9 @@ impl<'a> Formatter<'a> {
         }
     }
 
-    /// Lower normalized body text and detach its final line boundary when the
-    /// enclosing body owns it.
-    fn lower_body_text(&self, literal: &Text, is_final: bool) -> (Doc, bool) {
+    /// Lower normalized literal text and detach its final line boundary when
+    /// its enclosing sequence owns it.
+    fn lower_text(&self, literal: &Text, is_final: bool) -> (Doc, bool) {
         let start = byte_offset(literal.text_range().start());
         let starts_new_line = start == 0 || self.source.as_bytes()[start - 1] == b'\n';
         let mut body_text = split_body_text(literal.get(), starts_new_line);

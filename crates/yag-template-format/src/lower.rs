@@ -6,7 +6,7 @@ use yag_template_syntax::ast::{AstNode, Root};
 
 use crate::FormatOptions;
 use crate::line_protection::{LineProtection, ReflowPolicy};
-use crate::pretty::{Doc, GroupId, indent, text};
+use crate::pretty::{AllowCompact, Doc, GroupId, concat, indent, line, text};
 
 /// Lower a successfully parsed root into a renderable document.
 pub(super) fn lower(
@@ -19,9 +19,9 @@ pub(super) fn lower(
     let Some(root) = Root::cast(root.clone()) else {
         return text(source);
     };
-    let mut formatter = Formatter::new(source, envdefs, options, protection);
-    let elements = root.actions_with_text().collect::<Vec<_>>();
-    formatter.root(&elements)
+    let mut f = Formatter::new(source, envdefs, options, protection);
+    let body = root.actions_with_text().collect::<Vec<_>>();
+    concat([f.sequence(&body, AllowCompact::No).doc, line()])
 }
 
 /// Formatting context shared by the typed AST rules.

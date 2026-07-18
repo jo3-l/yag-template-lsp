@@ -83,11 +83,7 @@ pub fn format(source: &str, envdefs: &EnvDefs, options: &FormatOptions) -> Forma
         let root = SyntaxNode::new_root(parsed.root.clone());
         let line_protection = line_protection::resolve(&root, source);
         let doc = lower::lower(&root, source, envdefs, options, &line_protection);
-        let mut text = pretty::render(doc, options.max_width);
-        // Ensure trailing newline.
-        if !text.ends_with('\n') {
-            text.push('\n');
-        }
+        let text = pretty::render(doc, options.max_width);
         FormatResult { text, diagnostics }
     } else {
         FormatResult {
